@@ -2,6 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- ARCore requires camera access to capture environmental feed and track planes -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- AR Optional: allows the app to be installed on non-AR devices for 2D planning -->
+    <uses-feature
+        android:name="android.hardware.camera.ar"
+        android:required="false" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -11,8 +19,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.DhruvAR">
+
+        <!-- Indicates that this application uses ARCore optionally -->
+        <meta-data
+            android:name="com.google.ar.core"
+            android:value="optional" />
+
         <activity
             android:name=".MainActivity"
+            android:configChanges="orientation|screenSize"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.DhruvAR">

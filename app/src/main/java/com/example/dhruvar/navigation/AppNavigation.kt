@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.dhruvar.domain.model.Layout
+import com.example.dhruvar.ui.screens.ARVisualizationScreen
 import com.example.dhruvar.ui.screens.HomeScreen
 import com.example.dhruvar.ui.screens.PlanningScreen
 import com.example.dhruvar.ui.screens.VisualizationScreen
@@ -17,7 +18,7 @@ import com.example.dhruvar.viewmodel.PlanningViewModel
  * Top-level application navigation graph.
  *
  * Establishes the decoupled flow:
- * Home -> Planning -> Visualization -> Planning
+ * Home -> Planning -> Visualization -> AR Visualization
  */
 @Composable
 fun AppNavigation(
@@ -61,7 +62,18 @@ fun AppNavigation(
                 onNavigateBackToPlanning = {
                     navController.popBackStack()
                 },
+                onNavigateToAR = {
+                    navController.navigate(Screen.ARVisualization.route)
+                },
                 viewModel = planningViewModel
+            )
+        }
+
+        composable(Screen.ARVisualization.route) {
+            ARVisualizationScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
             )
         }
     }

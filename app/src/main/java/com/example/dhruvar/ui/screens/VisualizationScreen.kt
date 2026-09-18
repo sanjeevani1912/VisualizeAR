@@ -19,14 +19,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CenterFocusStrong
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Layers
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dhruvar.ui.components.AppTopBar
 import com.example.dhruvar.ui.components.PrimaryButton
-import com.example.dhruvar.ui.theme.AnchorOrange
 import com.example.dhruvar.ui.theme.PrecisionBlue
 import com.example.dhruvar.ui.theme.TacticalGreen
 import com.example.dhruvar.viewmodel.PlanningViewModel
@@ -52,6 +51,7 @@ import com.example.dhruvar.viewmodel.PlanningViewModel
 @Composable
 fun VisualizationScreen(
     onNavigateBackToPlanning: () -> Unit,
+    onNavigateToAR: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: PlanningViewModel = viewModel()
 ) {
@@ -106,7 +106,7 @@ fun VisualizationScreen(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "AR visualization will be available here.\nScan environment and place planned layout.",
+                        text = "Scan physical environment to detect horizontal ground planes and prepare your tactical deployment layout in augmented reality.",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             color = Color(0xFF94A3B8),
                             lineHeight = 20.sp
@@ -132,7 +132,7 @@ fun VisualizationScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "ARCORE ENGINE: STANDBY",
+                            text = "ARCORE ENGINE: READY",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 9.sp,
@@ -195,14 +195,38 @@ fun VisualizationScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Action: Enter AR Visualization
+            PrimaryButton(
+                text = "ENTER AR VISUALIZATION",
+                icon = Icons.Default.ViewInAr,
+                onClick = onNavigateToAR
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Action: Back to Planning
-            PrimaryButton(
-                text = "Back to Planning",
-                icon = Icons.AutoMirrored.Filled.ArrowBack,
-                onClick = onNavigateBackToPlanning
-            )
+            OutlinedButton(
+                onClick = onNavigateBackToPlanning,
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Back to Planning",
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            }
         }
     }
 }
