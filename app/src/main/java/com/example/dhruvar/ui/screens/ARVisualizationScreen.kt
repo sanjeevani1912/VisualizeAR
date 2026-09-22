@@ -49,6 +49,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -235,8 +236,8 @@ fun ARVisualizationScreen(
         arRenderer.selectedObjectId = uiState.selectedObjectId
     }
 
-    // Session initialization helper
-    fun initOrResumeSession(surfaceView: GLSurfaceView) {
+    // Session initialization & resume helper
+    fun resumeSession(surfaceView: GLSurfaceView) {
         if (!hasCameraPermission || arCoreStatus != "SUPPORTED") return
 
         try {
@@ -249,7 +250,6 @@ fun ARVisualizationScreen(
                 }
                 session.configure(config)
                 arSession = session
-                arRenderer.session = session
                 arRenderer.currentLayout = uiState.currentLayout
                 arRenderer.selectedObjectId = uiState.selectedObjectId
             }
@@ -260,9 +260,15 @@ fun ARVisualizationScreen(
             arRenderer.displayRotation = rotation
             arRenderer.notifySessionResumed()
 
+            // 1. Resume ARCore session first
             arSession?.resume()
+            // 2. Attach session to renderer and mark unpaused
+            arRenderer.session = arSession
+            arRenderer.isSessionPaused = false
+            // 3. Resume GLSurfaceView render loop
             surfaceView.onResume()
         } catch (e: Exception) {
+            arRenderer.isSessionPaused = true
             trackingStatus = when (e) {
                 is UnavailableArcoreNotInstalledException -> "ARCore not installed"
                 is UnavailableApkTooOldException -> "Update Google Play Services for AR"
@@ -274,29 +280,44 @@ fun ARVisualizationScreen(
         }
     }
 
+    fun pauseSession(surfaceView: GLSurfaceView?) {
+        arRenderer.isSessionPaused = true
+        try {
+            surfaceView?.onPause()
+        } catch (_: Exception) {}
+        try {
+            arSession?.pause()
+        } catch (_: Exception) {}
+    }
+
+    fun destroySession(surfaceView: GLSurfaceView?) {
+        arRenderer.isSessionPaused = true
+        try {
+            surfaceView?.onPause()
+        } catch (_: Exception) {}
+        arRenderer.session = null
+        arRenderer.resetOrigin()
+        try {
+            arSession?.pause()
+            arSession?.close()
+        } catch (_: Exception) {}
+        arSession = null
+    }
+
     // Lifecycle synchronization
-    DisposableEffect(lifecycleOwner, glSurfaceViewRef, hasCameraPermission, arCoreStatus) {
+    DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> {
                     glSurfaceViewRef?.let { view ->
-                        initOrResumeSession(view)
+                        resumeSession(view)
                     }
                 }
                 Lifecycle.Event.ON_PAUSE -> {
-                    glSurfaceViewRef?.onPause()
-                    try {
-                        arSession?.pause()
-                    } catch (_: Exception) {}
+                    pauseSession(glSurfaceViewRef)
                 }
                 Lifecycle.Event.ON_DESTROY -> {
-                    arRenderer.resetOrigin()
-                    try {
-                        arSession?.pause()
-                        arSession?.close()
-                    } catch (_: Exception) {}
-                    arSession = null
-                    arRenderer.session = null
+                    destroySession(glSurfaceViewRef)
                 }
                 else -> Unit
             }
@@ -306,13 +327,7 @@ fun ARVisualizationScreen(
 
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            arRenderer.resetOrigin()
-            try {
-                arSession?.pause()
-                arSession?.close()
-            } catch (_: Exception) {}
-            arSession = null
-            arRenderer.session = null
+            destroySession(glSurfaceViewRef)
         }
     }
 
@@ -321,12 +336,7 @@ fun ARVisualizationScreen(
             AppTopBar(
                 title = "AR VISUALIZATION",
                 onNavigateBack = {
-                    arRenderer.resetOrigin()
-                    try {
-                        arSession?.pause()
-                        arSession?.close()
-                    } catch (_: Exception) {}
-                    arSession = null
+                    destroySession(glSurfaceViewRef)
                     onNavigateBack()
                 }
             )
@@ -374,7 +384,17 @@ fun ARVisualizationScreen(
                     )
                 }
 
-                // 4. Active AR Camera & 3D Visualization View
+                // 4. ARCore Availability Checking View
+                arCoreStatus == "CHECKING" -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = PrecisionBlue)
+                    }
+                }
+
+                // 5. Active AR Camera & 3D Visualization View
                 else -> {
                     // OpenGL Surface View with Touch Tap Handling
                     AndroidView(
@@ -386,7 +406,17 @@ fun ARVisualizationScreen(
                                 setRenderer(arRenderer)
                                 renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
                                 glSurfaceViewRef = this
-                                initOrResumeSession(this)
+                                if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                                    resumeSession(this)
+                                }
+                            }
+                        },
+                        update = { glView ->
+                            glSurfaceViewRef = glView
+                            if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
+                                (arSession == null || arRenderer.isSessionPaused)
+                            ) {
+                                resumeSession(glView)
                             }
                         },
                         modifier = Modifier

@@ -19,6 +19,9 @@ import com.google.ar.core.Pose
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
 import com.google.ar.core.TrackingState
+import com.google.ar.core.exceptions.CameraNotAvailableException
+import com.google.ar.core.exceptions.NotYetAvailableException
+import com.google.ar.core.exceptions.SessionPausedException
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 import kotlin.math.sqrt
@@ -81,6 +84,9 @@ class ARRenderer(
 
     var session: Session? = null
     var displayRotation: Int = 0
+
+    @Volatile
+    var isSessionPaused: Boolean = true
 
     var displayRotationProvider: (() -> Int)? = null
 
@@ -157,6 +163,10 @@ class ARRenderer(
 
     override fun onDrawFrame(gl: GL10?) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
+
+        if (isSessionPaused) {
+            return
+        }
 
         val currentSession = session ?: return
 
@@ -372,6 +382,16 @@ class ARRenderer(
                     mainHandler.post { captureCb(null) }
                 }
             }
+        } catch (e: SessionPausedException) {
+            // Expected during pause/resume transitions; skip frame cleanly
+            return
+        } catch (e: NotYetAvailableException) {
+            // Frame is not yet available; skip frame cleanly
+            return
+        } catch (e: CameraNotAvailableException) {
+            android.util.Log.w("ARRenderer", "Camera not available during onDrawFrame: ${e.message}")
+            mainHandler.post { onStatusChanged("Camera unavailable") }
+            return
         } catch (e: Exception) {
             android.util.Log.e("ARRenderer", "Exception in onDrawFrame: ${e.message}", e)
         }
