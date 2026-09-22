@@ -2,6 +2,7 @@ package com.example.dhruvar.ui.ar.render
 
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
+import android.util.Log
 import com.google.ar.core.Coordinates2d
 import com.google.ar.core.Frame
 import java.nio.ByteBuffer
@@ -24,6 +25,7 @@ class BackgroundRenderer {
 
     private val quadVertices: FloatBuffer
     private val quadTexCoords: FloatBuffer
+    private var hasValidTexCoords = false
 
     init {
         // Full screen Normalized Device Coordinates (NDC)
@@ -41,10 +43,20 @@ class BackgroundRenderer {
                 position(0)
             }
 
-        // Texture coordinates buffer (transformed per-frame by ARCore)
-        quadTexCoords = ByteBuffer.allocateDirect(8 * 4)
+        // Texture coordinates buffer initialized with standard portrait camera UVs
+        val defaultTexCoords = floatArrayOf(
+            1.0f, 1.0f,
+            1.0f, 0.0f,
+            0.0f, 1.0f,
+            0.0f, 0.0f
+        )
+        quadTexCoords = ByteBuffer.allocateDirect(defaultTexCoords.size * 4)
             .order(ByteOrder.nativeOrder())
             .asFloatBuffer()
+            .apply {
+                put(defaultTexCoords)
+                position(0)
+            }
     }
 
     fun createOnGlThread() {
@@ -64,21 +76,54 @@ class BackgroundRenderer {
             GLES20.glAttachShader(prog, vertexShader)
             GLES20.glAttachShader(prog, fragmentShader)
             GLES20.glLinkProgram(prog)
+            val linkStatus = IntArray(1)
+            GLES20.glGetProgramiv(prog, GLES20.GL_LINK_STATUS, linkStatus, 0)
+            if (linkStatus[0] == 0) {
+                val log = GLES20.glGetProgramInfoLog(prog)
+                Log.e(TAG, "Error linking BackgroundRenderer program: $log")
+            }
         }
 
         aPositionHandle = GLES20.glGetAttribLocation(program, "a_Position")
         aTexCoordHandle = GLES20.glGetAttribLocation(program, "a_TexCoord")
-        uTextureHandle = GLES20.glGetUniformLocation(program, "u_Texture")
+        uTextureHandle = GLES20.glGetUniformLocation(program, "sTexture")
     }
 
     fun draw(frame: Frame) {
-        if (frame.hasDisplayGeometryChanged()) {
+        // Query transformed coordinates if geometry changed or if not yet validated
+        if (frame.hasDisplayGeometryChanged() || !hasValidTexCoords) {
+            quadVertices.position(0)
+            quadTexCoords.position(0)
             frame.transformCoordinates2d(
                 Coordinates2d.OPENGL_NORMALIZED_DEVICE_COORDINATES,
                 quadVertices,
                 Coordinates2d.TEXTURE_NORMALIZED,
                 quadTexCoords
             )
+            quadVertices.position(0)
+            quadTexCoords.position(0)
+
+            // Validate that coordinates are not degenerate all-zeroes
+            val u0 = quadTexCoords.get(0)
+            val v0 = quadTexCoords.get(1)
+            val u1 = quadTexCoords.get(2)
+            val v1 = quadTexCoords.get(3)
+            val isZero = (u0 == 0f && v0 == 0f && u1 == 0f && v1 == 0f)
+
+            if (!isZero && frame.timestamp != 0L) {
+                hasValidTexCoords = true
+            } else if (isZero) {
+                // Supply portrait orientation fallback UVs
+                val fallback = floatArrayOf(
+                    1.0f, 1.0f,
+                    1.0f, 0.0f,
+                    0.0f, 1.0f,
+                    0.0f, 0.0f
+                )
+                quadTexCoords.position(0)
+                quadTexCoords.put(fallback)
+                quadTexCoords.position(0)
+            }
         }
 
         if (frame.timestamp == 0L) {
@@ -87,6 +132,8 @@ class BackgroundRenderer {
 
         GLES20.glDisable(GLES20.GL_DEPTH_TEST)
         GLES20.glDepthMask(false)
+        GLES20.glDisable(GLES20.GL_CULL_FACE)
+        GLES20.glDisable(GLES20.GL_BLEND)
 
         GLES20.glUseProgram(program)
 
@@ -94,9 +141,11 @@ class BackgroundRenderer {
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureId)
         GLES20.glUniform1i(uTextureHandle, 0)
 
+        quadVertices.position(0)
         GLES20.glEnableVertexAttribArray(aPositionHandle)
         GLES20.glVertexAttribPointer(aPositionHandle, 2, GLES20.GL_FLOAT, false, 0, quadVertices)
 
+        quadTexCoords.position(0)
         GLES20.glEnableVertexAttribArray(aTexCoordHandle)
         GLES20.glVertexAttribPointer(aTexCoordHandle, 2, GLES20.GL_FLOAT, false, 0, quadTexCoords)
 
@@ -110,31 +159,39 @@ class BackgroundRenderer {
     }
 
     private fun loadShader(type: Int, shaderCode: String): Int {
-        return GLES20.glCreateShader(type).also { shader ->
-            GLES20.glShaderSource(shader, shaderCode)
-            GLES20.glCompileShader(shader)
+        val shader = GLES20.glCreateShader(type)
+        GLES20.glShaderSource(shader, shaderCode)
+        GLES20.glCompileShader(shader)
+        val compileStatus = IntArray(1)
+        GLES20.glGetShaderiv(shader, GLES20.GL_COMPILE_STATUS, compileStatus, 0)
+        if (compileStatus[0] == 0) {
+            val log = GLES20.glGetShaderInfoLog(shader)
+            Log.e(TAG, "Error compiling shader type $type: $log")
+            GLES20.glDeleteShader(shader)
+            return 0
         }
+        return shader
     }
 
     companion object {
-        private const val VERTEX_SHADER_CODE = """
-            attribute vec4 a_Position;
-            attribute vec2 a_TexCoord;
-            varying vec2 v_TexCoord;
-            void main() {
-                gl_Position = a_Position;
-                v_TexCoord = a_TexCoord;
-            }
-        """
+        private const val TAG = "BackgroundRenderer"
 
-        private const val FRAGMENT_SHADER_CODE = """
-            #extension GL_OES_EGL_image_external : require
-            precision mediump float;
-            varying vec2 v_TexCoord;
-            uniform samplerExternalOES u_Texture;
-            void main() {
-                gl_FragColor = texture2D(u_Texture, v_TexCoord);
-            }
-        """
+        private const val VERTEX_SHADER_CODE =
+            "attribute vec4 a_Position;\n" +
+            "attribute vec2 a_TexCoord;\n" +
+            "varying vec2 v_TexCoord;\n" +
+            "void main() {\n" +
+            "    gl_Position = a_Position;\n" +
+            "    v_TexCoord = a_TexCoord;\n" +
+            "}\n"
+
+        private const val FRAGMENT_SHADER_CODE =
+            "#extension GL_OES_EGL_image_external : require\n" +
+            "precision mediump float;\n" +
+            "varying vec2 v_TexCoord;\n" +
+            "uniform samplerExternalOES sTexture;\n" +
+            "void main() {\n" +
+            "    gl_FragColor = texture2D(sTexture, v_TexCoord);\n" +
+            "}\n"
     }
 }

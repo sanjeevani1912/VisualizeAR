@@ -5,6 +5,11 @@
     <!-- ARCore requires camera access to capture environmental feed and track planes -->
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- Legacy storage write permission for Android <= 9 (API 28); modern Android 10+ uses Scoped Storage via MediaStore -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
     <!-- AR Optional: allows the app to be installed on non-AR devices for 2D planning -->
     <uses-feature
         android:name="android.hardware.camera.ar"
@@ -18,6 +23,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:requestLegacyExternalStorage="true"
         android:theme="@style/Theme.DhruvAR">
 
         <!-- Indicates that this application uses ARCore optionally -->

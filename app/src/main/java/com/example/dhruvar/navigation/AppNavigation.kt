@@ -51,7 +51,7 @@ fun AppNavigation(
                     navController.popBackStack()
                 },
                 onNavigateToVisualization = {
-                    navController.navigate(Screen.Visualization.route)
+                    navController.navigate(Screen.ARVisualization.route)
                 },
                 viewModel = planningViewModel
             )
@@ -73,7 +73,8 @@ fun AppNavigation(
             ARVisualizationScreen(
                 onNavigateBack = {
                     navController.popBackStack()
-                }
+                },
+                viewModel = planningViewModel
             )
         }
     }

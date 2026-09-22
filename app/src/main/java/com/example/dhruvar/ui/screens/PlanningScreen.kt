@@ -70,6 +70,7 @@ fun PlanningScreen(
 
     // Save/Rename Dialog state
     var showSaveDialog by remember { mutableStateOf(false) }
+    var showSaveBeforeVisualizeDialog by remember { mutableStateOf(false) }
     var layoutNameInput by remember { mutableStateOf("") }
 
     // Handle user feedback messages (save confirmation, error, etc.)
@@ -120,6 +121,43 @@ fun PlanningScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showSaveDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Save Before Visualize Dialog (prevents silent discard of changes)
+    if (showSaveBeforeVisualizeDialog) {
+        AlertDialog(
+            onDismissRequest = { showSaveBeforeVisualizeDialog = false },
+            title = {
+                Text(
+                    text = "Save Before AR Visualization",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = "This layout has unsaved tactical modifications. Would you like to save before opening AR visualization?",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val finalName = uiState.currentLayout.name.ifBlank { "Tactical Plan" }
+                        viewModel.saveCurrentLayout(finalName)
+                        showSaveBeforeVisualizeDialog = false
+                        onNavigateToVisualization()
+                    }
+                ) {
+                    Text("Save & Visualize", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveBeforeVisualizeDialog = false }) {
                     Text("Cancel")
                 }
             }
@@ -383,7 +421,21 @@ fun PlanningScreen(
                 PrimaryButton(
                     text = "VISUALIZE",
                     icon = Icons.Default.ViewInAr,
-                    onClick = onNavigateToVisualization
+                    onClick = {
+                        if (uiState.hasUnsavedChanges) {
+                            if (uiState.isPersisted) {
+                                viewModel.saveCurrentLayout()
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Layout '${uiState.currentLayout.name}' saved automatically")
+                                }
+                                onNavigateToVisualization()
+                            } else {
+                                showSaveBeforeVisualizeDialog = true
+                            }
+                        } else {
+                            onNavigateToVisualization()
+                        }
+                    }
                 )
             }
         }
