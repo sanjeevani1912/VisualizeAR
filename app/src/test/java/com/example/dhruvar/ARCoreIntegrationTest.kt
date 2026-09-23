@@ -20,7 +20,6 @@ class ARCoreIntegrationTest {
     fun navigationRoutes_containARVisualizationRoute() {
         assertEquals("home", Screen.Home.route)
         assertEquals("planning", Screen.Planning.route)
-        assertEquals("visualization", Screen.Visualization.route)
         assertEquals("ar_visualization", Screen.ARVisualization.route)
     }
 

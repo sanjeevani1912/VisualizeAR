@@ -6,6 +6,5 @@ package com.example.dhruvar.navigation
 sealed class Screen(val route: String) {
     data object Home : Screen("home")
     data object Planning : Screen("planning")
-    data object Visualization : Screen("visualization")
     data object ARVisualization : Screen("ar_visualization")
 }

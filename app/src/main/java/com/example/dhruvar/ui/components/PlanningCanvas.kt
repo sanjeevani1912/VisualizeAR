@@ -273,6 +273,33 @@ fun PlanningCanvas(
 
         // --- HUD OVERLAYS ---
 
+        // Empty canvas guidance
+        if (layout.objects.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "No objects placed",
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                    )
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Select an asset below, then tap the canvas to place it.",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontFamily = FontFamily.Default
+                    ),
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+            }
+        }
+
         // 1. Top-Left: Tactical Coordinate & Zoom Status Readout
         TacticalHudCard(
             transformer = transformer,

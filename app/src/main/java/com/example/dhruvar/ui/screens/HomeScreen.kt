@@ -177,7 +177,7 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "DHRUV AR"
+                title = "Suraksha AR Planner"
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -193,10 +193,10 @@ fun HomeScreen(
         ) {
             // Header Section
             Text(
-                text = "DHRUV AR",
+                text = "Suraksha AR Planner",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp
+                    letterSpacing = 1.sp
                 ),
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -210,7 +210,7 @@ fun HomeScreen(
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Create a layout, position assets, and visualize the plan in AR.",
+                text = "Create a plan, position assets, and visualize it in AR — fully offline.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.secondary
             )
@@ -219,7 +219,7 @@ fun HomeScreen(
 
             // Primary Actions
             PrimaryButton(
-                text = "Create New Layout",
+                text = "Create New Plan",
                 icon = Icons.Default.Add,
                 onClick = onCreateNewLayout
             )
@@ -241,14 +241,14 @@ fun HomeScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.FolderOpen,
-                        contentDescription = null
+                        contentDescription = "Open most recent plan"
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = if (uiState.savedLayouts.isNotEmpty()) {
-                            "Open Most Recent Layout"
+                            "Open Most Recent Plan"
                         } else {
-                            "Open Layout (None Saved)"
+                            "No Plans Saved Yet"
                         },
                         style = MaterialTheme.typography.labelLarge
                     )
@@ -303,7 +303,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "RECENT LAYOUTS",
+                    text = "RECENT PLANS",
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.2.sp,
@@ -322,7 +322,30 @@ fun HomeScreen(
             }
             Spacer(modifier = Modifier.height(10.dp))
 
-            if (uiState.savedLayouts.isEmpty()) {
+            if (uiState.isLoadingSavedLayouts) {
+                Card(
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 28.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier = Modifier.size(28.dp),
+                            strokeWidth = 3.dp,
+                            color = PrecisionBlue
+                        )
+                    }
+                }
+            } else if (uiState.savedLayouts.isEmpty()) {
                 Card(
                     shape = RoundedCornerShape(8.dp),
                     colors = CardDefaults.cardColors(
@@ -339,7 +362,7 @@ fun HomeScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No saved layouts yet\nTap 'Create New Layout' to begin.",
+                            text = "No saved plans yet.\nTap 'Create New Plan' to begin.",
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 color = MaterialTheme.colorScheme.secondary,
                                 lineHeight = 20.sp

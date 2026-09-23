@@ -65,7 +65,7 @@ class PlanningArchitectureTest {
 
         assertNotNull(state.currentLayout)
         assertNotNull(state.currentLayout.anchor)
-        assertTrue(state.currentLayout.objects.isNotEmpty())
+        assertTrue(state.currentLayout.objects.isEmpty())
         assertEquals(AssetType.TENT, state.selectedAssetType)
     }
 
@@ -97,6 +97,8 @@ class PlanningArchitectureTest {
     @Test
     fun planningViewModel_selectObject_marksTargetObjectAsSelected() {
         val viewModel = PlanningViewModel()
+        viewModel.selectAssetType(AssetType.TENT)
+        viewModel.addAssetAt(xMeters = 2.0f, zMeters = 2.0f)
         val targetObjId = viewModel.uiState.value.currentLayout.objects.first().id
 
         viewModel.selectObject(targetObjId)

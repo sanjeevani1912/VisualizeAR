@@ -606,7 +606,34 @@ fun ARVisualizationScreen(
                     }
 
                     // 4.5 Tactical HUD Overlay Controls & Selected Object Inspector
-                    if (!isCapturing) {
+                    if (isCapturing) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xEE0F172A))
+                                .border(1.dp, PrecisionBlue, RoundedCornerShape(10.dp))
+                                .padding(horizontal = 20.dp, vertical = 14.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = PrecisionBlue
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = "Capturing…",
+                                    style = TextStyle(
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                )
+                            }
+                        }
+                    } else {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -750,7 +777,7 @@ fun ARVisualizationScreen(
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
                                             Text(
-                                                text = "Layout has 0 assets. Go Back to 2D Planner to add assets.",
+                                                text = "No objects placed. Go back to the 2D planner to add assets.",
                                                 style = TextStyle(
                                                     fontFamily = FontFamily.Monospace,
                                                     fontSize = 9.5.sp,
@@ -1194,7 +1221,7 @@ fun ARVisualizationScreen(
                                             )
                                             isSavingImage = false
                                             saveResult.onSuccess {
-                                                captureFeedbackMessage = "Visualization saved to Pictures/DhruvAR"
+                                                captureFeedbackMessage = "Visualization saved to Pictures/SurakshaAR"
                                                 showPreviewDialog = false
                                                 capturedBitmap = null
                                             }.onFailure { err ->

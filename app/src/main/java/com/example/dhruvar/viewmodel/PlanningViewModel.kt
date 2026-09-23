@@ -20,24 +20,7 @@ import kotlinx.coroutines.launch
  * UI State for the 2D Top-Down Planning Canvas and persistence lifecycle.
  */
 data class PlanningUiState(
-    val currentLayout: Layout = Layout(
-        objects = listOf(
-            LayoutObject(
-                assetType = AssetType.TENT,
-                name = "Command Tent",
-                x = 4.0f,
-                z = 3.0f,
-                rotationDegrees = 45.0f
-            ),
-            LayoutObject(
-                assetType = AssetType.TRUCK,
-                name = "Logistics Truck",
-                x = -5.0f,
-                z = -2.5f,
-                rotationDegrees = 180.0f
-            )
-        )
-    ),
+    val currentLayout: Layout = Layout(),
     val selectedAssetType: AssetType = AssetType.TENT,
     val selectedObjectId: String? = null,
     val gridScaleMeters: Float = 1.0f,
@@ -53,7 +36,8 @@ data class PlanningUiState(
     val isPersisted: Boolean = false,
     val savedLayouts: List<Layout> = emptyList(),
     val lastSavedTimestamp: Long? = null,
-    val userFeedbackMessage: String? = null
+    val userFeedbackMessage: String? = null,
+    val isLoadingSavedLayouts: Boolean = false
 ) {
     /**
      * Currently selected [LayoutObject], or null if no object is selected.
@@ -93,7 +77,12 @@ class PlanningViewModel(
     fun loadSavedLayouts() {
         try {
             viewModelScope.launch {
-                loadSavedLayoutsDirect()
+                _uiState.update { it.copy(isLoadingSavedLayouts = true) }
+                try {
+                    loadSavedLayoutsDirect()
+                } finally {
+                    _uiState.update { it.copy(isLoadingSavedLayouts = false) }
+                }
             }
         } catch (_: Throwable) {
             // Main dispatcher may be absent in pure JUnit environments

@@ -11,14 +11,12 @@ import com.example.dhruvar.domain.model.Layout
 import com.example.dhruvar.ui.screens.ARVisualizationScreen
 import com.example.dhruvar.ui.screens.HomeScreen
 import com.example.dhruvar.ui.screens.PlanningScreen
-import com.example.dhruvar.ui.screens.VisualizationScreen
 import com.example.dhruvar.viewmodel.PlanningViewModel
 
 /**
  * Top-level application navigation graph.
  *
- * Establishes the decoupled flow:
- * Home -> Planning -> Visualization -> AR Visualization
+ * Flow: Home -> Planning -> AR Visualization
  */
 @Composable
 fun AppNavigation(
@@ -51,18 +49,6 @@ fun AppNavigation(
                     navController.popBackStack()
                 },
                 onNavigateToVisualization = {
-                    navController.navigate(Screen.ARVisualization.route)
-                },
-                viewModel = planningViewModel
-            )
-        }
-
-        composable(Screen.Visualization.route) {
-            VisualizationScreen(
-                onNavigateBackToPlanning = {
-                    navController.popBackStack()
-                },
-                onNavigateToAR = {
                     navController.navigate(Screen.ARVisualization.route)
                 },
                 viewModel = planningViewModel

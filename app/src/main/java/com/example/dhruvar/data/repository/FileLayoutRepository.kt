@@ -1,5 +1,6 @@
 package com.example.dhruvar.data.repository
 
+import android.util.Log
 import com.example.dhruvar.data.model.LayoutJsonSerializer
 import com.example.dhruvar.domain.model.Layout
 import kotlinx.coroutines.Dispatchers
@@ -41,7 +42,7 @@ class FileLayoutRepository(
                 val layout = LayoutJsonSerializer.deserialize(json)
                 layouts.add(layout)
             } catch (e: Exception) {
-                System.err.println("FileLayoutRepository: skipping corrupted file ${file.name}: ${e.message}")
+                logWarn("Skipping corrupted file ${file.name}: ${e.message}")
             }
         }
         layouts.sortedByDescending { it.updatedAtEpochMs }
@@ -55,7 +56,7 @@ class FileLayoutRepository(
             val json = file.readText(Charsets.UTF_8)
             LayoutJsonSerializer.deserialize(json)
         } catch (e: Exception) {
-            System.err.println("FileLayoutRepository: failed to read layout $id: ${e.message}")
+            logWarn("Failed to read layout $id: ${e.message}")
             null
         }
     }
@@ -83,7 +84,7 @@ class FileLayoutRepository(
             }
             true
         } catch (e: Exception) {
-            System.err.println("FileLayoutRepository: error saving layout ${layout.id}: ${e.message}")
+            logWarn("Error saving layout ${layout.id}: ${e.message}")
             false
         }
     }
@@ -101,7 +102,7 @@ class FileLayoutRepository(
                 false
             }
         } catch (e: Exception) {
-            System.err.println("FileLayoutRepository: error deleting layout $id: ${e.message}")
+            logWarn("Error deleting layout $id: ${e.message}")
             false
         }
     }
@@ -114,5 +115,18 @@ class FileLayoutRepository(
         )
         val success = saveLayout(updated)
         if (success) updated else null
+    }
+
+    companion object {
+        private const val TAG = "FileLayoutRepository"
+
+        private fun logWarn(message: String) {
+            try {
+                Log.w(TAG, message)
+            } catch (_: Throwable) {
+                // Android Log is unavailable in plain JVM unit tests
+                System.err.println("$TAG: $message")
+            }
+        }
     }
 }

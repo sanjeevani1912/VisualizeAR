@@ -43,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,6 +52,8 @@ import com.example.dhruvar.ui.components.AssetLibraryBar
 import com.example.dhruvar.ui.components.PlanningCanvas
 import com.example.dhruvar.ui.components.PrimaryButton
 import com.example.dhruvar.ui.components.SelectedObjectCard
+import com.example.dhruvar.ui.theme.TacticalAmber
+import com.example.dhruvar.ui.theme.TacticalGreen
 import com.example.dhruvar.viewmodel.PlanningViewModel
 import kotlinx.coroutines.launch
 
@@ -167,7 +168,7 @@ fun PlanningScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "DHRUV AR",
+                title = "Suraksha AR Planner",
                 onNavigateBack = onNavigateBack,
                 actions = {
                     // Quick Save Button
@@ -281,8 +282,8 @@ fun PlanningScreen(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(Color(0xFFE65100).copy(alpha = 0.15f))
-                                .border(1.dp, Color(0xFFE65100), RoundedCornerShape(4.dp))
+                                .background(TacticalAmber.copy(alpha = 0.15f))
+                                .border(1.dp, TacticalAmber, RoundedCornerShape(4.dp))
                                 .padding(horizontal = 5.dp, vertical = 1.dp)
                         ) {
                             Text(
@@ -290,7 +291,7 @@ fun PlanningScreen(
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 9.sp,
-                                    color = Color(0xFFFFB74D)
+                                    color = TacticalAmber
                                 )
                             )
                         }
@@ -299,8 +300,8 @@ fun PlanningScreen(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(Color(0xFF2E7D32).copy(alpha = 0.15f))
-                                .border(1.dp, Color(0xFF4CAF50), RoundedCornerShape(4.dp))
+                                .background(TacticalGreen.copy(alpha = 0.15f))
+                                .border(1.dp, TacticalGreen, RoundedCornerShape(4.dp))
                                 .padding(horizontal = 5.dp, vertical = 1.dp)
                         ) {
                             Text(
@@ -308,7 +309,7 @@ fun PlanningScreen(
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 9.sp,
-                                    color = Color(0xFF81C784)
+                                    color = TacticalGreen
                                 )
                             )
                         }
@@ -419,7 +420,7 @@ fun PlanningScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 PrimaryButton(
-                    text = "VISUALIZE",
+                    text = "Visualize in AR",
                     icon = Icons.Default.ViewInAr,
                     onClick = {
                         if (uiState.hasUnsavedChanges) {
