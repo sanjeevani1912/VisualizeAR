@@ -29,8 +29,8 @@ class ARWorkflowV13Test {
         val fileName = ARCaptureManager.buildImageFileName(metadata)
 
         // Special characters and spaces replaced by underscores
-        assertEquals("SURAKSHA_Forward_Base_Alpha___Sector__4_1726912345678.jpg", fileName)
-        assertTrue(fileName.startsWith("SURAKSHA_"))
+        assertEquals("DHRUV_Forward_Base_Alpha___Sector__4_1726912345678.jpg", fileName)
+        assertTrue(fileName.startsWith("DHRUV_"))
         assertTrue(fileName.endsWith(".jpg"))
         assertFalse(fileName.contains("/"))
         assertFalse(fileName.contains("#"))
@@ -47,12 +47,12 @@ class ARWorkflowV13Test {
         )
 
         val fileName = ARCaptureManager.buildImageFileName(metadataBlank)
-        assertEquals("SURAKSHA_Plan_1726912345000.jpg", fileName)
+        assertEquals("DHRUV_Plan_1726912345000.jpg", fileName)
     }
 
     @Test
     fun multipleCaptures_generateDistinctFilenamesWithoutOverwriting() {
-        val planName = "Operation Suraksha"
+        val planName = "Operation DhruvAR"
         val generatedNames = mutableSetOf<String>()
 
         // Simulate 10 sequential captures taken across time

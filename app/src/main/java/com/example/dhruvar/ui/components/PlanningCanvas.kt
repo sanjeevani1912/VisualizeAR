@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Straighten
@@ -28,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,6 +98,8 @@ fun PlanningCanvas(
     showDistances: Boolean = true,
     onToggleShowDistances: () -> Unit = {}
 ) {
+    val compassState by rememberCompassState()
+
     val isDark = MaterialTheme.colorScheme.background == Slate900
     val gridColor = if (isDark) Slate800 else Slate300
     val axisColor = if (isDark) Slate700 else Slate400
@@ -125,35 +127,51 @@ fun PlanningCanvas(
 
         val textMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
 
+        // Keep latest transform/objects in refs so pointerInput does NOT restart when
+        // asset positions update mid-drag (restarting would cancel the gesture).
+        val gestureRefs = remember {
+            object {
+                var transformer: CoordinateTransformer = transformer
+                var objects: List<LayoutObject> = layout.objects
+                var selectedObjectId: String? = selectedObjectId
+            }
+        }
+        gestureRefs.transformer = transformer
+        gestureRefs.objects = layout.objects
+        gestureRefs.selectedObjectId = selectedObjectId
+
         // Unified Multi-Mode Gesture Handler
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(layout.objects, transformer, selectedObjectId) {
+                .pointerInput(Unit) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
                         var isMultiTouch = false
                         var isDraggingObject = false
-                        var hitObject: LayoutObject? = null
+                        var draggedObjectId: String? = null
                         var grabOffsetX = 0f
                         var grabOffsetZ = 0f
                         var totalDragDistance = 0f
                         var lastSinglePointerPos = down.position
 
-                        // Test if touch started on an existing placed object
+                        val startTransformer = gestureRefs.transformer
+                        val startObjects = gestureRefs.objects
+
+                        // Hit-test: asset under finger → drag; empty canvas → pan
                         val initialHit = ObjectHitTester.findHitObject(
                             tapOffset = down.position,
-                            objects = layout.objects,
-                            transformer = transformer
+                            objects = startObjects,
+                            transformer = startTransformer
                         )
 
                         if (initialHit != null) {
-                            hitObject = initialHit
+                            draggedObjectId = initialHit.id
                             isDraggingObject = true
                             onObjectSelected(initialHit.id)
 
-                            // Preserve initial grab offset in logical meters
-                            val (touchWorldX, touchWorldZ) = transformer.canvasToWorld(down.position)
+                            // World-space grab offset so the touch point stays under the finger
+                            val (touchWorldX, touchWorldZ) = startTransformer.canvasToWorld(down.position)
                             grabOffsetX = touchWorldX - initialHit.x
                             grabOffsetZ = touchWorldZ - initialHit.z
                         }
@@ -164,11 +182,13 @@ fun PlanningCanvas(
                         do {
                             val event = awaitPointerEvent()
                             val activePointers = event.changes.filter { it.pressed }
+                            val liveTransformer = gestureRefs.transformer
 
                             if (activePointers.size >= 2) {
-                                // Multi-touch: Viewport Pinch-Zoom and Pan
+                                // Multi-touch: pinch-zoom / two-finger pan (cancels asset drag)
                                 isMultiTouch = true
                                 isDraggingObject = false
+                                draggedObjectId = null
 
                                 val p1 = activePointers[0].position
                                 val p2 = activePointers[1].position
@@ -189,25 +209,25 @@ fun PlanningCanvas(
                                 prevCentroid = currentCentroid
                                 event.changes.forEach { it.consume() }
                             } else if (activePointers.size == 1 && !isMultiTouch) {
-                                // Single pointer: Drag Object or Pan Canvas
                                 val pointer = activePointers.first()
                                 val moveDelta = pointer.position - lastSinglePointerPos
                                 totalDragDistance += moveDelta.getDistance()
                                 lastSinglePointerPos = pointer.position
 
-                                if (isDraggingObject && hitObject != null) {
-                                    // Direct object dragging with grab-offset compensation
-                                    val (curWorldX, curWorldZ) = transformer.canvasToWorld(pointer.position)
+                                val dragId = draggedObjectId
+                                if (isDraggingObject && dragId != null) {
+                                    // Screen → world via live transformer (respects current zoom/pan)
+                                    val (curWorldX, curWorldZ) = liveTransformer.canvasToWorld(pointer.position)
                                     val newX = curWorldX - grabOffsetX
                                     val newZ = curWorldZ - grabOffsetZ
-                                    onMoveObject(hitObject.id, newX, newZ)
+                                    onMoveObject(dragId, newX, newZ)
                                     onCursorMoved(newX, newZ)
                                     pointer.consume()
-                                } else if (hitObject == null) {
-                                    // Canvas panning when touch started on empty canvas
+                                } else if (draggedObjectId == null) {
+                                    // Empty-canvas pan
                                     if (totalDragDistance > 6f) {
                                         onPan(moveDelta)
-                                        val (curX, curZ) = transformer.canvasToWorld(pointer.position)
+                                        val (curX, curZ) = liveTransformer.canvasToWorld(pointer.position)
                                         onCursorMoved(curX, curZ)
                                         pointer.consume()
                                     }
@@ -215,13 +235,13 @@ fun PlanningCanvas(
                             }
                         } while (event.changes.any { it.pressed })
 
-                        // Gesture Completed: Check if this was a Tap (minimal drag distance)
+                        // Tap (minimal movement): select / deselect
                         if (!isMultiTouch && totalDragDistance < 8f) {
-                            if (hitObject != null) {
-                                onObjectSelected(hitObject.id)
+                            if (draggedObjectId != null) {
+                                onObjectSelected(draggedObjectId)
                             } else {
-                                val (tapX, tapZ) = transformer.canvasToWorld(down.position)
-                                if (selectedObjectId != null) {
+                                val (tapX, tapZ) = gestureRefs.transformer.canvasToWorld(down.position)
+                                if (gestureRefs.selectedObjectId != null) {
                                     onDeselect()
                                 } else {
                                     onCanvasTapped(tapX, tapZ)
@@ -290,7 +310,7 @@ fun PlanningCanvas(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Select an asset below, then tap the canvas to place it.",
+                    text = "Tap + to choose an asset and place it on the canvas.",
                     style = MaterialTheme.typography.bodySmall.copy(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontFamily = FontFamily.Default
@@ -309,8 +329,10 @@ fun PlanningCanvas(
                 .padding(10.dp)
         )
 
-        // 2. Top-Right: North Orientation Indicator
-        NorthOrientationIndicator(
+        // 2. Top-Right: Live magnetic compass (device orientation reference)
+        // Does not rotate the planning canvas coordinate system.
+        DeviceCompassWidget(
+            compassState = compassState,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(10.dp)
@@ -327,7 +349,8 @@ fun PlanningCanvas(
                 .padding(10.dp)
         )
 
-        // 4. Bottom-Right: Viewport Zoom & Reset Floating Controls
+        // 4. Bottom-Left: Viewport Zoom & Reset Floating Controls
+        // (Bottom-right reserved for the Add Asset FAB on PlanningScreen)
         ViewportControlsWidget(
             onZoomIn = onZoomIn,
             onZoomOut = onZoomOut,
@@ -335,7 +358,7 @@ fun PlanningCanvas(
             showDistances = showDistances,
             onToggleShowDistances = onToggleShowDistances,
             modifier = Modifier
-                .align(Alignment.BottomEnd)
+                .align(Alignment.BottomStart)
                 .padding(10.dp)
         )
     }
@@ -768,45 +791,6 @@ private fun TacticalHudCard(
                 style = TextStyle(
                     fontFamily = FontFamily.Monospace,
                     fontSize = 9.sp,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            )
-        }
-    }
-}
-
-@Composable
-private fun NorthOrientationIndicator(modifier: Modifier = Modifier) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
-        shape = RoundedCornerShape(6.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        modifier = modifier
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-        ) {
-            Text(
-                text = "N",
-                style = TextStyle(
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                    color = PrecisionBlue
-                )
-            )
-            Icon(
-                imageVector = Icons.Default.Navigation,
-                contentDescription = "North Indicator",
-                tint = PrecisionBlue,
-                modifier = Modifier.size(16.dp)
-            )
-            Text(
-                text = "+Z",
-                style = TextStyle(
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 8.sp,
                     color = MaterialTheme.colorScheme.secondary
                 )
             )

@@ -3,6 +3,7 @@ package com.example.dhruvar.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -43,19 +44,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.dhruvar.domain.spatial.CoordinateTransformer
 import com.example.dhruvar.ui.components.AppTopBar
-import com.example.dhruvar.ui.components.AssetLibraryBar
+import com.example.dhruvar.ui.components.FloatingAssetPickerOverlay
 import com.example.dhruvar.ui.components.PlanningCanvas
 import com.example.dhruvar.ui.components.PrimaryButton
-import com.example.dhruvar.ui.components.SelectedObjectCard
+import com.example.dhruvar.ui.components.SelectedObjectEditorOverlay
 import com.example.dhruvar.ui.theme.TacticalAmber
 import com.example.dhruvar.ui.theme.TacticalGreen
 import com.example.dhruvar.viewmodel.PlanningViewModel
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @Composable
 fun PlanningScreen(
@@ -68,11 +73,20 @@ fun PlanningScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var showMenu by remember { mutableStateOf(false) }
+    var isAssetMenuOpen by remember { mutableStateOf(false) }
+    var isPropertyEditorMinimized by remember { mutableStateOf(false) }
 
     // Save/Rename Dialog state
     var showSaveDialog by remember { mutableStateOf(false) }
     var showSaveBeforeVisualizeDialog by remember { mutableStateOf(false) }
     var layoutNameInput by remember { mutableStateOf("") }
+
+    // Reset minimized flag when selection changes / clears
+    LaunchedEffect(uiState.selectedObjectId) {
+        if (uiState.selectedObjectId == null) {
+            isPropertyEditorMinimized = false
+        }
+    }
 
     // Handle user feedback messages (save confirmation, error, etc.)
     LaunchedEffect(uiState.userFeedbackMessage) {
@@ -168,7 +182,7 @@ fun PlanningScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Suraksha AR Planner",
+                title = "DhruvAR",
                 onNavigateBack = onNavigateBack,
                 actions = {
                     // Quick Save Button
@@ -343,12 +357,16 @@ fun PlanningScreen(
             }
 
             // 1. 2D Top-Down Planning Canvas Area (takes majority of screen)
-            Box(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .padding(horizontal = 12.dp, vertical = 4.dp)
             ) {
+                val density = LocalDensity.current
+                val viewportWidthPx = with(density) { maxWidth.toPx() }
+                val viewportHeightPx = with(density) { maxHeight.toPx() }
+
                 PlanningCanvas(
                     layout = uiState.currentLayout,
                     panOffset = uiState.panOffset,
@@ -362,12 +380,11 @@ fun PlanningScreen(
                     onResetView = { viewModel.resetView() },
                     onCursorMoved = { x, z -> viewModel.updateCursorCoordinates(x, z) },
                     onCursorCleared = { viewModel.clearCursorCoordinates() },
-                    onCanvasTapped = { xMeters, zMeters ->
-                        // Snap tap coordinates to nearest 0.5m for clean tactical placement
-                        viewModel.addAssetAt(
-                            xMeters = (Math.round(xMeters * 2f) / 2f),
-                            zMeters = (Math.round(zMeters * 2f) / 2f)
-                        )
+                    onCanvasTapped = { _, _ ->
+                        // Placement is handled by the floating asset menu (+)
+                        if (uiState.selectedObjectId != null) {
+                            viewModel.deselectObject()
+                        }
                     },
                     onObjectSelected = { objectId ->
                         viewModel.selectObject(objectId)
@@ -382,38 +399,54 @@ fun PlanningScreen(
                     showDistances = uiState.showDistances,
                     onToggleShowDistances = { viewModel.toggleShowDistances() }
                 )
+
+                FloatingAssetPickerOverlay(
+                    isOpen = isAssetMenuOpen,
+                    onToggle = { isAssetMenuOpen = !isAssetMenuOpen },
+                    onDismiss = { isAssetMenuOpen = false },
+                    onAssetChosen = { assetType ->
+                        val transformer = CoordinateTransformer(
+                            viewportWidth = viewportWidthPx,
+                            viewportHeight = viewportHeightPx,
+                            panOffset = uiState.panOffset,
+                            zoom = uiState.zoom,
+                            basePixelsPerMeter = uiState.basePixelsPerMeter
+                        )
+                        // Place at the currently visible canvas center (preserves pan/zoom)
+                        val (worldX, worldZ) = transformer.canvasToWorld(
+                            Offset(viewportWidthPx / 2f, viewportHeightPx / 2f)
+                        )
+                        val snappedX = (worldX * 2f).roundToInt() / 2f
+                        val snappedZ = (worldZ * 2f).roundToInt() / 2f
+                        viewModel.addAssetOfType(assetType, snappedX, snappedZ)
+                        isAssetMenuOpen = false
+                        isPropertyEditorMinimized = false
+                    }
+                )
+
+                // Translucent property editor — canvas stays visible behind/around it
+                SelectedObjectEditorOverlay(
+                    selectedObject = uiState.selectedObject,
+                    isMinimized = isPropertyEditorMinimized,
+                    onMinimizedChange = { isPropertyEditorMinimized = it },
+                    viewportWidthPx = viewportWidthPx,
+                    viewportHeightPx = viewportHeightPx,
+                    panOffset = uiState.panOffset,
+                    zoom = uiState.zoom,
+                    basePixelsPerMeter = uiState.basePixelsPerMeter,
+                    onDelete = { viewModel.deleteSelectedObject() },
+                    onDeselect = { viewModel.deselectObject() },
+                    onDuplicate = { viewModel.duplicateSelectedObject() },
+                    onRotate = { delta -> viewModel.rotateSelectedObject(delta) },
+                    onSetRotation = { degrees -> viewModel.setSelectedObjectRotation(degrees) },
+                    onUpdatePosition = { x, z -> viewModel.updateSelectedObjectPosition(x, z) },
+                    onUpdateDimensions = { w, l, h ->
+                        viewModel.updateSelectedObjectDimensions(w, l, h)
+                    }
+                )
             }
 
-            // 2. Selected Object Property Inspector (displays when an object is selected)
-            uiState.selectedObject?.let { selectedObj ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 4.dp)
-                ) {
-                    SelectedObjectCard(
-                        selectedObject = selectedObj,
-                        onDelete = { viewModel.deleteSelectedObject() },
-                        onDeselect = { viewModel.deselectObject() },
-                        onDuplicate = { viewModel.duplicateSelectedObject() },
-                        onRotate = { delta -> viewModel.rotateSelectedObject(delta) },
-                        onSetRotation = { degrees -> viewModel.setSelectedObjectRotation(degrees) },
-                        onUpdatePosition = { x, z -> viewModel.updateSelectedObjectPosition(x, z) },
-                        onUpdateDimensions = { w, l -> viewModel.updateSelectedObjectDimensions(w, l) }
-                    )
-                }
-            }
-
-            // 3. Asset Library (docked bottom picker)
-            AssetLibraryBar(
-                selectedAssetType = uiState.selectedAssetType,
-                onAssetSelected = { assetType ->
-                    viewModel.selectAssetType(assetType)
-                    viewModel.deselectObject()
-                }
-            )
-
-            // 4. Primary Visualize in AR Action Button
+            // Primary Visualize in AR Action Button
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

@@ -357,12 +357,22 @@ class PlanningViewModel(
         moveObject(selectedId, newX, newZ)
     }
 
-    fun updateObjectDimensions(objectId: String, newWidth: Float, newLength: Float) {
+    fun updateObjectDimensions(
+        objectId: String,
+        newWidth: Float,
+        newLength: Float,
+        newHeight: Float? = null
+    ) {
         if (newWidth <= 0f || newLength <= 0f) return
+        if (newHeight != null && newHeight <= 0f) return
         _uiState.update { state ->
             val updatedList = state.currentLayout.objects.map { obj ->
                 if (obj.id == objectId) {
-                    obj.withDimensions(newWidth = newWidth, newLength = newLength)
+                    obj.withDimensions(
+                        newWidth = newWidth,
+                        newLength = newLength,
+                        newHeight = newHeight ?: obj.heightMeters
+                    )
                 } else {
                     obj
                 }
@@ -377,9 +387,9 @@ class PlanningViewModel(
         }
     }
 
-    fun updateSelectedObjectDimensions(newWidth: Float, newLength: Float) {
+    fun updateSelectedObjectDimensions(newWidth: Float, newLength: Float, newHeight: Float? = null) {
         val selectedId = _uiState.value.selectedObjectId ?: return
-        updateObjectDimensions(selectedId, newWidth, newLength)
+        updateObjectDimensions(selectedId, newWidth, newLength, newHeight)
     }
 
     fun rotateObject(objectId: String, degreesDelta: Float) {
@@ -455,6 +465,35 @@ class PlanningViewModel(
                     updatedAtEpochMs = System.currentTimeMillis()
                 ),
                 selectedObjectId = duplicate.id
+            )
+        }
+    }
+
+    /**
+     * Selects [assetType] and places a new instance at the given metric coordinates.
+     * The new object becomes selected; existing objects are left in place.
+     */
+    fun addAssetOfType(assetType: AssetType, xMeters: Float, zMeters: Float) {
+        _uiState.update { state ->
+            val count = state.currentLayout.objects.count { it.assetType == assetType } + 1
+            val newObj = LayoutObject(
+                assetType = assetType,
+                name = "${assetType.displayName} $count",
+                x = xMeters,
+                z = zMeters,
+                rotationDegrees = 0.0f,
+                scale = 1.0f,
+                isSelected = true
+            )
+            val updatedList = state.currentLayout.objects.map { it.copy(isSelected = false) } + newObj
+            state.copy(
+                selectedAssetType = assetType,
+                hasUnsavedChanges = true,
+                currentLayout = state.currentLayout.copy(
+                    objects = updatedList,
+                    updatedAtEpochMs = System.currentTimeMillis()
+                ),
+                selectedObjectId = newObj.id
             )
         }
     }

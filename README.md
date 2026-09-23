@@ -1,4 +1,4 @@
-# Suraksha AR Planner
+# DhruvAR
 
 Offline Android planning and AR visualization prototype.
 
@@ -102,7 +102,7 @@ Session ARCore anchors are **not** written into saved layouts. Re-open AR → ca
 ## Persistence
 
 - Layouts: app files dir `dhruvar_layouts/<id>.json` (atomic temp-file writes).
-- Captures: MediaStore `Pictures/SurakshaAR/` with timestamped filenames.
+- Captures: MediaStore `Pictures/DhruvAR/` with timestamped filenames.
 - No network APIs; no `INTERNET` permission.
 
 ## Project structure
@@ -134,7 +134,7 @@ app/src/main/java/com/example/dhruvar/
 - 3D assets are procedural placeholders (not final production GLB models).
 - AR visualization is approximate — not a surveying or measurement instrument.
 - Tracking can degrade in low light or low-feature environments.
-- Package id remains `com.example.dhruvar` (legacy module name).
+- Package id: `com.example.dhruvar`
 - No cloud sync, sharing, or multi-user collaboration.
 
 ## License / status

@@ -58,7 +58,7 @@ object ARCaptureManager {
      * Generates a non-colliding, timestamped image file name for the given [metadata].
      */
     fun buildImageFileName(metadata: CaptureMetadata): String {
-        return "SURAKSHA_${metadata.sanitizedLayoutName}_${metadata.timestampMillis}.jpg"
+        return "DHRUV_${metadata.sanitizedLayoutName}_${metadata.timestampMillis}.jpg"
     }
 
     /**
@@ -166,7 +166,7 @@ object ARCaptureManager {
             textSize = 28f
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
         }
-        canvas.drawText("SURAKSHA AR  •  PLAN: ${metadata.layoutName.uppercase()}", 24f, 44f, titlePaint)
+        canvas.drawText("DhruvAR  •  PLAN: ${metadata.layoutName.uppercase()}", 24f, 44f, titlePaint)
 
         val metaPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.argb(240, 203, 213, 225)
@@ -299,7 +299,7 @@ object ARCaptureManager {
                 put(MediaStore.Images.Media.DATE_ADDED, metadata.timestampMillis / 1000)
                 put(MediaStore.Images.Media.DATE_TAKEN, metadata.timestampMillis)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/SurakshaAR")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/DhruvAR")
                     put(MediaStore.Images.Media.IS_PENDING, 1)
                 }
             }

@@ -1221,7 +1221,7 @@ fun ARVisualizationScreen(
                                             )
                                             isSavingImage = false
                                             saveResult.onSuccess {
-                                                captureFeedbackMessage = "Visualization saved to Pictures/SurakshaAR"
+                                                captureFeedbackMessage = "Visualization saved to Pictures/DhruvAR"
                                                 showPreviewDialog = false
                                                 capturedBitmap = null
                                             }.onFailure { err ->

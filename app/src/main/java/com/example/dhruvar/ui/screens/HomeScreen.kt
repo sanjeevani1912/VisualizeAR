@@ -177,7 +177,7 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Suraksha AR Planner"
+                title = "DhruvAR"
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -193,7 +193,7 @@ fun HomeScreen(
         ) {
             // Header Section
             Text(
-                text = "Suraksha AR Planner",
+                text = "DhruvAR",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.sp
