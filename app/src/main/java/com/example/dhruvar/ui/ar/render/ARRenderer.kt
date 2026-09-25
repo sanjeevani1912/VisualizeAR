@@ -24,6 +24,8 @@ import com.google.ar.core.exceptions.NotYetAvailableException
 import com.google.ar.core.exceptions.SessionPausedException
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
@@ -119,6 +121,13 @@ class ARRenderer(
     @Volatile
     private var currentCenterHit: HitResult? = null
 
+    /** Camera look direction on the ground plane, sampled each tracking frame. */
+    @Volatile
+    private var cameraForwardX = 0f
+
+    @Volatile
+    private var cameraForwardZ = 1f
+
     @Volatile
     private var latestFrame: com.google.ar.core.Frame? = null
 
@@ -182,6 +191,9 @@ class ARRenderer(
             val frame = currentSession.update()
             latestFrame = frame
             val camera = frame.camera
+            val lookAxis = camera.pose.zAxis
+            cameraForwardX = -lookAxis[0]
+            cameraForwardZ = -lookAxis[2]
 
             // 1. Draw live camera background feed
             backgroundRenderer.draw(frame)
@@ -476,12 +488,18 @@ class ARRenderer(
         return false
     }
 
-    fun setOriginAtCenterHit(): Boolean {
+    /**
+     * Places the planning origin on the ground and rotates it once so canvas north
+     * matches [magneticHeadingDegrees]. The anchor keeps that orientation afterwards.
+     */
+    fun setOriginAtCenterHit(magneticHeadingDegrees: Float): Boolean {
         val hit = currentCenterHit
         if (hit != null) {
             val plane = hit.trackable as? Plane
             if (plane != null) {
-                val newAnchor = plane.createAnchor(hit.hitPose)
+                val newAnchor = plane.createAnchor(
+                    northAlignedPose(hit.hitPose, magneticHeadingDegrees)
+                )
                 originAnchor?.detach()
                 originAnchor = newAnchor
                 mainHandler.post { onOriginCalibratedChanged(true) }
@@ -492,7 +510,9 @@ class ARRenderer(
         // Fallback: If center hit wasn't strictly acquired but ground planes exist, anchor to nearest plane center
         val fallbackPlane = latestHorizontalPlanes.firstOrNull()
         if (fallbackPlane != null) {
-            val newAnchor = fallbackPlane.createAnchor(fallbackPlane.centerPose)
+            val newAnchor = fallbackPlane.createAnchor(
+                northAlignedPose(fallbackPlane.centerPose, magneticHeadingDegrees)
+            )
             originAnchor?.detach()
             originAnchor = newAnchor
             mainHandler.post { onOriginCalibratedChanged(true) }
@@ -500,6 +520,18 @@ class ARRenderer(
         }
 
         return false
+    }
+
+    private fun northAlignedPose(sourcePose: Pose, magneticHeadingDegrees: Float): Pose {
+        val yaw = ARCoordinateTransformer.originYawDegreesForMagneticNorth(
+            cameraForwardX = cameraForwardX,
+            cameraForwardZ = cameraForwardZ,
+            magneticHeadingDegrees = magneticHeadingDegrees
+        )
+        val alpha = Math.toRadians((-yaw).toDouble()).toFloat()
+        val rotation = Pose.makeRotation(0f, sin(alpha / 2f), 0f, cos(alpha / 2f))
+        val translation = Pose.makeTranslation(sourcePose.tx(), sourcePose.ty(), sourcePose.tz())
+        return translation.compose(rotation)
     }
 
     fun resetOrigin() {

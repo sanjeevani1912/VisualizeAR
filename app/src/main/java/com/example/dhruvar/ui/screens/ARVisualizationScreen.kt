@@ -97,7 +97,9 @@ import com.example.dhruvar.ui.ar.render.ARObjectLabelProjection
 import com.example.dhruvar.ui.ar.render.AROriginLabelProjection
 import com.example.dhruvar.ui.ar.render.ARRenderer
 import com.example.dhruvar.ui.components.AppTopBar
+import com.example.dhruvar.ui.components.DeviceCompassWidget
 import com.example.dhruvar.ui.components.PrimaryButton
+import com.example.dhruvar.ui.components.rememberCompassState
 import com.example.dhruvar.ui.components.toIcon
 import com.example.dhruvar.ui.theme.AnchorOrange
 import com.example.dhruvar.ui.theme.PrecisionBlue
@@ -129,6 +131,7 @@ fun ARVisualizationScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val density = LocalDensity.current
     val uiState by viewModel.uiState.collectAsState()
+    val compassState by rememberCompassState()
 
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -426,6 +429,13 @@ fun ARVisualizationScreen(
                                     arRenderer.handleScreenTap(offset.x, offset.y)
                                 }
                             }
+                    )
+
+                    DeviceCompassWidget(
+                        compassState = compassState,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(10.dp)
                     )
 
                     // 4.1 Screen-Space Floating Object Labels (Billboarded above each 3D asset)
@@ -920,7 +930,9 @@ fun ARVisualizationScreen(
                                 if (!isOriginCalibrated) {
                                     // Set Planning Origin Action
                                     Button(
-                                        onClick = { arRenderer.setOriginAtCenterHit() },
+                                        onClick = {
+                                            arRenderer.setOriginAtCenterHit(compassState.magneticHeadingDegrees)
+                                        },
                                         enabled = canSetOrigin,
                                         shape = RoundedCornerShape(8.dp),
                                         colors = ButtonDefaults.buttonColors(

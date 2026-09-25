@@ -78,6 +78,51 @@ class ARCalibrationTest {
     }
 
     @Test
+    fun originYaw_alignsCanvasNorthToMagneticNorth() {
+        // Phone facing north, and the session's +Z already is that facing direction.
+        val yawFacingNorth = ARCoordinateTransformer.originYawDegreesForMagneticNorth(
+            cameraForwardX = 0f,
+            cameraForwardZ = 1f,
+            magneticHeadingDegrees = 0f
+        )
+        assertEquals(0f, yawFacingNorth, 0.001f)
+
+        // Phone facing north, but this session's camera-forward is +X. Canvas north must follow the phone.
+        val yawSessionRotated = ARCoordinateTransformer.originYawDegreesForMagneticNorth(
+            cameraForwardX = 1f,
+            cameraForwardZ = 0f,
+            magneticHeadingDegrees = 0f
+        )
+        val north = ARCoordinateTransformer.computeWorldPositionPure(
+            originX = 0f,
+            originY = 0f,
+            originZ = 0f,
+            originYawDegrees = yawSessionRotated,
+            planX = 0f,
+            planZ = 1f
+        )
+        assertEquals(1f, north[0], 0.001f)
+        assertEquals(0f, north[2], 0.001f)
+
+        // Phone facing east along session +Z. Canvas north is to the left of the camera.
+        val yawFacingEast = ARCoordinateTransformer.originYawDegreesForMagneticNorth(
+            cameraForwardX = 0f,
+            cameraForwardZ = 1f,
+            magneticHeadingDegrees = 90f
+        )
+        val northFromEast = ARCoordinateTransformer.computeWorldPositionPure(
+            originX = 0f,
+            originY = 0f,
+            originZ = 0f,
+            originYawDegrees = yawFacingEast,
+            planX = 0f,
+            planZ = 1f
+        )
+        assertEquals(-1f, northFromEast[0], 0.001f)
+        assertEquals(0f, northFromEast[2], 0.001f)
+    }
+
+    @Test
     fun rotationComposition_normalizesDegrees() {
         // Simple addition
         val r1 = ARCoordinateTransformer.computeWorldRotationDegrees(45.0f, 90.0f)

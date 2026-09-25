@@ -62,9 +62,94 @@ fun rememberCompassState(): State<CompassState> {
 }
 
 /**
- * Compact magnetic-north compass overlay for the planning canvas.
- * Dial rotates with device heading; fixed tip marker shows phone-forward.
- * Does not affect canvas pan/zoom/coordinates.
+ * Fixed north-up direction rose for the planning canvas.
+ * North is the top of the map, east is right. It does not follow the phone.
+ */
+@Composable
+fun FixedCardinalRose(
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f),
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 3.dp,
+        shadowElevation = 4.dp,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+        ),
+        modifier = modifier.semantics { contentDescription = "North up. East right, South down, West left." }
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(72.dp)
+            ) {
+                Canvas(modifier = Modifier.size(72.dp)) {
+                    val cx = size.width / 2f
+                    val cy = size.height / 2f
+                    val radius = size.minDimension / 2f - 3.dp.toPx()
+                    drawCircle(
+                        color = Color(0xFF334155),
+                        radius = radius,
+                        center = Offset(cx, cy),
+                        style = Stroke(width = 1.5.dp.toPx())
+                    )
+                    drawCardinalLabels(
+                        cx = cx,
+                        cy = cy,
+                        radius = radius - 10.dp.toPx()
+                    )
+                    val needleLen = radius - 14.dp.toPx()
+                    drawLine(
+                        color = AnchorOrange,
+                        start = Offset(cx, cy + 6.dp.toPx()),
+                        end = Offset(cx, cy - needleLen),
+                        strokeWidth = 2.5.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        color = Color(0xFF94A3B8),
+                        start = Offset(cx, cy),
+                        end = Offset(cx, cy + needleLen * 0.55f),
+                        strokeWidth = 2.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
+                    drawCircle(
+                        color = AnchorOrange,
+                        radius = 2.5.dp.toPx(),
+                        center = Offset(cx, cy)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "N",
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp,
+                    color = AnchorOrange
+                )
+            )
+            Text(
+                text = "NORTH UP",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 8.sp,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            )
+        }
+    }
+}
+
+/**
+ * Live magnetic-north compass for the AR visualization screen.
+ * Dial rotates with device heading; the fixed tip is the direction the phone faces.
  */
 @Composable
 fun DeviceCompassWidget(

@@ -1,6 +1,7 @@
 package com.example.dhruvar.domain.spatial
 
 import com.google.ar.core.Pose
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -106,6 +107,34 @@ object ARCoordinateTransformer {
             originY,
             originZ + (rotatedZ * METERS_PER_PLANNING_UNIT)
         )
+    }
+
+    /**
+     * Yaw to apply to the planning origin so canvas north (+Z, up on the map) points at
+     * magnetic north in the current ARCore session.
+     *
+     * [cameraForwardX] and [cameraForwardZ] are the camera look direction on the ground
+     * plane (ARCore: look direction is the pose's negative Z, projected to XZ).
+     * [magneticHeadingDegrees] is degrees clockwise from magnetic north to that same
+     * facing direction (0 = facing north).
+     *
+     * The result matches [computeWorldPositionPure]'s clockwise yaw: it is captured once
+     * at origin placement and then left fixed on the anchor.
+     */
+    fun originYawDegreesForMagneticNorth(
+        cameraForwardX: Float,
+        cameraForwardZ: Float,
+        magneticHeadingDegrees: Float
+    ): Float {
+        val magSq = cameraForwardX * cameraForwardX + cameraForwardZ * cameraForwardZ
+        if (magSq < 1e-6f) return 0f
+        val forwardAngleDeg = Math.toDegrees(
+            atan2(cameraForwardX.toDouble(), cameraForwardZ.toDouble())
+        ).toFloat()
+        var yaw = magneticHeadingDegrees - forwardAngleDeg
+        yaw %= 360f
+        if (yaw < 0f) yaw += 360f
+        return if (yaw >= 360f) 0f else yaw
     }
 
     /**

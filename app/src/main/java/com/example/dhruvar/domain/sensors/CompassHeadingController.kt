@@ -5,7 +5,9 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.hardware.display.DisplayManager
 import android.os.Build
+import android.view.Display
 import android.view.Surface
 import android.view.WindowManager
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -182,13 +184,24 @@ class CompassHeadingController(
         }
     }
 
+    /**
+     * Application Context is not display-associated: [Context.getDisplay] throws on API 30+.
+     * Use [DisplayManager] (works from any Context) with a safe fallback.
+     */
     @Suppress("DEPRECATION")
     private fun currentDisplayRotation(): Int {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            appContext.display?.rotation ?: Surface.ROTATION_0
-        } else {
-            val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-            wm.defaultDisplay.rotation
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val displayManager =
+                    appContext.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
+                displayManager?.getDisplay(Display.DEFAULT_DISPLAY)?.rotation
+                    ?: Surface.ROTATION_0
+            } else {
+                val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                wm.defaultDisplay.rotation
+            }
+        } catch (_: Throwable) {
+            Surface.ROTATION_0
         }
     }
 

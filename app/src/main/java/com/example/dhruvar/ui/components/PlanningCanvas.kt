@@ -27,7 +27,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,8 +97,6 @@ fun PlanningCanvas(
     showDistances: Boolean = true,
     onToggleShowDistances: () -> Unit = {}
 ) {
-    val compassState by rememberCompassState()
-
     val isDark = MaterialTheme.colorScheme.background == Slate900
     val gridColor = if (isDark) Slate800 else Slate300
     val axisColor = if (isDark) Slate700 else Slate400
@@ -329,10 +326,8 @@ fun PlanningCanvas(
                 .padding(10.dp)
         )
 
-        // 2. Top-Right: Live magnetic compass (device orientation reference)
-        // Does not rotate the planning canvas coordinate system.
-        DeviceCompassWidget(
-            compassState = compassState,
+        // 2. Top-Right: Fixed north-up directions. +Z is north (top), +X is east (right).
+        FixedCardinalRose(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(10.dp)
