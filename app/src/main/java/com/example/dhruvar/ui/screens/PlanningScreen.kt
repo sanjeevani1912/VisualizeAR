@@ -45,17 +45,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.example.dhruvar.domain.spatial.CoordinateTransformer
 import com.example.dhruvar.ui.components.AppTopBar
 import com.example.dhruvar.ui.components.FloatingAssetPickerOverlay
+import com.example.dhruvar.ui.components.GeoOriginPanel
 import com.example.dhruvar.ui.components.PlanningCanvas
 import com.example.dhruvar.ui.components.PrimaryButton
 import com.example.dhruvar.ui.components.SelectedObjectEditorOverlay
+import com.example.dhruvar.ui.components.rememberCompassState
 import com.example.dhruvar.ui.theme.TacticalAmber
 import com.example.dhruvar.ui.theme.TacticalGreen
 import com.example.dhruvar.viewmodel.PlanningViewModel
@@ -75,6 +83,44 @@ fun PlanningScreen(
     var showMenu by remember { mutableStateOf(false) }
     var isAssetMenuOpen by remember { mutableStateOf(false) }
     var isPropertyEditorMinimized by remember { mutableStateOf(false) }
+    val compassState by rememberCompassState()
+    val context = LocalContext.current
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        val granted = results[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            results[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        viewModel.onLocationPermissionResult(granted)
+    }
+
+    fun hasLocationPermission(): Boolean {
+        val fine = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        val coarse = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        return fine || coarse
+    }
+
+    fun requestLocationPermission() {
+        locationPermissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+        )
+    }
+
+    // Sync permission status when the geo panel opens (e.g. already granted at OS level)
+    LaunchedEffect(uiState.isGeoOriginPanelExpanded) {
+        if (uiState.isGeoOriginPanelExpanded) {
+            viewModel.onLocationPermissionResult(hasLocationPermission())
+        }
+    }
 
     // Save/Rename Dialog state
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -355,6 +401,36 @@ fun PlanningScreen(
                     color = MaterialTheme.colorScheme.secondary
                 )
             }
+
+            GeoOriginPanel(
+                expanded = uiState.isGeoOriginPanelExpanded,
+                onExpandedChange = { viewModel.setGeoOriginPanelExpanded(it) },
+                anchor = uiState.currentLayout.anchor,
+                locationState = uiState.locationState,
+                liveHeadingDegrees = compassState.magneticHeadingDegrees,
+                compassAvailable = compassState.isAvailable,
+                geoAccuracyWarning = uiState.geoAccuracyWarning,
+                onRequestPermission = { requestLocationPermission() },
+                onRefreshLocation = {
+                    if (hasLocationPermission()) {
+                        viewModel.refreshLocation()
+                    } else {
+                        requestLocationPermission()
+                    }
+                },
+                onUseMyLocation = {
+                    if (!hasLocationPermission()) {
+                        requestLocationPermission()
+                        return@GeoOriginPanel
+                    }
+                    viewModel.setGeographicAnchorFromDeviceFix(compassState.magneticHeadingDegrees)
+                },
+                onCaptureHeading = {
+                    viewModel.updateGeographicHeading(compassState.magneticHeadingDegrees)
+                },
+                onClear = { viewModel.clearGeographicAnchor() },
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+            )
 
             // 1. 2D Top-Down Planning Canvas Area (takes majority of screen)
             BoxWithConstraints(

@@ -9,6 +9,8 @@ import java.util.UUID
  * This data structure serves as the canonical contract shared between:
  * 1. The 2D Top-Down Planning Screen (Canvas editor)
  * 2. The 3D ARCore Visualization Screen (Physical world renderer)
+ *
+ * Optional [regionBounds] describes the geographic map region for the layout when set.
  */
 data class Layout(
     val id: String = UUID.randomUUID().toString(),
@@ -16,5 +18,6 @@ data class Layout(
     val anchor: Anchor = Anchor(),
     val objects: List<LayoutObject> = emptyList(),
     val createdAtEpochMs: Long = System.currentTimeMillis(),
-    val updatedAtEpochMs: Long = System.currentTimeMillis()
+    val updatedAtEpochMs: Long = System.currentTimeMillis(),
+    val regionBounds: GeoBounds? = null
 )

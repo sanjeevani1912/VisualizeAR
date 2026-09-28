@@ -5,6 +5,10 @@
     <!-- ARCore requires camera access to capture environmental feed and track planes -->
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- GNSS / fused location for geographic layout origin -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
     <!-- Legacy storage write permission for Android <= 9 (API 28); modern Android 10+ uses Scoped Storage via MediaStore -->
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"

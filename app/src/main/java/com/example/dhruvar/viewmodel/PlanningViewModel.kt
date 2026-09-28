@@ -3,11 +3,15 @@ package com.example.dhruvar.viewmodel
 import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.dhruvar.data.location.DefaultDeviceLocationControllerProvider
 import com.example.dhruvar.data.repository.DefaultLayoutRepositoryProvider
 import com.example.dhruvar.data.repository.LayoutRepository
+import com.example.dhruvar.domain.location.DeviceLocationController
+import com.example.dhruvar.domain.location.DeviceLocationState
 import com.example.dhruvar.domain.model.AssetType
 import com.example.dhruvar.domain.model.Layout
 import com.example.dhruvar.domain.model.LayoutObject
+import com.example.dhruvar.domain.sensors.CompassHeadingController
 import com.example.dhruvar.domain.spatial.CoordinateTransformer
 import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,7 +41,12 @@ data class PlanningUiState(
     val savedLayouts: List<Layout> = emptyList(),
     val lastSavedTimestamp: Long? = null,
     val userFeedbackMessage: String? = null,
-    val isLoadingSavedLayouts: Boolean = false
+    val isLoadingSavedLayouts: Boolean = false,
+    // Phase 3: GNSS geographic origin
+    val locationState: DeviceLocationState = DeviceLocationState(),
+    val isGeoOriginPanelExpanded: Boolean = false,
+    /** Non-null when the last device stamp used accuracy worse than 15 m. */
+    val geoAccuracyWarning: String? = null
 ) {
     /**
      * Currently selected [LayoutObject], or null if no object is selected.
@@ -52,11 +61,225 @@ data class PlanningUiState(
  * selected tools, object modifications, and local file persistence.
  */
 class PlanningViewModel(
-    private val repository: LayoutRepository = DefaultLayoutRepositoryProvider.getRepository()
+    private val repository: LayoutRepository = DefaultLayoutRepositoryProvider.getRepository(),
+    private val locationController: DeviceLocationController =
+        DefaultDeviceLocationControllerProvider.getController()
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(PlanningUiState())
+    private val _uiState = MutableStateFlow(
+        PlanningUiState(locationState = locationController.state.value)
+    )
     val uiState: StateFlow<PlanningUiState> = _uiState.asStateFlow()
+
+    init {
+        try {
+            viewModelScope.launch {
+                locationController.state.collect { loc ->
+                    _uiState.update { it.copy(locationState = loc) }
+                }
+            }
+        } catch (_: Throwable) {
+            // Main dispatcher / scope may be limited in pure JUnit environments
+        }
+    }
+
+    override fun onCleared() {
+        locationController.stopUpdates()
+        super.onCleared()
+    }
+
+    // ==========================================
+    // GEOGRAPHIC ORIGIN (Phase 3)
+    // ==========================================
+
+    fun setGeoOriginPanelExpanded(expanded: Boolean) {
+        _uiState.update {
+            it.copy(
+                isGeoOriginPanelExpanded = expanded,
+                locationState = locationController.state.value
+            )
+        }
+        if (expanded) {
+            locationController.startHighAccuracyUpdates()
+        } else {
+            locationController.stopUpdates()
+        }
+        syncLocationState()
+    }
+
+    fun onLocationPermissionResult(granted: Boolean) {
+        locationController.onPermissionResult(granted)
+        syncLocationState()
+        if (granted && _uiState.value.isGeoOriginPanelExpanded) {
+            locationController.startHighAccuracyUpdates()
+            syncLocationState()
+        }
+        if (!granted) {
+            _uiState.update {
+                it.copy(
+                    userFeedbackMessage = "Location permission denied — geo origin cannot use GNSS"
+                )
+            }
+        }
+    }
+
+    fun refreshLocation() {
+        locationController.refreshLocation()
+        syncLocationState()
+    }
+
+    /**
+     * Stamps the layout geographic anchor from the latest device GNSS fix.
+     * [headingDegrees] should come from the live compass (magnetic heading).
+     *
+     * @return true if the anchor was updated.
+     */
+    fun setGeographicAnchorFromDeviceFix(headingDegrees: Float): Boolean {
+        syncLocationState()
+        val locState = locationController.state.value
+        val fix = locState.lastFix
+        if (fix == null || !fix.isFinite) {
+            _uiState.update {
+                it.copy(userFeedbackMessage = "No GNSS fix available — wait for a location signal")
+            }
+            return false
+        }
+        if (!locState.permissionGranted) {
+            _uiState.update {
+                it.copy(userFeedbackMessage = "Location permission required to stamp origin")
+            }
+            return false
+        }
+        val heading = CompassHeadingController.normalizeDegrees(headingDegrees)
+        val poorAccuracy = fix.horizontalAccuracyMeters != null &&
+            fix.horizontalAccuracyMeters > DeviceLocationState.POOR_ACCURACY_METERS
+        val warning = if (poorAccuracy) {
+            SITE_LEVEL_ACCURACY_WARNING
+        } else {
+            null
+        }
+        applyGeographicAnchor(
+            latitude = fix.latitude,
+            longitude = fix.longitude,
+            headingDegrees = heading,
+            horizontalAccuracyMeters = fix.horizontalAccuracyMeters,
+            feedback = if (poorAccuracy) {
+                "Origin set (±${"%.0f".format(fix.horizontalAccuracyMeters)} m). $SITE_LEVEL_ACCURACY_WARNING"
+            } else {
+                "Geographic origin set from device GNSS"
+            },
+            accuracyWarning = warning
+        )
+        return true
+    }
+
+    /**
+     * Manually sets geographic anchor fields after validation.
+     * @return true if applied.
+     */
+    fun setGeographicAnchorManual(
+        latitude: Double,
+        longitude: Double,
+        headingDegrees: Float
+    ): Boolean {
+        if (!latitude.isFinite() || latitude !in -90.0..90.0) {
+            _uiState.update { it.copy(userFeedbackMessage = "Latitude must be a finite value in [-90, 90]") }
+            return false
+        }
+        if (!longitude.isFinite()) {
+            _uiState.update { it.copy(userFeedbackMessage = "Longitude must be finite") }
+            return false
+        }
+        if (!headingDegrees.isFinite()) {
+            _uiState.update { it.copy(userFeedbackMessage = "Heading must be finite") }
+            return false
+        }
+        applyGeographicAnchor(
+            latitude = latitude,
+            longitude = longitude,
+            headingDegrees = CompassHeadingController.normalizeDegrees(headingDegrees),
+            horizontalAccuracyMeters = null,
+            feedback = "Geographic origin set manually",
+            accuracyWarning = null
+        )
+        return true
+    }
+
+    /**
+     * Writes compass heading onto the layout anchor (Capture heading).
+     */
+    fun updateGeographicHeading(headingDegrees: Float): Boolean {
+        if (!headingDegrees.isFinite()) {
+            _uiState.update { it.copy(userFeedbackMessage = "Heading must be finite") }
+            return false
+        }
+        val heading = CompassHeadingController.normalizeDegrees(headingDegrees)
+        _uiState.update { state ->
+            val updatedAnchor = state.currentLayout.anchor.copy(headingDegrees = heading)
+            state.copy(
+                hasUnsavedChanges = true,
+                geoAccuracyWarning = state.geoAccuracyWarning,
+                currentLayout = state.currentLayout.copy(
+                    anchor = updatedAnchor,
+                    updatedAtEpochMs = System.currentTimeMillis()
+                ),
+                userFeedbackMessage = "Heading captured: ${"%.1f".format(heading)}°"
+            )
+        }
+        return true
+    }
+
+    fun clearGeographicAnchor() {
+        _uiState.update { state ->
+            val cleared = state.currentLayout.anchor.copy(
+                latitude = null,
+                longitude = null,
+                headingDegrees = null,
+                horizontalAccuracyMeters = null
+            )
+            state.copy(
+                hasUnsavedChanges = true,
+                geoAccuracyWarning = null,
+                currentLayout = state.currentLayout.copy(
+                    anchor = cleared,
+                    updatedAtEpochMs = System.currentTimeMillis()
+                ),
+                userFeedbackMessage = "Geographic origin cleared"
+            )
+        }
+    }
+
+    private fun applyGeographicAnchor(
+        latitude: Double,
+        longitude: Double,
+        headingDegrees: Float,
+        horizontalAccuracyMeters: Float?,
+        feedback: String,
+        accuracyWarning: String?
+    ) {
+        _uiState.update { state ->
+            val updatedAnchor = state.currentLayout.anchor.copy(
+                latitude = latitude,
+                longitude = longitude,
+                headingDegrees = headingDegrees,
+                horizontalAccuracyMeters = horizontalAccuracyMeters
+            )
+            state.copy(
+                hasUnsavedChanges = true,
+                geoAccuracyWarning = accuracyWarning,
+                locationState = locationController.state.value,
+                currentLayout = state.currentLayout.copy(
+                    anchor = updatedAnchor,
+                    updatedAtEpochMs = System.currentTimeMillis()
+                ),
+                userFeedbackMessage = feedback
+            )
+        }
+    }
+
+    private fun syncLocationState() {
+        _uiState.update { it.copy(locationState = locationController.state.value) }
+    }
 
     // ==========================================
     // PERSISTENCE OPERATIONS (Part 8)
@@ -576,5 +799,10 @@ class PlanningViewModel(
                 selectedObjectId = null
             )
         }
+    }
+
+    companion object {
+        const val SITE_LEVEL_ACCURACY_WARNING =
+            "Site-level only; relative meter placement remains precise"
     }
 }

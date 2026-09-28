@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import com.example.dhruvar.data.location.DefaultDeviceLocationControllerProvider
 import com.example.dhruvar.data.repository.DefaultLayoutRepositoryProvider
 import com.example.dhruvar.navigation.AppNavigation
 import com.example.dhruvar.ui.theme.DhruvARTheme
@@ -16,6 +17,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // Initialize offline local repository with persistent app files directory
         DefaultLayoutRepositoryProvider.init(filesDir.resolve("dhruvar_layouts"))
+        DefaultDeviceLocationControllerProvider.init(applicationContext)
         enableEdgeToEdge()
         setContent {
             DhruvARTheme {

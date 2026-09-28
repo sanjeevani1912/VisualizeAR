@@ -2,6 +2,7 @@ package com.example.dhruvar.data.model
 
 import com.example.dhruvar.domain.model.Anchor
 import com.example.dhruvar.domain.model.AssetType
+import com.example.dhruvar.domain.model.GeoBounds
 import com.example.dhruvar.domain.model.Layout
 import com.example.dhruvar.domain.model.LayoutObject
 import org.json.JSONArray
@@ -18,17 +19,19 @@ class LayoutSerializationException(message: String, cause: Throwable? = null) :
  * Robust JSON serializer and deserializer for [Layout] entities.
  *
  * Implements:
- * - Versioned schema (`"version": 1`) for future-proof migrations.
+ * - Versioned schema (`"version": 2`) for geographic anchor / region fields with
+ *   backward-compatible load of schema v1 (missing geo → null).
  * - Defensive decoding: gracefully sanitizes corrupted fields, non-positive dimensions,
- *   unrecognized asset types, and non-finite coordinates without crashing.
+ *   unrecognized asset types, non-finite coordinates, and invalid geo values without crashing.
  * - 100% offline, zero-dependency serialization based on standard Android [JSONObject].
  */
 object LayoutJsonSerializer {
 
-    const val CURRENT_SCHEMA_VERSION = 1
+    const val CURRENT_SCHEMA_VERSION = 2
 
     /**
      * Serializes a [Layout] into a formatted JSON string.
+     * Optional geographic fields are written only when present.
      */
     fun serialize(layout: Layout): String {
         try {
@@ -39,6 +42,15 @@ object LayoutJsonSerializer {
             root.put("createdAtEpochMs", layout.createdAtEpochMs)
             root.put("updatedAtEpochMs", layout.updatedAtEpochMs)
 
+            layout.regionBounds?.let { bounds ->
+                val boundsObj = JSONObject()
+                boundsObj.put("northLatitude", bounds.northLatitude)
+                boundsObj.put("southLatitude", bounds.southLatitude)
+                boundsObj.put("eastLongitude", bounds.eastLongitude)
+                boundsObj.put("westLongitude", bounds.westLongitude)
+                root.put("regionBounds", boundsObj)
+            }
+
             // Anchor serialization
             val anchorObj = JSONObject()
             anchorObj.put("id", layout.anchor.id)
@@ -46,6 +58,10 @@ object LayoutJsonSerializer {
             anchorObj.put("x", layout.anchor.x.toDouble())
             anchorObj.put("z", layout.anchor.z.toDouble())
             anchorObj.put("description", layout.anchor.description)
+            putOptionalDouble(anchorObj, "latitude", layout.anchor.latitude)
+            putOptionalDouble(anchorObj, "longitude", layout.anchor.longitude)
+            putOptionalFloat(anchorObj, "headingDegrees", layout.anchor.headingDegrees)
+            putOptionalFloat(anchorObj, "horizontalAccuracyMeters", layout.anchor.horizontalAccuracyMeters)
             root.put("anchor", anchorObj)
 
             // LayoutObjects serialization
@@ -75,6 +91,10 @@ object LayoutJsonSerializer {
     /**
      * Deserializes a JSON string into a validated [Layout] entity.
      * Gracefully falls back on corrupted or missing fields.
+     *
+     * Schema v1 (or any document missing geo keys) loads with null geographic fields.
+     * Schema v2 with partial/invalid geo sanitizes: non-finite coords → null;
+     * invalid [GeoBounds] (e.g. south > north, antimeridian) → null regionBounds.
      */
     fun deserialize(jsonString: String): Layout {
         try {
@@ -85,6 +105,8 @@ object LayoutJsonSerializer {
             val createdAt = root.optLong("createdAtEpochMs", System.currentTimeMillis())
             val updatedAt = root.optLong("updatedAtEpochMs", System.currentTimeMillis())
 
+            val regionBounds = deserializeRegionBounds(root.optJSONObject("regionBounds"))
+
             // Deserialize Anchor
             val anchorJson = root.optJSONObject("anchor")
             val anchor = if (anchorJson != null) {
@@ -93,7 +115,11 @@ object LayoutJsonSerializer {
                     label = anchorJson.optString("label", "Origin Anchor"),
                     x = sanitizeFloat(anchorJson.optDouble("x", 0.0).toFloat()),
                     z = sanitizeFloat(anchorJson.optDouble("z", 0.0).toFloat()),
-                    description = anchorJson.optString("description", "Primary deployment reference datum")
+                    description = anchorJson.optString("description", "Primary deployment reference datum"),
+                    latitude = sanitizeLatitude(optFiniteDoubleOrNull(anchorJson, "latitude")),
+                    longitude = sanitizeLongitude(optFiniteDoubleOrNull(anchorJson, "longitude")),
+                    headingDegrees = optFiniteFloatOrNull(anchorJson, "headingDegrees"),
+                    horizontalAccuracyMeters = optFiniteFloatOrNull(anchorJson, "horizontalAccuracyMeters")
                 )
             } else {
                 Anchor()
@@ -160,11 +186,62 @@ object LayoutJsonSerializer {
                 anchor = anchor,
                 objects = objectsList,
                 createdAtEpochMs = createdAt,
-                updatedAtEpochMs = updatedAt
+                updatedAtEpochMs = updatedAt,
+                regionBounds = regionBounds
             )
         } catch (e: Exception) {
             throw LayoutSerializationException("Malformed layout JSON: ${e.message}", e)
         }
+    }
+
+    private fun deserializeRegionBounds(boundsJson: JSONObject?): GeoBounds? {
+        if (boundsJson == null) return null
+        val north = optFiniteDoubleOrNull(boundsJson, "northLatitude") ?: return null
+        val south = optFiniteDoubleOrNull(boundsJson, "southLatitude") ?: return null
+        val east = optFiniteDoubleOrNull(boundsJson, "eastLongitude") ?: return null
+        val west = optFiniteDoubleOrNull(boundsJson, "westLongitude") ?: return null
+        return GeoBounds.createOrNull(
+            northLatitude = north,
+            southLatitude = south,
+            eastLongitude = east,
+            westLongitude = west
+        )
+    }
+
+    private fun putOptionalDouble(json: JSONObject, key: String, value: Double?) {
+        if (value != null && value.isFinite()) {
+            json.put(key, value)
+        }
+    }
+
+    private fun putOptionalFloat(json: JSONObject, key: String, value: Float?) {
+        if (value != null && value.isFinite()) {
+            json.put(key, value.toDouble())
+        }
+    }
+
+    private fun optFiniteDoubleOrNull(json: JSONObject, key: String): Double? {
+        if (!json.has(key) || json.isNull(key)) return null
+        // optDouble returns NaN when the value is non-numeric
+        val value = json.optDouble(key, Double.NaN)
+        return if (value.isFinite()) value else null
+    }
+
+    private fun optFiniteFloatOrNull(json: JSONObject, key: String): Float? {
+        val doubleValue = optFiniteDoubleOrNull(json, key) ?: return null
+        val floatValue = doubleValue.toFloat()
+        return if (floatValue.isFinite()) floatValue else null
+    }
+
+    private fun sanitizeLatitude(value: Double?): Double? {
+        if (value == null || !value.isFinite()) return null
+        if (value !in -90.0..90.0) return null
+        return value
+    }
+
+    private fun sanitizeLongitude(value: Double?): Double? {
+        if (value == null || !value.isFinite()) return null
+        return value
     }
 
     private fun sanitizeFloat(value: Float): Float {

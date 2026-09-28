@@ -4,10 +4,12 @@ import com.example.dhruvar.data.model.LayoutJsonSerializer
 import com.example.dhruvar.data.repository.FileLayoutRepository
 import com.example.dhruvar.domain.model.Anchor
 import com.example.dhruvar.domain.model.AssetType
+import com.example.dhruvar.domain.model.GeoBounds
 import com.example.dhruvar.domain.model.Layout
 import com.example.dhruvar.domain.model.LayoutObject
 import com.example.dhruvar.viewmodel.PlanningViewModel
 import kotlinx.coroutines.runBlocking
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -362,5 +364,243 @@ class LayoutPersistenceTest {
         assertNotNull(loaded)
         assertTrue(loaded!!.objects.isEmpty())
         assertEquals("Empty Canvas Layout", loaded.name)
+    }
+
+    // ── Schema v2 geographic fields ──────────────────────────────────────────
+
+    @Test
+    fun serializer_schemaVersionIs2() {
+        assertEquals(2, LayoutJsonSerializer.CURRENT_SCHEMA_VERSION)
+        val json = LayoutJsonSerializer.serialize(Layout(id = "v2-check", name = "Version Check"))
+        assertEquals(2, JSONObject(json).getInt("version"))
+    }
+
+    @Test
+    fun serializeDeserialize_fullGeo_roundTripPreservesFields() {
+        val bounds = GeoBounds(
+            northLatitude = 28.70,
+            southLatitude = 28.50,
+            eastLongitude = 77.30,
+            westLongitude = 77.10
+        )
+        val original = Layout(
+            id = "geo-roundtrip",
+            name = "Delhi Sector Plan",
+            anchor = Anchor(
+                id = "anchor-geo",
+                label = "GNSS Datum",
+                x = 0f,
+                z = 0f,
+                description = "Fixed origin",
+                latitude = 28.6139,
+                longitude = 77.2090,
+                headingDegrees = 12.5f,
+                horizontalAccuracyMeters = 4.2f
+            ),
+            objects = listOf(
+                LayoutObject(
+                    id = "obj-tent",
+                    assetType = AssetType.TENT,
+                    name = "Command Tent",
+                    x = 5f,
+                    z = -2f,
+                    rotationDegrees = 30f
+                )
+            ),
+            createdAtEpochMs = 1000L,
+            updatedAtEpochMs = 2000L,
+            regionBounds = bounds
+        )
+
+        assertTrue(original.anchor.hasGeographicFix)
+
+        val json = LayoutJsonSerializer.serialize(original)
+        val root = JSONObject(json)
+        assertEquals(2, root.getInt("version"))
+        assertTrue(root.has("regionBounds"))
+        assertTrue(root.getJSONObject("anchor").has("latitude"))
+
+        val loaded = LayoutJsonSerializer.deserialize(json)
+        assertEquals(original.id, loaded.id)
+        assertEquals(original.name, loaded.name)
+        assertEquals(original.createdAtEpochMs, loaded.createdAtEpochMs)
+        assertEquals(original.updatedAtEpochMs, loaded.updatedAtEpochMs)
+
+        assertNotNull(loaded.regionBounds)
+        assertEquals(28.70, loaded.regionBounds!!.northLatitude, 1e-9)
+        assertEquals(28.50, loaded.regionBounds!!.southLatitude, 1e-9)
+        assertEquals(77.30, loaded.regionBounds!!.eastLongitude, 1e-9)
+        assertEquals(77.10, loaded.regionBounds!!.westLongitude, 1e-9)
+
+        assertEquals(28.6139, loaded.anchor.latitude!!, 1e-9)
+        assertEquals(77.2090, loaded.anchor.longitude!!, 1e-9)
+        assertEquals(12.5f, loaded.anchor.headingDegrees!!, 1e-4f)
+        assertEquals(4.2f, loaded.anchor.horizontalAccuracyMeters!!, 1e-4f)
+        assertTrue(loaded.anchor.hasGeographicFix)
+
+        assertEquals(1, loaded.objects.size)
+        assertEquals(5f, loaded.objects[0].x, 0.001f)
+        assertEquals(-2f, loaded.objects[0].z, 0.001f)
+    }
+
+    @Test
+    fun deserialize_classicV1JsonWithoutGeo_succeedsWithNullGeo() {
+        val v1Json = """
+            {
+                "version": 1,
+                "id": "legacy-v1",
+                "name": "Classic Field Plan",
+                "createdAtEpochMs": 1111,
+                "updatedAtEpochMs": 2222,
+                "anchor": {
+                    "id": "a1",
+                    "label": "Origin Anchor",
+                    "x": 0.0,
+                    "z": 0.0,
+                    "description": "Primary deployment reference datum"
+                },
+                "objects": [
+                    {
+                        "id": "o1",
+                        "assetType": "TENT",
+                        "name": "Tent 1",
+                        "x": 2.0,
+                        "z": 3.0,
+                        "rotationDegrees": 0.0,
+                        "widthMeters": 5.0,
+                        "lengthMeters": 5.0,
+                        "heightMeters": 3.0,
+                        "scale": 1.0
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val loaded = LayoutJsonSerializer.deserialize(v1Json)
+        assertEquals("legacy-v1", loaded.id)
+        assertEquals("Classic Field Plan", loaded.name)
+        assertNull(loaded.regionBounds)
+        assertNull(loaded.anchor.latitude)
+        assertNull(loaded.anchor.longitude)
+        assertNull(loaded.anchor.headingDegrees)
+        assertNull(loaded.anchor.horizontalAccuracyMeters)
+        assertFalse(loaded.anchor.hasGeographicFix)
+        assertEquals(1, loaded.objects.size)
+        assertEquals(2.0f, loaded.objects[0].x, 0.001f)
+        assertEquals(3.0f, loaded.objects[0].z, 0.001f)
+    }
+
+    @Test
+    fun deserialize_invalidBounds_southGreaterThanNorth_ignoredAsNull() {
+        val json = """
+            {
+                "version": 2,
+                "id": "bad-bounds",
+                "name": "Invalid Region",
+                "anchor": {
+                    "id": "a1",
+                    "label": "Origin",
+                    "x": 0.0,
+                    "z": 0.0,
+                    "latitude": 28.6,
+                    "longitude": 77.2
+                },
+                "regionBounds": {
+                    "northLatitude": 28.0,
+                    "southLatitude": 29.0,
+                    "eastLongitude": 78.0,
+                    "westLongitude": 77.0
+                },
+                "objects": []
+            }
+        """.trimIndent()
+
+        val loaded = LayoutJsonSerializer.deserialize(json)
+        assertNull(loaded.regionBounds)
+        // Anchor geo still loads
+        assertEquals(28.6, loaded.anchor.latitude!!, 1e-9)
+        assertEquals(77.2, loaded.anchor.longitude!!, 1e-9)
+        assertTrue(loaded.anchor.hasGeographicFix)
+    }
+
+    @Test
+    fun deserialize_nonFiniteLatLng_sanitizedToNull() {
+        val json = """
+            {
+                "version": 2,
+                "id": "nan-geo",
+                "name": "Broken Fix",
+                "anchor": {
+                    "id": "a1",
+                    "label": "Origin",
+                    "x": 0.0,
+                    "z": 0.0,
+                    "latitude": "NaN",
+                    "longitude": "Infinity",
+                    "headingDegrees": "not-a-number",
+                    "horizontalAccuracyMeters": null
+                },
+                "objects": []
+            }
+        """.trimIndent()
+
+        val loaded = LayoutJsonSerializer.deserialize(json)
+        assertNull(loaded.anchor.latitude)
+        assertNull(loaded.anchor.longitude)
+        assertNull(loaded.anchor.headingDegrees)
+        assertNull(loaded.anchor.horizontalAccuracyMeters)
+        assertFalse(loaded.anchor.hasGeographicFix)
+    }
+
+    @Test
+    fun deserialize_latitudeOutOfRange_sanitizedToNull() {
+        val json = """
+            {
+                "version": 2,
+                "id": "oor-lat",
+                "name": "Out Of Range",
+                "anchor": {
+                    "id": "a1",
+                    "label": "Origin",
+                    "x": 0.0,
+                    "z": 0.0,
+                    "latitude": 95.0,
+                    "longitude": 77.2
+                },
+                "objects": []
+            }
+        """.trimIndent()
+
+        val loaded = LayoutJsonSerializer.deserialize(json)
+        assertNull(loaded.anchor.latitude)
+        assertEquals(77.2, loaded.anchor.longitude!!, 1e-9)
+        assertFalse(loaded.anchor.hasGeographicFix)
+    }
+
+    @Test
+    fun saveAndLoad_layoutWithGeo_viaRepository() = runBlocking {
+        val layout = Layout(
+            id = "repo-geo",
+            name = "Geo Persisted",
+            anchor = Anchor(
+                latitude = 19.0760,
+                longitude = 72.8777,
+                headingDegrees = 45f,
+                horizontalAccuracyMeters = 3.1f
+            ),
+            regionBounds = GeoBounds(
+                northLatitude = 19.2,
+                southLatitude = 18.9,
+                eastLongitude = 73.0,
+                westLongitude = 72.7
+            )
+        )
+        assertTrue(repository.saveLayout(layout))
+        val loaded = repository.getLayoutById("repo-geo")
+        assertNotNull(loaded)
+        assertTrue(loaded!!.anchor.hasGeographicFix)
+        assertEquals(19.0760, loaded.anchor.latitude!!, 1e-9)
+        assertNotNull(loaded.regionBounds)
+        assertEquals(19.2, loaded.regionBounds!!.northLatitude, 1e-9)
     }
 }
