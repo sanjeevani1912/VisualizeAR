@@ -89,6 +89,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.dhruvar.data.location.DefaultDeviceLocationControllerProvider
+import com.example.dhruvar.domain.ar.ArGeoGuidance
+import com.example.dhruvar.domain.ar.ArVisualizationScale
+import com.example.dhruvar.domain.spatial.GeographicCoordinateConverter
 import com.example.dhruvar.domain.spatial.SpatialDistanceCalculator
 import com.example.dhruvar.ui.ar.capture.ARCaptureManager
 import com.example.dhruvar.ui.ar.capture.CaptureMetadata
@@ -97,12 +101,15 @@ import com.example.dhruvar.ui.ar.render.ARObjectLabelProjection
 import com.example.dhruvar.ui.ar.render.AROriginLabelProjection
 import com.example.dhruvar.ui.ar.render.ARRenderer
 import com.example.dhruvar.ui.components.AppTopBar
+import com.example.dhruvar.ui.components.ArGeoBriefingPanel
+import com.example.dhruvar.ui.components.ArScaleModeRow
 import com.example.dhruvar.ui.components.DeviceCompassWidget
 import com.example.dhruvar.ui.components.PrimaryButton
 import com.example.dhruvar.ui.components.rememberCompassState
 import com.example.dhruvar.ui.components.toIcon
 import com.example.dhruvar.ui.theme.AnchorOrange
 import com.example.dhruvar.ui.theme.PrecisionBlue
+import com.example.dhruvar.ui.theme.TacticalAmber
 import com.example.dhruvar.ui.theme.TacticalGreen
 import com.example.dhruvar.viewmodel.PlanningViewModel
 import com.google.ar.core.ArCoreApk
@@ -150,6 +157,27 @@ fun ARVisualizationScreen(
     // Calibration states
     var canSetOrigin by remember { mutableStateOf(false) }
     var isOriginCalibrated by remember { mutableStateOf(false) }
+    var calibrationFeedback by remember { mutableStateOf<String?>(null) }
+    var visualizationScaleMode by remember { mutableStateOf(ArVisualizationScale.FULL) }
+
+    // Phase 5: geo briefing via fused location (GPS guides to site; AR tracking owns local stability)
+    val locationController = remember { DefaultDeviceLocationControllerProvider.getController() }
+    val locationState by locationController.state.collectAsState()
+    var hasLocationPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+                PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val geoGuidance = remember(uiState.currentLayout.anchor, locationState.lastFix) {
+        ArGeoGuidance.from(
+            anchor = uiState.currentLayout.anchor,
+            deviceFix = locationState.lastFix
+        )
+    }
 
     // Screen-space 2D projections from OpenGL pipeline
     var projectedOriginLabel by remember { mutableStateOf<AROriginLabelProjection?>(null) }
@@ -167,6 +195,47 @@ fun ARVisualizationScreen(
         if (captureFeedbackMessage != null) {
             kotlinx.coroutines.delay(4000)
             captureFeedbackMessage = null
+        }
+    }
+
+    LaunchedEffect(calibrationFeedback) {
+        if (calibrationFeedback != null) {
+            kotlinx.coroutines.delay(4500)
+            calibrationFeedback = null
+        }
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        val granted = results[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            results[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        hasLocationPermission = granted
+        locationController.onPermissionResult(granted)
+        if (granted) {
+            locationController.startHighAccuracyUpdates()
+            locationController.refreshLocation()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (hasLocationPermission) {
+            locationController.onPermissionResult(true)
+            locationController.startHighAccuracyUpdates()
+            locationController.refreshLocation()
+        } else {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            locationController.stopUpdates()
         }
     }
 
@@ -237,6 +306,17 @@ fun ARVisualizationScreen(
     LaunchedEffect(uiState.currentLayout, uiState.selectedObjectId) {
         arRenderer.currentLayout = uiState.currentLayout
         arRenderer.selectedObjectId = uiState.selectedObjectId
+    }
+
+    LaunchedEffect(visualizationScaleMode) {
+        arRenderer.visualizationScale = visualizationScaleMode.scaleFactor
+    }
+
+    LaunchedEffect(isOriginCalibrated) {
+        if (isOriginCalibrated) {
+            val n = uiState.currentLayout.objects.size
+            calibrationFeedback = "Origin calibrated — rendering $n object${if (n == 1) "" else "s"}"
+        }
     }
 
     // Session initialization & resume helper
@@ -731,6 +811,34 @@ fun ARVisualizationScreen(
                                     }
                                 }
 
+                                ArGeoBriefingPanel(
+                                    guidance = geoGuidance,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                ArScaleModeRow(
+                                    selected = visualizationScaleMode,
+                                    onSelected = { visualizationScaleMode = it },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                calibrationFeedback?.let { msg ->
+                                    Text(
+                                        text = msg,
+                                        style = TextStyle(
+                                            fontFamily = FontFamily.Monospace,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TacticalGreen
+                                        ),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color(0xCC0F172A))
+                                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                                    )
+                                }
+
                                 // 3-Step AR Preparation Progress Bar
                                 Card(
                                     colors = CardDefaults.cardColors(containerColor = Color(0xD90F172A)),
@@ -918,6 +1026,34 @@ fun ARVisualizationScreen(
                                                 )
                                             )
                                         }
+
+                                        // Optional field-verify: derived WGS84 from meter offsets (not live GPS drag)
+                                        val layoutAnchor = uiState.currentLayout.anchor
+                                        if (layoutAnchor.hasGeographicFix) {
+                                            val derived = runCatching {
+                                                GeographicCoordinateConverter.metersOffsetToLatLng(
+                                                    layoutAnchor,
+                                                    selectedObj.x,
+                                                    selectedObj.z
+                                                )
+                                            }.getOrNull()
+                                            if (derived != null) {
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = String.format(
+                                                        Locale.US,
+                                                        "GEO ≈ Lat %.6f  Lng %.6f",
+                                                        derived.latitude,
+                                                        derived.longitude
+                                                    ),
+                                                    style = TextStyle(
+                                                        fontFamily = FontFamily.Monospace,
+                                                        fontSize = 8.5.sp,
+                                                        color = PrecisionBlue
+                                                    )
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -928,10 +1064,17 @@ fun ARVisualizationScreen(
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 if (!isOriginCalibrated) {
-                                    // Set Planning Origin Action
+                                    // Set Planning Origin Action — prefer saved layout heading, else live compass
                                     Button(
                                         onClick = {
-                                            arRenderer.setOriginAtCenterHit(compassState.magneticHeadingDegrees)
+                                            val heading = uiState.currentLayout.anchor.headingDegrees
+                                                ?: compassState.magneticHeadingDegrees
+                                            val ok = arRenderer.setOriginAtCenterHit(heading)
+                                            if (ok) {
+                                                val n = uiState.currentLayout.objects.size
+                                                calibrationFeedback =
+                                                    "Origin calibrated — rendering $n object${if (n == 1) "" else "s"}"
+                                            }
                                         },
                                         enabled = canSetOrigin,
                                         shape = RoundedCornerShape(8.dp),

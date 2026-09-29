@@ -52,9 +52,12 @@ class ARObjectRenderer {
         originPose: Pose,
         selectedObjectId: String?,
         viewMatrix: FloatArray,
-        projectionMatrix: FloatArray
+        projectionMatrix: FloatArray,
+        visualizationScale: Float = 1.0f
     ) {
         if (objects.isEmpty()) return
+
+        val scale = visualizationScale.coerceAtLeast(0.001f)
 
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
         GLES20.glDisable(GLES20.GL_CULL_FACE)
@@ -72,16 +75,17 @@ class ARObjectRenderer {
                 originPose = originPose,
                 planXMeters = obj.x,
                 planZMeters = obj.z,
-                planRotationDegrees = obj.rotationDegrees
+                planRotationDegrees = obj.rotationDegrees,
+                visualizationScale = scale
             )
 
             objectPose.toMatrix(modelMatrix, 0)
 
-            // 2. Apply physical dimension scaling if custom dimensions differ from prototype specification
+            // 2. Apply physical dimension scaling; miniature mode also shrinks meshes about origin
             val defaultSpec = obj.assetType.defaultSpecification
-            val scaleX = (obj.widthMeters / defaultSpec.widthMeters).coerceIn(0.2f, 5.0f)
-            val scaleY = (obj.heightMeters / defaultSpec.heightMeters).coerceIn(0.2f, 5.0f)
-            val scaleZ = (obj.lengthMeters / defaultSpec.lengthMeters).coerceIn(0.2f, 5.0f)
+            val scaleX = (obj.widthMeters / defaultSpec.widthMeters).coerceIn(0.2f, 5.0f) * scale
+            val scaleY = (obj.heightMeters / defaultSpec.heightMeters).coerceIn(0.2f, 5.0f) * scale
+            val scaleZ = (obj.lengthMeters / defaultSpec.lengthMeters).coerceIn(0.2f, 5.0f) * scale
             Matrix.scaleM(modelMatrix, 0, scaleX, scaleY, scaleZ)
 
             // 3. Compute MVP transformation

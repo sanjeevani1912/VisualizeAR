@@ -11,6 +11,7 @@ import com.example.dhruvar.data.location.DefaultDeviceLocationControllerProvider
 import com.example.dhruvar.data.repository.DefaultLayoutRepositoryProvider
 import com.example.dhruvar.navigation.AppNavigation
 import com.example.dhruvar.ui.theme.DhruvARTheme
+import org.maplibre.android.MapLibre
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,6 +19,8 @@ class MainActivity : ComponentActivity() {
         // Initialize offline local repository with persistent app files directory
         DefaultLayoutRepositoryProvider.init(filesDir.resolve("dhruvar_layouts"))
         DefaultDeviceLocationControllerProvider.init(applicationContext)
+        // Required before any MapView / style load
+        MapLibre.getInstance(this)
         enableEdgeToEdge()
         setContent {
             DhruvARTheme {

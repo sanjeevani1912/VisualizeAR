@@ -1,5 +1,13 @@
 package com.example.dhruvar.ui.screens
 
+import android.Manifest
+import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -34,6 +42,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -50,20 +59,23 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import com.example.dhruvar.domain.model.MapInteractionMode
+import com.example.dhruvar.domain.model.PlanningSurface
 import com.example.dhruvar.domain.spatial.CoordinateTransformer
 import com.example.dhruvar.ui.components.AppTopBar
 import com.example.dhruvar.ui.components.FloatingAssetPickerOverlay
 import com.example.dhruvar.ui.components.GeoOriginPanel
+import com.example.dhruvar.ui.components.MapModeToolbar
 import com.example.dhruvar.ui.components.PlanningCanvas
+import com.example.dhruvar.ui.components.PlanningSurfaceSwitcher
 import com.example.dhruvar.ui.components.PrimaryButton
 import com.example.dhruvar.ui.components.SelectedObjectEditorOverlay
 import com.example.dhruvar.ui.components.rememberCompassState
+import com.example.dhruvar.ui.map.MapViewportBoundsBridge
+import com.example.dhruvar.ui.map.PlanningMapView
 import com.example.dhruvar.ui.theme.TacticalAmber
 import com.example.dhruvar.ui.theme.TacticalGreen
 import com.example.dhruvar.viewmodel.PlanningViewModel
@@ -85,6 +97,7 @@ fun PlanningScreen(
     var isPropertyEditorMinimized by remember { mutableStateOf(false) }
     val compassState by rememberCompassState()
     val context = LocalContext.current
+    var locationPermissionPermanentlyDenied by remember { mutableStateOf(false) }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -92,6 +105,21 @@ fun PlanningScreen(
         val granted = results[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
             results[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         viewModel.onLocationPermissionResult(granted)
+        if (!granted) {
+            val activity = context as? Activity
+            val showRationale = activity != null && (
+                ActivityCompat.shouldShowRequestPermissionRationale(
+                    activity,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) || ActivityCompat.shouldShowRequestPermissionRationale(
+                    activity,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+            locationPermissionPermanentlyDenied = !showRationale
+        } else {
+            locationPermissionPermanentlyDenied = false
+        }
     }
 
     fun hasLocationPermission(): Boolean {
@@ -115,10 +143,24 @@ fun PlanningScreen(
         )
     }
 
+    fun openAppLocationSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+        }
+        context.startActivity(intent)
+    }
+
     // Sync permission status when the geo panel opens (e.g. already granted at OS level)
     LaunchedEffect(uiState.isGeoOriginPanelExpanded) {
         if (uiState.isGeoOriginPanelExpanded) {
             viewModel.onLocationPermissionResult(hasLocationPermission())
+        }
+    }
+
+    // Battery: stop GNSS when leaving Planning
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.stopLocationUpdates()
         }
     }
 
@@ -411,6 +453,8 @@ fun PlanningScreen(
                 compassAvailable = compassState.isAvailable,
                 geoAccuracyWarning = uiState.geoAccuracyWarning,
                 onRequestPermission = { requestLocationPermission() },
+                onOpenAppSettings = { openAppLocationSettings() },
+                permissionPermanentlyDenied = locationPermissionPermanentlyDenied,
                 onRefreshLocation = {
                     if (hasLocationPermission()) {
                         viewModel.refreshLocation()
@@ -432,7 +476,53 @@ fun PlanningScreen(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
             )
 
-            // 1. 2D Top-Down Planning Canvas Area (takes majority of screen)
+            uiState.mapStyleError?.let { err ->
+                Text(
+                    text = "Map tiles unavailable: $err — check network or PMTiles config.",
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = TacticalAmber,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+                        .border(1.dp, TacticalAmber, RoundedCornerShape(8.dp))
+                        .padding(10.dp)
+                )
+            }
+
+            PlanningSurfaceSwitcher(
+                surface = uiState.planningSurface,
+                onSurfaceChange = { viewModel.setPlanningSurface(it) },
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+            )
+
+            if (uiState.planningSurface == PlanningSurface.MAP) {
+                MapModeToolbar(
+                    mode = uiState.mapInteractionMode,
+                    onModeChange = { viewModel.setMapInteractionMode(it) },
+                    hasRegion = uiState.currentLayout.regionBounds != null,
+                    onConfirmViewportRegion = {
+                        val bounds = MapViewportBoundsBridge.queryVisibleBounds()
+                        if (bounds == null) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Map not ready — wait for tiles to load")
+                            }
+                        } else {
+                            viewModel.setRegionBoundsFromViewport(
+                                northLatitude = bounds.north,
+                                southLatitude = bounds.south,
+                                eastLongitude = bounds.east,
+                                westLongitude = bounds.west
+                            )
+                        }
+                    },
+                    onClearRegion = { viewModel.clearRegionBounds() },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                )
+            }
+
+            // Planning surface: MapLibre (primary) or metric grid (secondary)
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -443,64 +533,100 @@ fun PlanningScreen(
                 val viewportWidthPx = with(density) { maxWidth.toPx() }
                 val viewportHeightPx = with(density) { maxHeight.toPx() }
 
-                PlanningCanvas(
-                    layout = uiState.currentLayout,
-                    panOffset = uiState.panOffset,
-                    zoom = uiState.zoom,
-                    basePixelsPerMeter = uiState.basePixelsPerMeter,
-                    cursorCoordinatesMeters = uiState.cursorCoordinatesMeters,
-                    onPan = { delta -> viewModel.onPan(delta) },
-                    onZoom = { factor, centroid -> viewModel.onZoom(factor, centroid) },
-                    onZoomIn = { viewModel.zoomIn() },
-                    onZoomOut = { viewModel.zoomOut() },
-                    onResetView = { viewModel.resetView() },
-                    onCursorMoved = { x, z -> viewModel.updateCursorCoordinates(x, z) },
-                    onCursorCleared = { viewModel.clearCursorCoordinates() },
-                    onCanvasTapped = { _, _ ->
-                        // Placement is handled by the floating asset menu (+)
-                        if (uiState.selectedObjectId != null) {
+                if (uiState.planningSurface == PlanningSurface.MAP) {
+                    PlanningMapView(
+                        layout = uiState.currentLayout,
+                        selectedObjectId = uiState.selectedObjectId,
+                        interactionMode = uiState.mapInteractionMode,
+                        onMapTap = { lat, lng ->
+                            when (uiState.mapInteractionMode) {
+                                MapInteractionMode.NAVIGATE -> Unit
+                                MapInteractionMode.SELECT_REGION -> Unit
+                                MapInteractionMode.SET_ANCHOR -> {
+                                    viewModel.setGeographicAnchorFromMap(
+                                        latitude = lat,
+                                        longitude = lng,
+                                        headingDegrees = compassState.magneticHeadingDegrees
+                                    )
+                                }
+                                MapInteractionMode.PLACE_ASSET -> {
+                                    viewModel.placeAssetAtGeographic(lat, lng)
+                                }
+                                MapInteractionMode.EDIT -> {
+                                    viewModel.handleMapEditTap(lat, lng)
+                                }
+                            }
+                        },
+                        onStyleError = { viewModel.setMapStyleError(it) },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    PlanningCanvas(
+                        layout = uiState.currentLayout,
+                        panOffset = uiState.panOffset,
+                        zoom = uiState.zoom,
+                        basePixelsPerMeter = uiState.basePixelsPerMeter,
+                        cursorCoordinatesMeters = uiState.cursorCoordinatesMeters,
+                        onPan = { delta -> viewModel.onPan(delta) },
+                        onZoom = { factor, centroid -> viewModel.onZoom(factor, centroid) },
+                        onZoomIn = { viewModel.zoomIn() },
+                        onZoomOut = { viewModel.zoomOut() },
+                        onResetView = { viewModel.resetView() },
+                        onCursorMoved = { x, z -> viewModel.updateCursorCoordinates(x, z) },
+                        onCursorCleared = { viewModel.clearCursorCoordinates() },
+                        onCanvasTapped = { _, _ ->
+                            if (uiState.selectedObjectId != null) {
+                                viewModel.deselectObject()
+                            }
+                        },
+                        onObjectSelected = { objectId ->
+                            viewModel.selectObject(objectId)
+                        },
+                        onMoveObject = { id, x, z ->
+                            viewModel.moveObject(id, x, z)
+                        },
+                        onDeselect = {
                             viewModel.deselectObject()
-                        }
-                    },
-                    onObjectSelected = { objectId ->
-                        viewModel.selectObject(objectId)
-                    },
-                    onMoveObject = { id, x, z ->
-                        viewModel.moveObject(id, x, z)
-                    },
-                    onDeselect = {
-                        viewModel.deselectObject()
-                    },
-                    selectedObjectId = uiState.selectedObjectId,
-                    showDistances = uiState.showDistances,
-                    onToggleShowDistances = { viewModel.toggleShowDistances() }
-                )
+                        },
+                        selectedObjectId = uiState.selectedObjectId,
+                        showDistances = uiState.showDistances,
+                        onToggleShowDistances = { viewModel.toggleShowDistances() }
+                    )
+                }
 
                 FloatingAssetPickerOverlay(
                     isOpen = isAssetMenuOpen,
                     onToggle = { isAssetMenuOpen = !isAssetMenuOpen },
                     onDismiss = { isAssetMenuOpen = false },
                     onAssetChosen = { assetType ->
-                        val transformer = CoordinateTransformer(
-                            viewportWidth = viewportWidthPx,
-                            viewportHeight = viewportHeightPx,
-                            panOffset = uiState.panOffset,
-                            zoom = uiState.zoom,
-                            basePixelsPerMeter = uiState.basePixelsPerMeter
-                        )
-                        // Place at the currently visible canvas center (preserves pan/zoom)
-                        val (worldX, worldZ) = transformer.canvasToWorld(
-                            Offset(viewportWidthPx / 2f, viewportHeightPx / 2f)
-                        )
-                        val snappedX = (worldX * 2f).roundToInt() / 2f
-                        val snappedZ = (worldZ * 2f).roundToInt() / 2f
-                        viewModel.addAssetOfType(assetType, snappedX, snappedZ)
+                        viewModel.selectAssetType(assetType)
+                        if (uiState.planningSurface == PlanningSurface.METRIC_GRID) {
+                            val transformer = CoordinateTransformer(
+                                viewportWidth = viewportWidthPx,
+                                viewportHeight = viewportHeightPx,
+                                panOffset = uiState.panOffset,
+                                zoom = uiState.zoom,
+                                basePixelsPerMeter = uiState.basePixelsPerMeter
+                            )
+                            val (worldX, worldZ) = transformer.canvasToWorld(
+                                Offset(viewportWidthPx / 2f, viewportHeightPx / 2f)
+                            )
+                            val snappedX = (worldX * 2f).roundToInt() / 2f
+                            val snappedZ = (worldZ * 2f).roundToInt() / 2f
+                            viewModel.addAssetOfType(assetType, snappedX, snappedZ)
+                        } else {
+                            viewModel.setMapInteractionMode(MapInteractionMode.PLACE_ASSET)
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    "Place mode: tap the map to drop ${assetType.displayName}"
+                                )
+                            }
+                        }
                         isAssetMenuOpen = false
                         isPropertyEditorMinimized = false
                     }
                 )
 
-                // Translucent property editor — canvas stays visible behind/around it
                 SelectedObjectEditorOverlay(
                     selectedObject = uiState.selectedObject,
                     isMinimized = isPropertyEditorMinimized,

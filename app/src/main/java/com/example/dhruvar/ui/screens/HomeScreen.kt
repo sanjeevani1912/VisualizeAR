@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.AlertDialog
@@ -69,6 +70,7 @@ import java.util.Locale
 fun HomeScreen(
     onCreateNewLayout: () -> Unit,
     onOpenLayout: (Layout) -> Unit,
+    onOpenFieldGuide: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: PlanningViewModel = viewModel()
 ) {
@@ -177,7 +179,15 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "DhruvAR"
+                title = "DhruvAR",
+                actions = {
+                    IconButton(onClick = onOpenFieldGuide) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                            contentDescription = "Field Guide"
+                        )
+                    }
+                }
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -210,7 +220,7 @@ fun HomeScreen(
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Create a plan, position assets, and visualize it in AR — fully offline.",
+                text = "Create a geo-accurate plan on MapLibre, stamp GNSS origin, place assets in meters, and visualize in AR.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.secondary
             )
@@ -280,15 +290,15 @@ fun HomeScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     WorkflowStepItem(
                         step = "01",
-                        title = "2D Planning Canvas",
-                        description = "Configure assets (tents, trucks, antennas) relative to a central origin anchor.",
+                        title = "Map & Geo Planning",
+                        description = "Stamp GNSS origin, select region, place assets as meter offsets on MapLibre / metric grid.",
                         icon = Icons.Default.Layers
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                     WorkflowStepItem(
                         step = "02",
                         title = "AR Visualization",
-                        description = "Detect physical ground plane and project 3D models into the real environment.",
+                        description = "Navigate to origin, calibrate heading-aligned plane, project 3D assets at planned offsets.",
                         icon = Icons.Default.ViewInAr
                     )
                 }

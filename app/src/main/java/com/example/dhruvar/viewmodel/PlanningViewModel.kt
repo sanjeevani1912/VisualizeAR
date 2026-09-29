@@ -9,10 +9,14 @@ import com.example.dhruvar.data.repository.LayoutRepository
 import com.example.dhruvar.domain.location.DeviceLocationController
 import com.example.dhruvar.domain.location.DeviceLocationState
 import com.example.dhruvar.domain.model.AssetType
+import com.example.dhruvar.domain.model.GeoBounds
 import com.example.dhruvar.domain.model.Layout
 import com.example.dhruvar.domain.model.LayoutObject
+import com.example.dhruvar.domain.model.MapInteractionMode
+import com.example.dhruvar.domain.model.PlanningSurface
 import com.example.dhruvar.domain.sensors.CompassHeadingController
 import com.example.dhruvar.domain.spatial.CoordinateTransformer
+import com.example.dhruvar.domain.spatial.MapLayoutProjection
 import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,7 +50,11 @@ data class PlanningUiState(
     val locationState: DeviceLocationState = DeviceLocationState(),
     val isGeoOriginPanelExpanded: Boolean = false,
     /** Non-null when the last device stamp used accuracy worse than 15 m. */
-    val geoAccuracyWarning: String? = null
+    val geoAccuracyWarning: String? = null,
+    // Phase 4: MapLibre planning surface
+    val planningSurface: PlanningSurface = PlanningSurface.MAP,
+    val mapInteractionMode: MapInteractionMode = MapInteractionMode.NAVIGATE,
+    val mapStyleError: String? = null
 ) {
     /**
      * Currently selected [LayoutObject], or null if no object is selected.
@@ -282,6 +290,173 @@ class PlanningViewModel(
     }
 
     // ==========================================
+    // MAP PLANNING (Phase 4)
+    // ==========================================
+
+    fun setPlanningSurface(surface: PlanningSurface) {
+        _uiState.update { it.copy(planningSurface = surface) }
+    }
+
+    fun setMapInteractionMode(mode: MapInteractionMode) {
+        _uiState.update { it.copy(mapInteractionMode = mode) }
+    }
+
+    fun setMapStyleError(message: String?) {
+        _uiState.update { it.copy(mapStyleError = message) }
+    }
+
+    /**
+     * Sets or replaces [Layout.regionBounds]. Invalid boxes are rejected.
+     */
+    fun setRegionBounds(bounds: GeoBounds?): Boolean {
+        if (bounds == null) {
+            clearRegionBounds()
+            return true
+        }
+        _uiState.update { state ->
+            state.copy(
+                hasUnsavedChanges = true,
+                currentLayout = state.currentLayout.copy(
+                    regionBounds = bounds,
+                    updatedAtEpochMs = System.currentTimeMillis()
+                ),
+                userFeedbackMessage = "Region bounds set"
+            )
+        }
+        return true
+    }
+
+    fun setRegionBoundsFromViewport(
+        northLatitude: Double,
+        southLatitude: Double,
+        eastLongitude: Double,
+        westLongitude: Double
+    ): Boolean {
+        val bounds = GeoBounds.createOrNull(
+            northLatitude = northLatitude,
+            southLatitude = southLatitude,
+            eastLongitude = eastLongitude,
+            westLongitude = westLongitude
+        )
+        if (bounds == null) {
+            _uiState.update {
+                it.copy(userFeedbackMessage = "Invalid region — check north≥south and west≤east")
+            }
+            return false
+        }
+        return setRegionBounds(bounds)
+    }
+
+    fun clearRegionBounds() {
+        _uiState.update { state ->
+            state.copy(
+                hasUnsavedChanges = true,
+                currentLayout = state.currentLayout.copy(
+                    regionBounds = null,
+                    updatedAtEpochMs = System.currentTimeMillis()
+                ),
+                userFeedbackMessage = "Region bounds cleared"
+            )
+        }
+    }
+
+    /**
+     * Sets geographic anchor from a map tap. Preserves existing heading when [headingDegrees] is null,
+     * otherwise uses the provided heading (typically live compass).
+     */
+    fun setGeographicAnchorFromMap(
+        latitude: Double,
+        longitude: Double,
+        headingDegrees: Float?
+    ): Boolean {
+        val existingHeading = _uiState.value.currentLayout.anchor.headingDegrees
+        val heading = headingDegrees ?: existingHeading ?: 0f
+        return setGeographicAnchorManual(latitude, longitude, heading)
+    }
+
+    /**
+     * Places the selected asset type at a geographic point.
+     *
+     * Blocks when the layout has no geographic fix. When [GeoBounds] is set, points outside
+     * the region are **rejected** (not clamped).
+     */
+    fun placeAssetAtGeographic(latitude: Double, longitude: Double): Boolean {
+        val layout = _uiState.value.currentLayout
+        val anchor = layout.anchor
+        if (!anchor.hasGeographicFix) {
+            _uiState.update {
+                it.copy(
+                    isGeoOriginPanelExpanded = true,
+                    userFeedbackMessage = "Set geographic origin before placing assets on the map"
+                )
+            }
+            return false
+        }
+        if (!MapLayoutProjection.isInsideRegionOrUnbounded(layout.regionBounds, latitude, longitude)) {
+            _uiState.update {
+                it.copy(userFeedbackMessage = "Placement rejected — outside selected region")
+            }
+            return false
+        }
+        val meters = MapLayoutProjection.metersFromAnchor(anchor, latitude, longitude)
+        if (meters == null) {
+            _uiState.update { it.copy(userFeedbackMessage = "Could not convert map tap to meters") }
+            return false
+        }
+        addAssetOfType(_uiState.value.selectedAssetType, meters.first, meters.second)
+        return true
+    }
+
+    /**
+     * Moves an existing object to a geographic point (EDIT mode).
+     * Outside-region taps are rejected when bounds are set.
+     */
+    fun moveObjectToGeographic(objectId: String, latitude: Double, longitude: Double): Boolean {
+        val layout = _uiState.value.currentLayout
+        val anchor = layout.anchor
+        if (!anchor.hasGeographicFix) {
+            _uiState.update {
+                it.copy(userFeedbackMessage = "Geographic origin required to move assets on the map")
+            }
+            return false
+        }
+        if (!MapLayoutProjection.isInsideRegionOrUnbounded(layout.regionBounds, latitude, longitude)) {
+            _uiState.update {
+                it.copy(userFeedbackMessage = "Move rejected — outside selected region")
+            }
+            return false
+        }
+        val meters = MapLayoutProjection.metersFromAnchor(anchor, latitude, longitude) ?: return false
+        moveObject(objectId, meters.first, meters.second)
+        return true
+    }
+
+    /**
+     * Handles an EDIT-mode map tap: select nearest asset, or move the current selection.
+     */
+    fun handleMapEditTap(latitude: Double, longitude: Double): Boolean {
+        val layout = _uiState.value.currentLayout
+        val nearest = MapLayoutProjection.findNearestObjectId(
+            layout.anchor,
+            layout.objects,
+            latitude,
+            longitude
+        )
+        val selectedId = _uiState.value.selectedObjectId
+        return when {
+            nearest != null -> {
+                selectObject(nearest)
+                true
+            }
+            selectedId != null -> moveObjectToGeographic(selectedId, latitude, longitude)
+            else -> {
+                deselectObject()
+                false
+            }
+        }
+    }
+
+    // ==========================================
     // PERSISTENCE OPERATIONS (Part 8)
     // ==========================================
 
@@ -326,9 +501,16 @@ class PlanningViewModel(
                 cursorCoordinatesMeters = null,
                 panOffset = Offset.Zero,
                 zoom = CoordinateTransformer.DEFAULT_ZOOM,
+                // Session chrome restoration: Map primary + Navigate after load
+                planningSurface = PlanningSurface.MAP,
+                mapInteractionMode = MapInteractionMode.NAVIGATE,
+                mapStyleError = null,
+                isGeoOriginPanelExpanded = false,
+                geoAccuracyWarning = null,
                 userFeedbackMessage = "Loaded layout '${layout.name}'"
             )
         }
+        locationController.stopUpdates()
     }
 
     /**
@@ -351,7 +533,24 @@ class PlanningViewModel(
                 hasUnsavedChanges = false,
                 cursorCoordinatesMeters = null,
                 panOffset = Offset.Zero,
-                zoom = CoordinateTransformer.DEFAULT_ZOOM
+                zoom = CoordinateTransformer.DEFAULT_ZOOM,
+                planningSurface = PlanningSurface.MAP,
+                mapInteractionMode = MapInteractionMode.NAVIGATE,
+                mapStyleError = null,
+                isGeoOriginPanelExpanded = false,
+                geoAccuracyWarning = null
+            )
+        }
+        locationController.stopUpdates()
+    }
+
+    /** Stops GNSS updates when leaving Planning (battery). Safe to call repeatedly. */
+    fun stopLocationUpdates() {
+        locationController.stopUpdates()
+        _uiState.update {
+            it.copy(
+                isGeoOriginPanelExpanded = false,
+                locationState = locationController.state.value
             )
         }
     }

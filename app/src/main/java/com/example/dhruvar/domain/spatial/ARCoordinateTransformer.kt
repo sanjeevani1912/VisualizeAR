@@ -17,12 +17,15 @@ import kotlin.math.sin
  * - Planning +X: Lateral horizontal axis (Right). Maps to +X offset relative to planning origin.
  * - Planning +Z: Depth horizontal axis (Forward/Backward on the ground plane). Maps to +Z offset relative to planning origin.
  * - Vertical +Y: Normal axis perpendicular to the ground plane (Height clearance). Ground plane is Y = 0.0.
- * - Scale: 1 planning meter corresponds strictly to 1.0 real-world AR meter (SI metric standard).
+ * - Scale: 1 planning meter corresponds to [METERS_PER_PLANNING_UNIT] real-world meters at full scale;
+ *   [visualizationScale] (e.g. miniature sand-table) multiplies horizontal offsets uniformly about the origin.
+ *
+ * Geographic GPS is **not** applied here — the user places the AR origin on-site; meshes use meter offsets only.
  */
 object ARCoordinateTransformer {
 
     /**
-     * Metric scale factor: exactly 1.0 meter in the 2D planner equals 1.0 meter in ARCore.
+     * Metric scale factor: exactly 1.0 meter in the 2D planner equals 1.0 meter in ARCore at full scale.
      */
     const val METERS_PER_PLANNING_UNIT = 1.0f
 
@@ -31,19 +34,23 @@ object ARCoordinateTransformer {
      * anchored to the physical planning origin [originPose].
      *
      * Pipeline:
-     * Layout (X, Z) -> meters -> AR world offset from planning origin -> ARCore Pose
+     * Layout (X, Z) -> meters * [visualizationScale] -> AR world offset from planning origin -> ARCore Pose
+     *
+     * @param visualizationScale Uniform sand-table / full-scale factor about the origin (default 1.0).
      */
     fun transformPlanningToWorldPose(
         originPose: Pose,
         planXMeters: Float,
         planZMeters: Float,
-        planRotationDegrees: Float = 0.0f
+        planRotationDegrees: Float = 0.0f,
+        visualizationScale: Float = 1.0f
     ): Pose {
+        val s = visualizationScale.coerceAtLeast(0.001f)
         // Translation in horizontal ground plane (Y = 0.0)
         val translationOffset = Pose.makeTranslation(
-            planXMeters * METERS_PER_PLANNING_UNIT,
+            planXMeters * METERS_PER_PLANNING_UNIT * s,
             0.0f,
-            planZMeters * METERS_PER_PLANNING_UNIT
+            planZMeters * METERS_PER_PLANNING_UNIT * s
         )
 
         // Rotation around vertical axis (Y in ARCore right-handed system)
@@ -64,12 +71,14 @@ object ARCoordinateTransformer {
     fun transformPlanningToWorldPosition(
         originPose: Pose,
         planXMeters: Float,
-        planZMeters: Float
+        planZMeters: Float,
+        visualizationScale: Float = 1.0f
     ): FloatArray {
+        val s = visualizationScale.coerceAtLeast(0.001f)
         val localPoint = floatArrayOf(
-            planXMeters * METERS_PER_PLANNING_UNIT,
+            planXMeters * METERS_PER_PLANNING_UNIT * s,
             0.0f,
-            planZMeters * METERS_PER_PLANNING_UNIT
+            planZMeters * METERS_PER_PLANNING_UNIT * s
         )
         return originPose.transformPoint(localPoint)
     }
@@ -78,13 +87,7 @@ object ARCoordinateTransformer {
      * Pure geometric computation of world position without depending on native ARCore JNI.
      * Useful for decoupled testing and validation.
      *
-     * @param originX World X coordinate of origin anchor
-     * @param originY World Y coordinate of origin anchor (ground plane height)
-     * @param originZ World Z coordinate of origin anchor
-     * @param originYawDegrees Compass/orientation yaw of origin in degrees
-     * @param planX Offset along planning X axis in meters
-     * @param planZ Offset along planning Z axis in meters
-     * @return 3-element array [worldX, worldY, worldZ]
+     * @param visualizationScale Uniform miniature / full-scale factor (default 1.0).
      */
     fun computeWorldPositionPure(
         originX: Float,
@@ -92,15 +95,19 @@ object ARCoordinateTransformer {
         originZ: Float,
         originYawDegrees: Float,
         planX: Float,
-        planZ: Float
+        planZ: Float,
+        visualizationScale: Float = 1.0f
     ): FloatArray {
+        val s = visualizationScale.coerceAtLeast(0.001f)
         val rad = Math.toRadians(originYawDegrees.toDouble()).toFloat()
         val cosYaw = cos(rad)
         val sinYaw = sin(rad)
 
+        val scaledX = planX * s
+        val scaledZ = planZ * s
         // Rotate offset by origin yaw
-        val rotatedX = (planX * cosYaw) - (planZ * sinYaw)
-        val rotatedZ = (planX * sinYaw) + (planZ * cosYaw)
+        val rotatedX = (scaledX * cosYaw) - (scaledZ * sinYaw)
+        val rotatedZ = (scaledX * sinYaw) + (scaledZ * cosYaw)
 
         return floatArrayOf(
             originX + (rotatedX * METERS_PER_PLANNING_UNIT),

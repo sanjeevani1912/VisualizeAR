@@ -61,6 +61,8 @@ fun GeoOriginPanel(
     compassAvailable: Boolean,
     geoAccuracyWarning: String?,
     onRequestPermission: () -> Unit,
+    onOpenAppSettings: (() -> Unit)? = null,
+    permissionPermanentlyDenied: Boolean = false,
     onRefreshLocation: () -> Unit,
     onUseMyLocation: () -> Unit,
     onCaptureHeading: () -> Unit,
@@ -125,18 +127,39 @@ fun GeoOriginPanel(
                     ) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Location permission is required to capture GNSS origin.",
+                            text = if (permissionPermanentlyDenied) {
+                                "Location permission permanently denied. Open settings to enable GNSS origin capture."
+                            } else {
+                                "Location permission is required to capture GNSS origin."
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.secondary
                         )
-                        TextButton(onClick = onRequestPermission) {
-                            Text("Grant location permission", fontWeight = FontWeight.SemiBold)
+                        if (permissionPermanentlyDenied && onOpenAppSettings != null) {
+                            TextButton(onClick = onOpenAppSettings) {
+                                Text("Open app settings", fontWeight = FontWeight.SemiBold)
+                            }
+                        } else {
+                            TextButton(onClick = onRequestPermission) {
+                                Text("Grant location permission", fontWeight = FontWeight.SemiBold)
+                            }
                         }
                     } else if (locationState.availability == LocationAvailability.GPS_DISABLED) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = locationState.statusMessage
-                                ?: "Enable device location services, then retry.",
+                                ?: "Location services disabled — enable GPS/Network location, then retry.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TacticalAmber
+                        )
+                        TextButton(onClick = onRefreshLocation) {
+                            Text("Retry location", fontWeight = FontWeight.SemiBold)
+                        }
+                    } else if (locationState.availability == LocationAvailability.PROVIDER_ERROR) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = locationState.statusMessage
+                                ?: "Location provider error — retry or check Play Services.",
                             style = MaterialTheme.typography.bodySmall,
                             color = TacticalAmber
                         )

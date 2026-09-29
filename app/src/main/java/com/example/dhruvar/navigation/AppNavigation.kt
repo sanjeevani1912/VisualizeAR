@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.dhruvar.domain.model.Layout
 import com.example.dhruvar.ui.screens.ARVisualizationScreen
+import com.example.dhruvar.ui.screens.FieldGuideScreen
 import com.example.dhruvar.ui.screens.HomeScreen
 import com.example.dhruvar.ui.screens.PlanningScreen
 import com.example.dhruvar.viewmodel.PlanningViewModel
@@ -16,7 +17,7 @@ import com.example.dhruvar.viewmodel.PlanningViewModel
 /**
  * Top-level application navigation graph.
  *
- * Flow: Home -> Planning -> AR Visualization
+ * Flow: Home -> Planning -> AR Visualization; Home -> Field Guide
  */
 @Composable
 fun AppNavigation(
@@ -38,6 +39,9 @@ fun AppNavigation(
                 onOpenLayout = { layout: Layout ->
                     planningViewModel.loadLayout(layout)
                     navController.navigate(Screen.Planning.route)
+                },
+                onOpenFieldGuide = {
+                    navController.navigate(Screen.FieldGuide.route)
                 },
                 viewModel = planningViewModel
             )
@@ -61,6 +65,12 @@ fun AppNavigation(
                     navController.popBackStack()
                 },
                 viewModel = planningViewModel
+            )
+        }
+
+        composable(Screen.FieldGuide.route) {
+            FieldGuideScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

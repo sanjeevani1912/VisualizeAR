@@ -102,6 +102,13 @@ class ARRenderer(
     var currentLayout: Layout? = null
     var selectedObjectId: String? = null
 
+    /**
+     * Uniform sand-table / full-scale factor applied to planning offsets (and meshes).
+     * Does not persist into layout JSON — session visualization only.
+     */
+    @Volatile
+    var visualizationScale: Float = 1.0f
+
     var originAnchor: Anchor? = null
         private set
 
@@ -257,13 +264,15 @@ class ARRenderer(
 
                         // 4. Draw 3D tactical assets
                         val layout = currentLayout
+                        val vizScale = visualizationScale
                         if (layout != null && layout.objects.isNotEmpty()) {
                             arObjectRenderer.draw(
                                 objects = layout.objects,
                                 originPose = anchor.pose,
                                 selectedObjectId = selectedObjectId,
                                 viewMatrix = viewMatrix,
-                                projectionMatrix = projectionMatrix
+                                projectionMatrix = projectionMatrix,
+                                visualizationScale = vizScale
                             )
 
                             // 5. Draw 3D distance line if an object is selected
@@ -275,7 +284,8 @@ class ARRenderer(
                                     originPose = anchor.pose,
                                     planXMeters = selectedObj.x,
                                     planZMeters = selectedObj.z,
-                                    planRotationDegrees = selectedObj.rotationDegrees
+                                    planRotationDegrees = selectedObj.rotationDegrees,
+                                    visualizationScale = vizScale
                                 )
                                 arDistanceLineRenderer.draw(anchor.pose, selectedPose, viewMatrix, projectionMatrix)
 
@@ -307,10 +317,11 @@ class ARRenderer(
                                     originPose = anchor.pose,
                                     planXMeters = obj.x,
                                     planZMeters = obj.z,
-                                    planRotationDegrees = obj.rotationDegrees
+                                    planRotationDegrees = obj.rotationDegrees,
+                                    visualizationScale = vizScale
                                 )
                                 val oTrans = objPose.translation
-                                val topY = oTrans[1] + obj.heightMeters + 0.25f
+                                val topY = oTrans[1] + (obj.heightMeters * vizScale) + 0.25f
 
                                 val screenCoord = projectWorldToScreen(oTrans[0], topY, oTrans[2])
                                 val dx = oTrans[0] - cameraPos[0]
@@ -490,7 +501,8 @@ class ARRenderer(
 
     /**
      * Places the planning origin on the ground and rotates it once so canvas north
-     * matches [magneticHeadingDegrees]. The anchor keeps that orientation afterwards.
+     * matches [magneticHeadingDegrees] (prefer layout.anchor.headingDegrees at the call site;
+     * fall back to live compass). The ARCore session anchor is ephemeral — never persisted to JSON.
      */
     fun setOriginAtCenterHit(magneticHeadingDegrees: Float): Boolean {
         val hit = currentCenterHit

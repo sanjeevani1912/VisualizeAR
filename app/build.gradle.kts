@@ -17,6 +17,16 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Demo PMTiles imagery style (MapLibre demotiles). Override via product flavors / CI if needed.
+        buildConfigField(
+            "String",
+            "MAP_STYLE_URL",
+            "\"https://demotiles.maplibre.org/pmtiles/raster/style-imagery.json\""
+        )
+        // Optional direct PMTiles archive URL (empty = use style JSON above). Example:
+        // "pmtiles://https://example.com/region.pmtiles"
+        buildConfigField("String", "PMTILES_URL", "\"\"")
     }
 
     buildTypes {
@@ -34,6 +44,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -51,6 +62,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation("com.google.ar:core:1.47.0")
     implementation(libs.play.services.location)
+    // MapLibre Native Android — PMTiles via pmtiles:// requires >= 11.7.0 (pinned 11.8.0)
+    implementation(libs.maplibre.android.sdk)
     testImplementation(libs.junit)
     testImplementation("org.json:json:20240303")
     androidTestImplementation(libs.androidx.junit)
