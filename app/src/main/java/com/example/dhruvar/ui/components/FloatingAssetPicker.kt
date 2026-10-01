@@ -9,7 +9,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -20,7 +19,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -47,12 +45,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.dhruvar.domain.model.AssetType
-import com.example.dhruvar.ui.theme.PrecisionBlue
 
 /**
  * Bottom-right FAB that toggles a translucent floating asset picker over the planning canvas.
@@ -109,11 +104,19 @@ fun BoxScope.FloatingAssetPickerOverlay(
         FloatingActionButton(
             onClick = onToggle,
             shape = CircleShape,
-            containerColor = if (isOpen) MaterialTheme.colorScheme.secondaryContainer else PrecisionBlue,
-            contentColor = if (isOpen) MaterialTheme.colorScheme.onSecondaryContainer else Color.White,
+            containerColor = if (isOpen) {
+                MaterialTheme.colorScheme.secondaryContainer
+            } else {
+                MaterialTheme.colorScheme.primary
+            },
+            contentColor = if (isOpen) {
+                MaterialTheme.colorScheme.onSecondaryContainer
+            } else {
+                MaterialTheme.colorScheme.onPrimary
+            },
             elevation = FloatingActionButtonDefaults.elevation(
-                defaultElevation = 6.dp,
-                pressedElevation = 8.dp
+                defaultElevation = 4.dp,
+                pressedElevation = 6.dp
             ),
             modifier = Modifier
                 .size(56.dp)
@@ -137,14 +140,10 @@ private fun FloatingAssetMenuPanel(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
-        tonalElevation = 4.dp,
-        shadowElevation = 8.dp,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
-        )
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        tonalElevation = 3.dp,
+        shadowElevation = 4.dp
     ) {
         Column(
             modifier = Modifier
@@ -152,13 +151,10 @@ private fun FloatingAssetMenuPanel(
                 .padding(horizontal = 12.dp, vertical = 12.dp)
         ) {
             Text(
-                text = "ADD ASSET",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.2.sp,
-                    fontFamily = FontFamily.Monospace
-                ),
-                color = PrecisionBlue,
+                text = "Add asset",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
@@ -187,11 +183,7 @@ private fun AssetMenuRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .border(
-                1.dp,
-                MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
-                RoundedCornerShape(10.dp)
-            )
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 10.dp)
             .semantics { contentDescription = "Add ${assetType.displayName}" },
@@ -201,13 +193,13 @@ private fun AssetMenuRow(
             modifier = Modifier
                 .size(36.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(PrecisionBlue.copy(alpha = 0.15f)),
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = assetType.displayName.take(1),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = PrecisionBlue
+                color = MaterialTheme.colorScheme.primary
             )
         }
         Spacer(modifier = Modifier.width(10.dp))
@@ -219,7 +211,7 @@ private fun AssetMenuRow(
             )
             Text(
                 text = dims,
-                style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

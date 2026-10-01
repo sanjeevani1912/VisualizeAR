@@ -18,11 +18,13 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Demo PMTiles imagery style (MapLibre demotiles). Override via product flavors / CI if needed.
+        // Global free OpenStreetMap-based style (works in India and worldwide).
+        // Previous Alps-only demo: https://demotiles.maplibre.org/pmtiles/raster/style-imagery.json
+        // Override via product flavors / CI; site-specific PMTiles still supported — see docs/PMTiles-Configuration.md
         buildConfigField(
             "String",
             "MAP_STYLE_URL",
-            "\"https://demotiles.maplibre.org/pmtiles/raster/style-imagery.json\""
+            "\"https://tiles.openfreemap.org/styles/liberty\""
         )
         // Optional direct PMTiles archive URL (empty = use style JSON above). Example:
         // "pmtiles://https://example.com/region.pmtiles"

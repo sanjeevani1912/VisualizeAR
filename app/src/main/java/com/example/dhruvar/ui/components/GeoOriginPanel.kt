@@ -1,11 +1,13 @@
 package com.example.dhruvar.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -41,15 +43,13 @@ import com.example.dhruvar.domain.location.DeviceLocationState
 import com.example.dhruvar.domain.location.GeoOriginReadiness
 import com.example.dhruvar.domain.location.LocationAvailability
 import com.example.dhruvar.domain.model.Anchor
-import com.example.dhruvar.ui.theme.PrecisionBlue
 import com.example.dhruvar.ui.theme.TacticalAmber
 import com.example.dhruvar.ui.theme.TacticalGreen
 import com.example.dhruvar.viewmodel.PlanningViewModel
 import java.util.Locale
 
 /**
- * Compact expandable Geo Origin panel for stamping GNSS + compass onto the layout anchor.
- * Collapsed by default so it does not clutter canvas interaction.
+ * Compact geo-origin control: collapsed chip on the map; expands as an overlay sheet.
  */
 @Composable
 fun GeoOriginPanel(
@@ -70,18 +70,16 @@ fun GeoOriginPanel(
     modifier: Modifier = Modifier
 ) {
     val readiness = locationState.readiness
+    val chipLabel = originChipLabel(anchor.hasGeographicFix, readiness)
+
     Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
         tonalElevation = 2.dp,
-        shadowElevation = 2.dp,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
-        ),
-        modifier = modifier.fillMaxWidth()
+        shadowElevation = 3.dp,
+        modifier = modifier
     ) {
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -91,31 +89,35 @@ fun GeoOriginPanel(
                 Icon(
                     imageVector = Icons.Default.MyLocation,
                     contentDescription = null,
-                    tint = PrecisionBlue,
-                    modifier = Modifier.size(18.dp)
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "GEO ORIGIN",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    text = "Origin",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                ReadinessChip(readiness = readiness, hasStampedFix = anchor.hasGeographicFix)
+                StatusPill(text = chipLabel, readiness = readiness, stamped = anchor.hasGeographicFix)
                 Spacer(modifier = Modifier.weight(1f))
                 Icon(
                     imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "Collapse geo origin" else "Expand geo origin",
-                    tint = MaterialTheme.colorScheme.secondary
+                    contentDescription = if (expanded) "Collapse origin" else "Expand origin",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
-            AnimatedVisibility(visible = expanded) {
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
                 Column(modifier = Modifier.padding(top = 10.dp)) {
                     StampedOriginSummary(anchor = anchor, liveHeadingDegrees = liveHeadingDegrees)
-
                     Spacer(modifier = Modifier.height(8.dp))
-
                     LiveFixSummary(
                         locationState = locationState,
                         liveHeadingDegrees = liveHeadingDegrees,
@@ -128,12 +130,12 @@ fun GeoOriginPanel(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = if (permissionPermanentlyDenied) {
-                                "Location permission permanently denied. Open settings to enable GNSS origin capture."
+                                "Location permission permanently denied. Open settings to enable GNSS."
                             } else {
-                                "Location permission is required to capture GNSS origin."
+                                "Location permission is required to capture origin."
                             },
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.secondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (permissionPermanentlyDenied && onOpenAppSettings != null) {
                             TextButton(onClick = onOpenAppSettings) {
@@ -148,7 +150,7 @@ fun GeoOriginPanel(
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = locationState.statusMessage
-                                ?: "Location services disabled — enable GPS/Network location, then retry.",
+                                ?: "Location services disabled — enable GPS, then retry.",
                             style = MaterialTheme.typography.bodySmall,
                             color = TacticalAmber
                         )
@@ -187,8 +189,11 @@ fun GeoOriginPanel(
                         Button(
                             onClick = onUseMyLocation,
                             enabled = locationState.hasFix && locationState.permissionGranted,
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = PrecisionBlue),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
                             modifier = Modifier.weight(1.2f)
                         ) {
                             Icon(
@@ -197,12 +202,12 @@ fun GeoOriginPanel(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Use my location", fontSize = 12.sp)
+                            Text("Use location", fontSize = 12.sp)
                         }
                         OutlinedButton(
                             onClick = onCaptureHeading,
                             enabled = compassAvailable,
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(
@@ -216,7 +221,7 @@ fun GeoOriginPanel(
                         OutlinedButton(
                             onClick = onClear,
                             enabled = anchor.hasGeographicFix || anchor.headingDegrees != null,
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(0.7f)
                         ) {
                             Icon(
@@ -232,42 +237,42 @@ fun GeoOriginPanel(
     }
 }
 
+private fun originChipLabel(stamped: Boolean, readiness: GeoOriginReadiness): String {
+    return when {
+        stamped -> "Set"
+        readiness == GeoOriginReadiness.READY -> "Ready"
+        readiness == GeoOriginReadiness.ACCURACY_POOR -> "Poor GPS"
+        else -> "No fix"
+    }
+}
+
 @Composable
-private fun ReadinessChip(readiness: GeoOriginReadiness, hasStampedFix: Boolean) {
-    val (label, color) = when {
-        !hasStampedFix && readiness == GeoOriginReadiness.NO_FIX ->
-            "NO FIX" to MaterialTheme.colorScheme.secondary
-        readiness == GeoOriginReadiness.NO_FIX ->
-            "NO FIX" to MaterialTheme.colorScheme.secondary
-        readiness == GeoOriginReadiness.ACCURACY_POOR ->
-            "ACCURACY POOR (>15m)" to TacticalAmber
-        else ->
-            "READY" to TacticalGreen
+private fun StatusPill(text: String, readiness: GeoOriginReadiness, stamped: Boolean) {
+    val color = when {
+        stamped -> TacticalGreen
+        readiness == GeoOriginReadiness.READY -> TacticalGreen
+        readiness == GeoOriginReadiness.ACCURACY_POOR -> TacticalAmber
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    Box(
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Medium,
+        color = color,
         modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(color.copy(alpha = 0.15f))
-            .border(1.dp, color, RoundedCornerShape(4.dp))
-            .padding(horizontal = 6.dp, vertical = 2.dp)
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 9.sp,
-                color = color
-            )
-        )
-    }
+            .clip(RoundedCornerShape(6.dp))
+            .background(color.copy(alpha = 0.14f))
+            .padding(horizontal = 7.dp, vertical = 2.dp)
+    )
 }
 
 @Composable
 private fun StampedOriginSummary(anchor: Anchor, liveHeadingDegrees: Float) {
     Text(
-        text = "LAYOUT ANCHOR",
-        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-        color = MaterialTheme.colorScheme.secondary
+        text = "Layout anchor",
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     Spacer(modifier = Modifier.height(4.dp))
     if (anchor.hasGeographicFix) {
@@ -292,9 +297,9 @@ private fun StampedOriginSummary(anchor: Anchor, liveHeadingDegrees: Float) {
         )
     } else {
         Text(
-            text = "Not set — stamp from GNSS when READY",
+            text = "Not set — stamp from GNSS when Ready",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.secondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -306,9 +311,10 @@ private fun LiveFixSummary(
     compassAvailable: Boolean
 ) {
     Text(
-        text = "DEVICE",
-        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-        color = MaterialTheme.colorScheme.secondary
+        text = "Device",
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     Spacer(modifier = Modifier.height(4.dp))
     val fix = locationState.lastFix
@@ -336,7 +342,7 @@ private fun LiveFixSummary(
         Text(
             text = locationState.statusMessage ?: "Waiting for GNSS fix…",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.secondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

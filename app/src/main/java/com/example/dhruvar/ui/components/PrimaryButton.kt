@@ -33,7 +33,7 @@ fun PrimaryButton(
     Button(
         onClick = onClick,
         enabled = enabled,
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary
@@ -41,7 +41,7 @@ fun PrimaryButton(
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
         modifier = modifier
             .fillMaxWidth()
-            .height(52.dp)
+            .height(48.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically

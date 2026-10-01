@@ -1,16 +1,16 @@
-# PMTiles configuration (DhruvAR Phase 4)
+# Map / PMTiles configuration (DhruvAR)
 
 DhruvAR uses **MapLibre Native Android** (`org.maplibre.gl:android-sdk:11.8.0`) with native `pmtiles://` support (requires MapLibre ≥ 11.7.0).
 
-## Default (demo) basemap
+## Default basemap (global — India works)
 
-`BuildConfig.MAP_STYLE_URL` points at MapLibre’s public PMTiles imagery style:
+`BuildConfig.MAP_STYLE_URL` points at **OpenFreeMap Liberty** (OpenStreetMap data, free, no API key):
 
 ```text
-https://demotiles.maplibre.org/pmtiles/raster/style-imagery.json
+https://tiles.openfreemap.org/styles/liberty
 ```
 
-That style JSON already references a remote `pmtiles://https://…` raster archive (Central Alps demo). No Google Maps tiles are used.
+This is a **worldwide** vector style: streets, places, and buildings appear when you zoom into India or anywhere else.
 
 Configured in `app/build.gradle.kts`:
 
@@ -18,12 +18,22 @@ Configured in `app/build.gradle.kts`:
 buildConfigField(
     "String",
     "MAP_STYLE_URL",
-    "\"https://demotiles.maplibre.org/pmtiles/raster/style-imagery.json\""
+    "\"https://tiles.openfreemap.org/styles/liberty\""
 )
 buildConfigField("String", "PMTILES_URL", "\"\"")
 ```
 
-## Plug in a production PMTiles archive
+### Why the old demo looked empty over India
+
+The previous MapLibre demo style:
+
+```text
+https://demotiles.maplibre.org/pmtiles/raster/style-imagery.json
+```
+
+is named **“Central Alps: Sentinel-2 Imagery”**. Its satellite raster PMTiles archive only covers the Alps (Austria / Italy area). Outside that box you only saw sparse place-name labels from a vector overlay — not a bug in zoom gestures.
+
+## Plug in a production / site PMTiles archive
 
 ### Option A — Style JSON (recommended)
 
@@ -59,6 +69,8 @@ Set `PMTILES_URL` to a non-empty `pmtiles://https://…` or `pmtiles://file://�
 ## Network
 
 `INTERNET` + `ACCESS_NETWORK_STATE` are declared for remote styles/archives. Failures surface as a non-blocking banner on the planning map (“Map tiles unavailable…”).
+
+Keep OpenStreetMap / OpenFreeMap attribution visible (MapLibre shows it automatically when the style declares it).
 
 ## Dual surface
 

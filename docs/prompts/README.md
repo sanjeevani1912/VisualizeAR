@@ -34,3 +34,20 @@ A geo-anchored combat layout authoring system on Android:
 - Versioned layout JSON as the single source of truth
 
 **Not in these prompts:** Google Maps basemap, backend auth/share/approve, web client, live multi-user AR.
+
+---
+
+## Field Kit UX overhaul (after geo 01–06)
+
+Separate series for military day-ops light UI, search, drag-region, origin chip, HUD cleanup, AR briefing:
+
+→ See **[`ux-field-kit/README.md`](ux-field-kit/README.md)**
+
+| Order | File | Outcome |
+|-------|------|---------|
+| UX-01 | `ux-field-kit/01-THEME-FIELD-KIT.md` | Force light Field Kit palette |
+| UX-02 | `ux-field-kit/02-CONTEXTUAL-HUD.md` | Contextual planning HUD |
+| UX-03 | `ux-field-kit/03-LOCATION-SEARCH.md` | Expandable place search |
+| UX-04 | `ux-field-kit/04-REGION-CORNER-DRAG.md` | Drag rectangle + viewport fallback |
+| UX-05 | `ux-field-kit/05-ORIGIN-HYBRID-CHIP.md` | Hybrid origin chip |
+| UX-06 | `ux-field-kit/06-AR-COLLAPSIBLE-BRIEFING.md` | Collapsible AR briefing |

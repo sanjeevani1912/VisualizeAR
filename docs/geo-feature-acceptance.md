@@ -1,12 +1,12 @@
 # Geo feature acceptance demo script
 
-End-to-end check against the current DhruvAR build (Phases 1–6). Use a device/emulator with Play Services, network (for demo PMTiles), and ARCore where available.
+End-to-end check against the current DhruvAR build (Phases 1–6). Use a device/emulator with Play Services, network (for OpenFreeMap / tiles), and ARCore where available.
 
 ## Demo script (15 steps)
 
 1. **Launch** DhruvAR → Home. Optionally open **Field Guide** and skim geo workflow.
 2. **Create new layout** → Planning opens on **Map** surface.
-3. Confirm **MapLibre** basemap loads (demo PMTiles imagery). If offline, a non-blocking “Map tiles unavailable” banner appears — app does not crash.
+3. Confirm **MapLibre** basemap loads (OpenFreeMap Liberty — streets worldwide, including India). If offline, a non-blocking “Map tiles unavailable” banner appears — app does not crash.
 4. Expand **GEO ORIGIN** → grant location (or deny once: clear message + retry / Open settings if permanent).
 5. With GPS on, wait for **READY** (or stamp with **ACCURACY POOR** and note the site-level warning).
 6. **Use my location** + **Heading** → anchor shows lat/lng/heading. Save is marked unsaved until you save.
@@ -33,7 +33,7 @@ End-to-end check against the current DhruvAR build (Phases 1–6). Use a device/
 ## Known limitations
 
 - Absolute GNSS error vs relative meter precision.
-- PMTiles demo style needs network unless a local archive is configured (`docs/PMTiles-Configuration.md`).
+- Basemap needs network unless a local PMTiles archive is configured (`docs/PMTiles-Configuration.md`).
 - Antimeridian region boxes unsupported.
 - Equirectangular geo math: field scale ≤ ~1–2 km recommended.
 - AR requires user-placed plane origin (no VPS / Geospatial API in this release).

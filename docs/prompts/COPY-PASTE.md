@@ -33,3 +33,22 @@ then execute docs/prompts/0N-....md exactly. Stay within that phase’s scope.
 ```
 
 Replace `0N-....md` with the phase file name.
+
+---
+
+## Field Kit UX series (after geo phases)
+
+Use `docs/prompts/ux-field-kit/COPY-PASTE.md`.
+
+Order:
+
+```text
+ux-field-kit/01-THEME-FIELD-KIT
+→ 02-CONTEXTUAL-HUD
+→ 03-LOCATION-SEARCH
+→ 04-REGION-CORNER-DRAG
+→ 05-ORIGIN-HYBRID-CHIP
+→ 06-AR-COLLAPSIBLE-BRIEFING
+```
+
+Each chat: `00-SHARED-CONTEXT.md` + `ux-field-kit/00-UX-SHARED.md` + one phase file.

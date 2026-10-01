@@ -1,26 +1,41 @@
 package com.example.dhruvar.ui.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CropFree
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.GridOn
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.NearMe
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.dhruvar.domain.model.MapInteractionMode
 import com.example.dhruvar.domain.model.PlanningSurface
-import com.example.dhruvar.ui.theme.PrecisionBlue
 
 @Composable
 fun PlanningSurfaceSwitcher(
@@ -28,31 +43,70 @@ fun PlanningSurfaceSwitcher(
     onSurfaceChange: (PlanningSurface) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        tonalElevation = 2.dp,
+        shadowElevation = 2.dp,
+        modifier = modifier
     ) {
-        FilterChip(
-            selected = surface == PlanningSurface.MAP,
-            onClick = { onSurfaceChange(PlanningSurface.MAP) },
-            label = { Text("Map", fontWeight = FontWeight.SemiBold, fontSize = 13.sp) },
-            shape = RoundedCornerShape(8.dp),
-            colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = PrecisionBlue.copy(alpha = 0.22f),
-                selectedLabelColor = PrecisionBlue
-            ),
-            modifier = Modifier.weight(1f)
+        Row(
+            modifier = Modifier.padding(3.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            CompactSegment(
+                selected = surface == PlanningSurface.MAP,
+                icon = Icons.Default.Map,
+                label = "Map",
+                onClick = { onSurfaceChange(PlanningSurface.MAP) }
+            )
+            CompactSegment(
+                selected = surface == PlanningSurface.METRIC_GRID,
+                icon = Icons.Default.GridOn,
+                label = "Grid",
+                onClick = { onSurfaceChange(PlanningSurface.METRIC_GRID) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompactSegment(
+    selected: Boolean,
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    val bg = if (selected) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+    } else {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0f)
+    }
+    val fg = if (selected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(bg)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 8.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = fg,
+            modifier = Modifier.size(16.dp)
         )
-        FilterChip(
-            selected = surface == PlanningSurface.METRIC_GRID,
-            onClick = { onSurfaceChange(PlanningSurface.METRIC_GRID) },
-            label = { Text("Metric grid", fontWeight = FontWeight.SemiBold, fontSize = 13.sp) },
-            shape = RoundedCornerShape(8.dp),
-            colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = PrecisionBlue.copy(alpha = 0.22f),
-                selectedLabelColor = PrecisionBlue
-            ),
-            modifier = Modifier.weight(1f)
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            color = fg
         )
     }
 }
@@ -67,69 +121,101 @@ fun MapModeToolbar(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+            tonalElevation = 3.dp,
+            shadowElevation = 4.dp,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            MapModeChip("Nav", MapInteractionMode.NAVIGATE, mode, onModeChange)
-            MapModeChip("Region", MapInteractionMode.SELECT_REGION, mode, onModeChange)
-            MapModeChip("Anchor", MapInteractionMode.SET_ANCHOR, mode, onModeChange)
-            MapModeChip("Place", MapInteractionMode.PLACE_ASSET, mode, onModeChange)
-            MapModeChip("Edit", MapInteractionMode.EDIT, mode, onModeChange)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 6.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MapModeItem("Nav", Icons.Default.NearMe, MapInteractionMode.NAVIGATE, mode, onModeChange)
+                MapModeItem("Region", Icons.Default.CropFree, MapInteractionMode.SELECT_REGION, mode, onModeChange)
+                MapModeItem("Anchor", Icons.Default.MyLocation, MapInteractionMode.SET_ANCHOR, mode, onModeChange)
+                MapModeItem("Place", Icons.Default.Place, MapInteractionMode.PLACE_ASSET, mode, onModeChange)
+                MapModeItem("Edit", Icons.Default.Edit, MapInteractionMode.EDIT, mode, onModeChange)
+            }
         }
-            Text(
-                text = if (hasRegion) {
-                    "Region active — placements outside bounds are rejected."
-                } else {
-                    "Region optional — without bounds, map placement is allowed site-wide."
-                },
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-            )
-            if (mode == MapInteractionMode.SELECT_REGION) {
+
+        if (mode == MapInteractionMode.SELECT_REGION) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Text(
+                        text = if (hasRegion) "Region set" else "Pan to site, then confirm",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
                     TextButton(onClick = onConfirmViewportRegion) {
-                        Text("Use visible area", fontWeight = FontWeight.SemiBold, color = PrecisionBlue)
+                        Text("Use area", fontWeight = FontWeight.SemiBold)
                     }
                     if (hasRegion) {
                         TextButton(onClick = onClearRegion) {
-                            Text("Clear region", fontWeight = FontWeight.SemiBold)
+                            Text("Clear")
                         }
                     }
                 }
-                Text(
-                    text = "Pan/zoom to the site, then confirm the visible map as region bounds.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
             }
+        }
     }
 }
 
 @Composable
-private fun MapModeChip(
+private fun MapModeItem(
     label: String,
+    icon: ImageVector,
     value: MapInteractionMode,
     selected: MapInteractionMode,
     onModeChange: (MapInteractionMode) -> Unit
 ) {
-    FilterChip(
-        selected = selected == value,
-        onClick = { onModeChange(value) },
-        label = { Text(label, fontSize = 12.sp) },
-        shape = RoundedCornerShape(8.dp),
-        colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = PrecisionBlue.copy(alpha = 0.22f),
-            selectedLabelColor = PrecisionBlue
+    val isSelected = selected == value
+    val bg = if (isSelected) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+    } else {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0f)
+    }
+    val fg = if (isSelected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(bg)
+            .clickable { onModeChange(value) }
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = fg,
+            modifier = Modifier.size(18.dp)
         )
-    )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+            color = fg
+        )
+    }
 }

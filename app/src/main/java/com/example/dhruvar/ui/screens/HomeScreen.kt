@@ -1,11 +1,10 @@
 package com.example.dhruvar.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,31 +13,29 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
-import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Layers
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.ViewInAr
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -51,16 +48,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dhruvar.domain.model.Layout
 import com.example.dhruvar.ui.components.AppTopBar
-import com.example.dhruvar.ui.components.PrimaryButton
-import com.example.dhruvar.ui.theme.PrecisionBlue
 import com.example.dhruvar.viewmodel.PlanningViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -77,17 +71,14 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Dialog states
     var layoutToRename by remember { mutableStateOf<Layout?>(null) }
     var renameInput by remember { mutableStateOf("") }
     var layoutToDelete by remember { mutableStateOf<Layout?>(null) }
 
-    // Load saved layouts when screen becomes active
     LaunchedEffect(Unit) {
         viewModel.loadSavedLayouts()
     }
 
-    // Handle user feedback messages
     LaunchedEffect(uiState.userFeedbackMessage) {
         uiState.userFeedbackMessage?.let { msg ->
             snackbarHostState.showSnackbar(msg)
@@ -95,7 +86,6 @@ fun HomeScreen(
         }
     }
 
-    // Rename Dialog
     layoutToRename?.let { targetLayout ->
         AlertDialog(
             onDismissRequest = { layoutToRename = null },
@@ -141,7 +131,6 @@ fun HomeScreen(
         )
     }
 
-    // Delete Confirmation Dialog
     layoutToDelete?.let { targetLayout ->
         AlertDialog(
             onDismissRequest = { layoutToDelete = null },
@@ -190,202 +179,81 @@ fun HomeScreen(
                 }
             )
         },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onCreateNewLayout,
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null
+                    )
+                },
+                text = { Text("New plan") },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            horizontalAlignment = Alignment.Start
-        ) {
-            // Header Section
-            Text(
-                text = "DhruvAR",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp
-                ),
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Spatial Planning & Visualization",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.SemiBold
-                ),
-                color = PrecisionBlue
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "Create a geo-accurate plan on MapLibre, stamp GNSS origin, place assets in meters, and visualize in AR.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.secondary
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // Primary Actions
-            PrimaryButton(
-                text = "Create New Plan",
-                icon = Icons.Default.Add,
-                onClick = onCreateNewLayout
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedButton(
-                onClick = {
-                    if (uiState.savedLayouts.isNotEmpty()) {
-                        onOpenLayout(uiState.savedLayouts.first())
-                    }
-                },
-                shape = RoundedCornerShape(8.dp),
-                enabled = uiState.savedLayouts.isNotEmpty(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.FolderOpen,
-                        contentDescription = "Open most recent plan"
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (uiState.savedLayouts.isNotEmpty()) {
-                            "Open Most Recent Plan"
-                        } else {
-                            "No Plans Saved Yet"
-                        },
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Architecture Workflow Overview
-            Text(
-                text = "WORKFLOW STAGES",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.2.sp,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Card(
-                shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    WorkflowStepItem(
-                        step = "01",
-                        title = "Map & Geo Planning",
-                        description = "Stamp GNSS origin, select region, place assets as meter offsets on MapLibre / metric grid.",
-                        icon = Icons.Default.Layers
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-                    WorkflowStepItem(
-                        step = "02",
-                        title = "AR Visualization",
-                        description = "Navigate to origin, calibrate heading-aligned plane, project 3D assets at planned offsets.",
-                        icon = Icons.Default.ViewInAr
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Recent Layouts Section
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "RECENT PLANS",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                )
-                if (uiState.savedLayouts.isNotEmpty()) {
-                    Text(
-                        text = "${uiState.savedLayouts.size} saved",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = PrecisionBlue,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-
-            if (uiState.isLoadingSavedLayouts) {
-                Card(
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
+        when {
+            uiState.isLoadingSavedLayouts -> {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 28.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        androidx.compose.material3.CircularProgressIndicator(
-                            modifier = Modifier.size(28.dp),
-                            strokeWidth = 3.dp,
-                            color = PrecisionBlue
-                        )
-                    }
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(28.dp),
+                        strokeWidth = 3.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
-            } else if (uiState.savedLayouts.isEmpty()) {
-                Card(
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
+            }
+
+            uiState.savedLayouts.isEmpty() -> {
+                EmptyPlansState(modifier = Modifier.padding(innerPadding))
+            }
+
+            else -> {
+                val latest = uiState.savedLayouts.first()
+                val older = uiState.savedLayouts.drop(1)
+                LazyColumn(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 8.dp,
+                        bottom = 88.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 28.dp, horizontal = 16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No saved plans yet.\nTap 'Create New Plan' to begin.",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.secondary,
-                                lineHeight = 20.sp
-                            ),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    item(key = "summary") {
+                        PlansSummary(layouts = uiState.savedLayouts)
+                    }
+                    item(key = "continue-${latest.id}") {
+                        PlanCard(
+                            layout = latest,
+                            featured = true,
+                            onOpen = { onOpenLayout(latest) },
+                            onRename = {
+                                layoutToRename = latest
+                                renameInput = latest.name
+                            },
+                            onDelete = { layoutToDelete = latest }
                         )
                     }
-                }
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    uiState.savedLayouts.forEach { layout ->
-                        SavedLayoutCard(
+                    items(
+                        items = older,
+                        key = { it.id }
+                    ) { layout ->
+                        PlanCard(
                             layout = layout,
+                            featured = false,
                             onOpen = { onOpenLayout(layout) },
                             onRename = {
                                 layoutToRename = layout
@@ -401,180 +269,228 @@ fun HomeScreen(
 }
 
 @Composable
-private fun SavedLayoutCard(
-    layout: Layout,
-    onOpen: () -> Unit,
-    onRename: () -> Unit,
-    onDelete: () -> Unit
-) {
-    val dateString = remember(layout.updatedAtEpochMs) {
-        val sdf = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
-        sdf.format(Date(layout.updatedAtEpochMs))
-    }
+private fun PlansSummary(layouts: List<Layout>) {
+    val ready = layouts.count { it.anchor.hasGeographicFix }
+    val planLabel = if (layouts.size == 1) "1 plan" else "${layouts.size} plans"
+    val readyLabel = if (ready == 1) "1 ready for AR" else "$ready ready for AR"
+    Text(
+        text = "$planLabel · $readyLabel",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+    )
+}
 
-    Card(
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-            .clickable { onOpen() }
+@Composable
+private fun EmptyPlansState(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = layout.name,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
-                )
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(PrecisionBlue.copy(alpha = 0.15f))
-                        .border(1.dp, PrecisionBlue.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = "${layout.objects.size} ASSETS",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 10.sp,
-                            color = PrecisionBlue
-                        )
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.CalendarToday,
+                    imageVector = Icons.Default.Layers,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(12.dp)
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
                 )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = dateString,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                // Rename action
-                IconButton(
-                    onClick = onRename,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DriveFileRenameOutline,
-                        contentDescription = "Rename layout",
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                // Delete action
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DeleteOutline,
-                        contentDescription = "Delete layout",
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(4.dp))
-
-                // Open button
-                FilledTonalButton(
-                    onClick = onOpen,
-                    shape = RoundedCornerShape(6.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        horizontal = 12.dp,
-                        vertical = 4.dp
-                    ),
-                    modifier = Modifier.height(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("OPEN", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
-                }
             }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "No plans yet",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Create a plan to stamp an origin and place assets.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
 
 @Composable
-private fun WorkflowStepItem(
-    step: String,
-    title: String,
-    description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
+private fun PlanCard(
+    layout: Layout,
+    featured: Boolean,
+    onOpen: () -> Unit,
+    onRename: () -> Unit,
+    onDelete: () -> Unit
 ) {
-    Row(
-        verticalAlignment = Alignment.Top,
+    val shape = RoundedCornerShape(12.dp)
+    val primary = MaterialTheme.colorScheme.primary
+    Surface(
+        onClick = onOpen,
+        shape = shape,
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = if (featured) 3.dp else 1.dp,
+        shadowElevation = if (featured) 2.dp else 0.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(PrecisionBlue.copy(alpha = 0.12f))
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = PrecisionBlue,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "STEP $step: ",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
-                        color = PrecisionBlue
-                    )
-                )
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.SemiBold
-                    )
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        if (featured) primary else primary.copy(alpha = 0.12f)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Layers,
+                    contentDescription = null,
+                    tint = if (featured) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        primary
+                    },
+                    modifier = Modifier.size(22.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.secondary
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                if (featured) {
+                    Text(
+                        text = "Continue",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = primary
+                    )
+                }
+                Text(
+                    text = layout.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${assetCountLabel(layout.objects.size)} · ${relativeUpdatedLabel(layout.updatedAtEpochMs)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    StatusChip(label = "Origin", done = layout.anchor.hasGeographicFix)
+                    StatusChip(label = "Region", done = layout.regionBounds != null)
+                }
+            }
+            PlanActionsMenu(onRename = onRename, onDelete = onDelete)
+        }
+    }
+}
+
+@Composable
+private fun StatusChip(label: String, done: Boolean) {
+    val background = if (done) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+    val content = if (done) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Text(
+        text = label,
+        color = content,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Medium,
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(background)
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+    )
+}
+
+@Composable
+private fun PlanActionsMenu(
+    onRename: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { menuExpanded = true }) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "Plan actions",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Rename") },
+                onClick = {
+                    menuExpanded = false
+                    onRename()
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.DriveFileRenameOutline,
+                        contentDescription = null
+                    )
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("Delete") },
+                onClick = {
+                    menuExpanded = false
+                    onDelete()
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.DeleteOutline,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            )
+        }
+    }
+}
+
+private fun assetCountLabel(count: Int): String {
+    return if (count == 1) "1 asset" else "$count assets"
+}
+
+private fun relativeUpdatedLabel(updatedAtEpochMs: Long): String {
+    val deltaMs = (System.currentTimeMillis() - updatedAtEpochMs).coerceAtLeast(0L)
+    val minutes = deltaMs / 60_000L
+    val hours = deltaMs / 3_600_000L
+    val days = deltaMs / 86_400_000L
+    return when {
+        minutes < 1L -> "Updated just now"
+        minutes < 60L -> "Updated ${minutes}m ago"
+        hours < 24L -> "Updated ${hours}h ago"
+        days < 7L -> "Updated ${days}d ago"
+        else -> {
+            val formatted = SimpleDateFormat("MMM d", Locale.getDefault())
+                .format(Date(updatedAtEpochMs))
+            "Updated $formatted"
         }
     }
 }

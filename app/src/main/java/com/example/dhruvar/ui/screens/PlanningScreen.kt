@@ -8,8 +8,6 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -32,6 +30,7 @@ import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +38,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -52,13 +52,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -71,13 +69,11 @@ import com.example.dhruvar.ui.components.GeoOriginPanel
 import com.example.dhruvar.ui.components.MapModeToolbar
 import com.example.dhruvar.ui.components.PlanningCanvas
 import com.example.dhruvar.ui.components.PlanningSurfaceSwitcher
-import com.example.dhruvar.ui.components.PrimaryButton
 import com.example.dhruvar.ui.components.SelectedObjectEditorOverlay
 import com.example.dhruvar.ui.components.rememberCompassState
 import com.example.dhruvar.ui.map.MapViewportBoundsBridge
 import com.example.dhruvar.ui.map.PlanningMapView
 import com.example.dhruvar.ui.theme.TacticalAmber
-import com.example.dhruvar.ui.theme.TacticalGreen
 import com.example.dhruvar.viewmodel.PlanningViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -267,13 +263,28 @@ fun PlanningScreen(
         )
     }
 
+    val planSubtitle = buildString {
+        append(uiState.currentLayout.name)
+        append(" · ")
+        append(
+            when {
+                uiState.hasUnsavedChanges -> "Unsaved"
+                uiState.isPersisted -> "Saved"
+                else -> "Draft"
+            }
+        )
+        append(" · ")
+        append(uiState.currentLayout.objects.size)
+        append(if (uiState.currentLayout.objects.size == 1) " asset" else " assets")
+    }
+
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "DhruvAR",
+                title = "Planning",
+                subtitle = planSubtitle,
                 onNavigateBack = onNavigateBack,
                 actions = {
-                    // Quick Save Button
                     IconButton(onClick = {
                         if (!uiState.isPersisted) {
                             layoutNameInput = uiState.currentLayout.name
@@ -352,328 +363,259 @@ fun PlanningScreen(
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Workspace Header Bar with active plan metadata and persistence status
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "ACTIVE PLAN: ",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                Text(
-                    text = uiState.currentLayout.name,
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Persistence Status Badge
-                when {
-                    uiState.hasUnsavedChanges -> {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(TacticalAmber.copy(alpha = 0.15f))
-                                .border(1.dp, TacticalAmber, RoundedCornerShape(4.dp))
-                                .padding(horizontal = 5.dp, vertical = 1.dp)
-                        ) {
-                            Text(
-                                text = "UNSAVED",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 9.sp,
-                                    color = TacticalAmber
-                                )
-                            )
-                        }
-                    }
-                    uiState.isPersisted -> {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(TacticalGreen.copy(alpha = 0.15f))
-                                .border(1.dp, TacticalGreen, RoundedCornerShape(4.dp))
-                                .padding(horizontal = 5.dp, vertical = 1.dp)
-                        ) {
-                            Text(
-                                text = "SAVED",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 9.sp,
-                                    color = TacticalGreen
-                                )
-                            )
-                        }
-                    }
-                    else -> {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-                                .padding(horizontal = 5.dp, vertical = 1.dp)
-                        ) {
-                            Text(
-                                text = "DRAFT",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 9.sp,
-                                    color = MaterialTheme.colorScheme.secondary
-                                )
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = "${uiState.currentLayout.objects.size} Placed Assets",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
-
-            GeoOriginPanel(
-                expanded = uiState.isGeoOriginPanelExpanded,
-                onExpandedChange = { viewModel.setGeoOriginPanelExpanded(it) },
-                anchor = uiState.currentLayout.anchor,
-                locationState = uiState.locationState,
-                liveHeadingDegrees = compassState.magneticHeadingDegrees,
-                compassAvailable = compassState.isAvailable,
-                geoAccuracyWarning = uiState.geoAccuracyWarning,
-                onRequestPermission = { requestLocationPermission() },
-                onOpenAppSettings = { openAppLocationSettings() },
-                permissionPermanentlyDenied = locationPermissionPermanentlyDenied,
-                onRefreshLocation = {
-                    if (hasLocationPermission()) {
-                        viewModel.refreshLocation()
-                    } else {
-                        requestLocationPermission()
-                    }
-                },
-                onUseMyLocation = {
-                    if (!hasLocationPermission()) {
-                        requestLocationPermission()
-                        return@GeoOriginPanel
-                    }
-                    viewModel.setGeographicAnchorFromDeviceFix(compassState.magneticHeadingDegrees)
-                },
-                onCaptureHeading = {
-                    viewModel.updateGeographicHeading(compassState.magneticHeadingDegrees)
-                },
-                onClear = { viewModel.clearGeographicAnchor() },
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-            )
-
-            uiState.mapStyleError?.let { err ->
-                Text(
-                    text = "Map tiles unavailable: $err — check network or PMTiles config.",
-                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = TacticalAmber,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
-                        .border(1.dp, TacticalAmber, RoundedCornerShape(8.dp))
-                        .padding(10.dp)
-                )
-            }
-
-            PlanningSurfaceSwitcher(
-                surface = uiState.planningSurface,
-                onSurfaceChange = { viewModel.setPlanningSurface(it) },
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
-            )
+            val density = LocalDensity.current
+            val viewportWidthPx = with(density) { maxWidth.toPx() }
+            val viewportHeightPx = with(density) { maxHeight.toPx() }
 
             if (uiState.planningSurface == PlanningSurface.MAP) {
-                MapModeToolbar(
-                    mode = uiState.mapInteractionMode,
-                    onModeChange = { viewModel.setMapInteractionMode(it) },
-                    hasRegion = uiState.currentLayout.regionBounds != null,
-                    onConfirmViewportRegion = {
-                        val bounds = MapViewportBoundsBridge.queryVisibleBounds()
-                        if (bounds == null) {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Map not ready — wait for tiles to load")
-                            }
-                        } else {
-                            viewModel.setRegionBoundsFromViewport(
-                                northLatitude = bounds.north,
-                                southLatitude = bounds.south,
-                                eastLongitude = bounds.east,
-                                westLongitude = bounds.west
-                            )
-                        }
-                    },
-                    onClearRegion = { viewModel.clearRegionBounds() },
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
-                )
-            }
-
-            // Planning surface: MapLibre (primary) or metric grid (secondary)
-            BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 12.dp, vertical = 4.dp)
-            ) {
-                val density = LocalDensity.current
-                val viewportWidthPx = with(density) { maxWidth.toPx() }
-                val viewportHeightPx = with(density) { maxHeight.toPx() }
-
-                if (uiState.planningSurface == PlanningSurface.MAP) {
-                    PlanningMapView(
-                        layout = uiState.currentLayout,
-                        selectedObjectId = uiState.selectedObjectId,
-                        interactionMode = uiState.mapInteractionMode,
-                        onMapTap = { lat, lng ->
-                            when (uiState.mapInteractionMode) {
-                                MapInteractionMode.NAVIGATE -> Unit
-                                MapInteractionMode.SELECT_REGION -> Unit
-                                MapInteractionMode.SET_ANCHOR -> {
-                                    viewModel.setGeographicAnchorFromMap(
-                                        latitude = lat,
-                                        longitude = lng,
-                                        headingDegrees = compassState.magneticHeadingDegrees
-                                    )
-                                }
-                                MapInteractionMode.PLACE_ASSET -> {
-                                    viewModel.placeAssetAtGeographic(lat, lng)
-                                }
-                                MapInteractionMode.EDIT -> {
-                                    viewModel.handleMapEditTap(lat, lng)
-                                }
-                            }
-                        },
-                        onStyleError = { viewModel.setMapStyleError(it) },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    PlanningCanvas(
-                        layout = uiState.currentLayout,
-                        panOffset = uiState.panOffset,
-                        zoom = uiState.zoom,
-                        basePixelsPerMeter = uiState.basePixelsPerMeter,
-                        cursorCoordinatesMeters = uiState.cursorCoordinatesMeters,
-                        onPan = { delta -> viewModel.onPan(delta) },
-                        onZoom = { factor, centroid -> viewModel.onZoom(factor, centroid) },
-                        onZoomIn = { viewModel.zoomIn() },
-                        onZoomOut = { viewModel.zoomOut() },
-                        onResetView = { viewModel.resetView() },
-                        onCursorMoved = { x, z -> viewModel.updateCursorCoordinates(x, z) },
-                        onCursorCleared = { viewModel.clearCursorCoordinates() },
-                        onCanvasTapped = { _, _ ->
-                            if (uiState.selectedObjectId != null) {
-                                viewModel.deselectObject()
-                            }
-                        },
-                        onObjectSelected = { objectId ->
-                            viewModel.selectObject(objectId)
-                        },
-                        onMoveObject = { id, x, z ->
-                            viewModel.moveObject(id, x, z)
-                        },
-                        onDeselect = {
-                            viewModel.deselectObject()
-                        },
-                        selectedObjectId = uiState.selectedObjectId,
-                        showDistances = uiState.showDistances,
-                        onToggleShowDistances = { viewModel.toggleShowDistances() }
-                    )
-                }
-
-                FloatingAssetPickerOverlay(
-                    isOpen = isAssetMenuOpen,
-                    onToggle = { isAssetMenuOpen = !isAssetMenuOpen },
-                    onDismiss = { isAssetMenuOpen = false },
-                    onAssetChosen = { assetType ->
-                        viewModel.selectAssetType(assetType)
-                        if (uiState.planningSurface == PlanningSurface.METRIC_GRID) {
-                            val transformer = CoordinateTransformer(
-                                viewportWidth = viewportWidthPx,
-                                viewportHeight = viewportHeightPx,
-                                panOffset = uiState.panOffset,
-                                zoom = uiState.zoom,
-                                basePixelsPerMeter = uiState.basePixelsPerMeter
-                            )
-                            val (worldX, worldZ) = transformer.canvasToWorld(
-                                Offset(viewportWidthPx / 2f, viewportHeightPx / 2f)
-                            )
-                            val snappedX = (worldX * 2f).roundToInt() / 2f
-                            val snappedZ = (worldZ * 2f).roundToInt() / 2f
-                            viewModel.addAssetOfType(assetType, snappedX, snappedZ)
-                        } else {
-                            viewModel.setMapInteractionMode(MapInteractionMode.PLACE_ASSET)
-                            scope.launch {
-                                snackbarHostState.showSnackbar(
-                                    "Place mode: tap the map to drop ${assetType.displayName}"
+                PlanningMapView(
+                    layout = uiState.currentLayout,
+                    selectedObjectId = uiState.selectedObjectId,
+                    interactionMode = uiState.mapInteractionMode,
+                    onMapTap = { lat, lng ->
+                        when (uiState.mapInteractionMode) {
+                            MapInteractionMode.NAVIGATE -> Unit
+                            MapInteractionMode.SELECT_REGION -> Unit
+                            MapInteractionMode.SET_ANCHOR -> {
+                                viewModel.setGeographicAnchorFromMap(
+                                    latitude = lat,
+                                    longitude = lng,
+                                    headingDegrees = compassState.magneticHeadingDegrees
                                 )
                             }
+                            MapInteractionMode.PLACE_ASSET -> {
+                                viewModel.placeAssetAtGeographic(lat, lng)
+                            }
+                            MapInteractionMode.EDIT -> {
+                                viewModel.handleMapEditTap(lat, lng)
+                            }
                         }
-                        isAssetMenuOpen = false
-                        isPropertyEditorMinimized = false
-                    }
+                    },
+                    onStyleError = { viewModel.setMapStyleError(it) },
+                    modifier = Modifier.fillMaxSize()
                 )
-
-                SelectedObjectEditorOverlay(
-                    selectedObject = uiState.selectedObject,
-                    isMinimized = isPropertyEditorMinimized,
-                    onMinimizedChange = { isPropertyEditorMinimized = it },
-                    viewportWidthPx = viewportWidthPx,
-                    viewportHeightPx = viewportHeightPx,
+            } else {
+                PlanningCanvas(
+                    layout = uiState.currentLayout,
                     panOffset = uiState.panOffset,
                     zoom = uiState.zoom,
                     basePixelsPerMeter = uiState.basePixelsPerMeter,
-                    onDelete = { viewModel.deleteSelectedObject() },
-                    onDeselect = { viewModel.deselectObject() },
-                    onDuplicate = { viewModel.duplicateSelectedObject() },
-                    onRotate = { delta -> viewModel.rotateSelectedObject(delta) },
-                    onSetRotation = { degrees -> viewModel.setSelectedObjectRotation(degrees) },
-                    onUpdatePosition = { x, z -> viewModel.updateSelectedObjectPosition(x, z) },
-                    onUpdateDimensions = { w, l, h ->
-                        viewModel.updateSelectedObjectDimensions(w, l, h)
-                    }
+                    cursorCoordinatesMeters = uiState.cursorCoordinatesMeters,
+                    onPan = { delta -> viewModel.onPan(delta) },
+                    onZoom = { factor, centroid -> viewModel.onZoom(factor, centroid) },
+                    onZoomIn = { viewModel.zoomIn() },
+                    onZoomOut = { viewModel.zoomOut() },
+                    onResetView = { viewModel.resetView() },
+                    onCursorMoved = { x, z -> viewModel.updateCursorCoordinates(x, z) },
+                    onCursorCleared = { viewModel.clearCursorCoordinates() },
+                    onCanvasTapped = { _, _ ->
+                        if (uiState.selectedObjectId != null) {
+                            viewModel.deselectObject()
+                        }
+                    },
+                    onObjectSelected = { objectId ->
+                        viewModel.selectObject(objectId)
+                    },
+                    onMoveObject = { id, x, z ->
+                        viewModel.moveObject(id, x, z)
+                    },
+                    onDeselect = {
+                        viewModel.deselectObject()
+                    },
+                    selectedObjectId = uiState.selectedObjectId,
+                    showDistances = uiState.showDistances,
+                    onToggleShowDistances = { viewModel.toggleShowDistances() }
                 )
             }
 
-            // Primary Visualize in AR Action Button
-            Box(
+            Column(
                 modifier = Modifier
+                    .align(Alignment.TopStart)
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
-                PrimaryButton(
-                    text = "Visualize in AR",
-                    icon = Icons.Default.ViewInAr,
-                    onClick = {
-                        if (uiState.hasUnsavedChanges) {
-                            if (uiState.isPersisted) {
-                                viewModel.saveCurrentLayout()
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Layout '${uiState.currentLayout.name}' saved automatically")
-                                }
-                                onNavigateToVisualization()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    GeoOriginPanel(
+                        expanded = uiState.isGeoOriginPanelExpanded,
+                        onExpandedChange = { viewModel.setGeoOriginPanelExpanded(it) },
+                        anchor = uiState.currentLayout.anchor,
+                        locationState = uiState.locationState,
+                        liveHeadingDegrees = compassState.magneticHeadingDegrees,
+                        compassAvailable = compassState.isAvailable,
+                        geoAccuracyWarning = uiState.geoAccuracyWarning,
+                        onRequestPermission = { requestLocationPermission() },
+                        onOpenAppSettings = { openAppLocationSettings() },
+                        permissionPermanentlyDenied = locationPermissionPermanentlyDenied,
+                        onRefreshLocation = {
+                            if (hasLocationPermission()) {
+                                viewModel.refreshLocation()
                             } else {
-                                showSaveBeforeVisualizeDialog = true
+                                requestLocationPermission()
                             }
-                        } else {
-                            onNavigateToVisualization()
+                        },
+                        onUseMyLocation = {
+                            if (!hasLocationPermission()) {
+                                requestLocationPermission()
+                                return@GeoOriginPanel
+                            }
+                            viewModel.setGeographicAnchorFromDeviceFix(compassState.magneticHeadingDegrees)
+                        },
+                        onCaptureHeading = {
+                            viewModel.updateGeographicHeading(compassState.magneticHeadingDegrees)
+                        },
+                        onClear = { viewModel.clearGeographicAnchor() },
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    PlanningSurfaceSwitcher(
+                        surface = uiState.planningSurface,
+                        onSurfaceChange = { viewModel.setPlanningSurface(it) }
+                    )
+                }
+
+                uiState.mapStyleError?.let { err ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Map tiles unavailable: $err",
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                            color = TacticalAmber,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 12.dp)
+            ) {
+                if (uiState.planningSurface == PlanningSurface.MAP) {
+                    MapModeToolbar(
+                        mode = uiState.mapInteractionMode,
+                        onModeChange = { viewModel.setMapInteractionMode(it) },
+                        hasRegion = uiState.currentLayout.regionBounds != null,
+                        onConfirmViewportRegion = {
+                            val bounds = MapViewportBoundsBridge.queryVisibleBounds()
+                            if (bounds == null) {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Map not ready — wait for tiles to load")
+                                }
+                            } else {
+                                viewModel.setRegionBoundsFromViewport(
+                                    northLatitude = bounds.north,
+                                    southLatitude = bounds.south,
+                                    eastLongitude = bounds.east,
+                                    westLongitude = bounds.west
+                                )
+                            }
+                        },
+                        onClearRegion = { viewModel.clearRegionBounds() },
+                        modifier = Modifier.padding(bottom = 10.dp)
+                    )
+                }
+
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    FloatingActionButton(
+                        onClick = {
+                            if (uiState.hasUnsavedChanges) {
+                                if (uiState.isPersisted) {
+                                    viewModel.saveCurrentLayout()
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("Layout '${uiState.currentLayout.name}' saved automatically")
+                                    }
+                                    onNavigateToVisualization()
+                                } else {
+                                    showSaveBeforeVisualizeDialog = true
+                                }
+                            } else {
+                                onNavigateToVisualization()
+                            }
+                        },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.align(Alignment.CenterStart)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ViewInAr,
+                            contentDescription = "Visualize in AR"
+                        )
+                    }
+                }
+            }
+
+            FloatingAssetPickerOverlay(
+                isOpen = isAssetMenuOpen,
+                onToggle = { isAssetMenuOpen = !isAssetMenuOpen },
+                onDismiss = { isAssetMenuOpen = false },
+                modifier = Modifier.padding(
+                    bottom = if (uiState.planningSurface == PlanningSurface.MAP) 88.dp else 12.dp
+                ),
+                onAssetChosen = { assetType ->
+                    viewModel.selectAssetType(assetType)
+                    if (uiState.planningSurface == PlanningSurface.METRIC_GRID) {
+                        val transformer = CoordinateTransformer(
+                            viewportWidth = viewportWidthPx,
+                            viewportHeight = viewportHeightPx,
+                            panOffset = uiState.panOffset,
+                            zoom = uiState.zoom,
+                            basePixelsPerMeter = uiState.basePixelsPerMeter
+                        )
+                        val (worldX, worldZ) = transformer.canvasToWorld(
+                            Offset(viewportWidthPx / 2f, viewportHeightPx / 2f)
+                        )
+                        val snappedX = (worldX * 2f).roundToInt() / 2f
+                        val snappedZ = (worldZ * 2f).roundToInt() / 2f
+                        viewModel.addAssetOfType(assetType, snappedX, snappedZ)
+                    } else {
+                        viewModel.setMapInteractionMode(MapInteractionMode.PLACE_ASSET)
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                "Place mode: tap the map to drop ${assetType.displayName}"
+                            )
                         }
                     }
-                )
-            }
+                    isAssetMenuOpen = false
+                    isPropertyEditorMinimized = false
+                }
+            )
+
+            SelectedObjectEditorOverlay(
+                selectedObject = uiState.selectedObject,
+                isMinimized = isPropertyEditorMinimized,
+                onMinimizedChange = { isPropertyEditorMinimized = it },
+                viewportWidthPx = viewportWidthPx,
+                viewportHeightPx = viewportHeightPx,
+                panOffset = uiState.panOffset,
+                zoom = uiState.zoom,
+                basePixelsPerMeter = uiState.basePixelsPerMeter,
+                onDelete = { viewModel.deleteSelectedObject() },
+                onDeselect = { viewModel.deselectObject() },
+                onDuplicate = { viewModel.duplicateSelectedObject() },
+                onRotate = { delta -> viewModel.rotateSelectedObject(delta) },
+                onSetRotation = { degrees -> viewModel.setSelectedObjectRotation(degrees) },
+                onUpdatePosition = { x, z -> viewModel.updateSelectedObjectPosition(x, z) },
+                onUpdateDimensions = { w, l, h ->
+                    viewModel.updateSelectedObjectDimensions(w, l, h)
+                }
+            )
         }
     }
 }
