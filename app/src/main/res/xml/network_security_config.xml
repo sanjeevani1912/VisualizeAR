@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext HTTP is denied by default (Android 9+ behaviour, asserted explicitly here).
+
+  The self-hosted India map server currently serves plain HTTP only: its 8443 listener is
+  published but has no certificate, so the TLS handshake fails. Until that is fixed server-side
+  the exception below is required for tiles, glyphs and /search to load.
+
+  Scope it per host. Do NOT set android:usesCleartextTraffic="true" on <application> — that would
+  permit downgraded connections to every destination the app ever talks to.
+
+  Remove the domain entry once the map server terminates TLS.
+  See docs/Map-Server-Configuration.md and docs/Map-Server-Handover-Notes.md.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- LAN map server host. Keep in sync with BuildConfig.MAP_SERVER_BASE. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">192.168.1.205</domain>
+        <!-- Android emulator alias for a server running on the development machine itself -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

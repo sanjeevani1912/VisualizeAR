@@ -26,6 +26,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.dhruvar.data.map.MapBasemapConfig
+import com.example.dhruvar.data.map.MapStyleLoader
 import com.example.dhruvar.domain.model.Layout
 import com.example.dhruvar.domain.model.MapInteractionMode
 import com.example.dhruvar.domain.spatial.MapLayoutProjection
@@ -76,6 +77,7 @@ fun PlanningMapView(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var mapReadyError by remember { mutableStateOf<String?>(null) }
+    var styleFallbackWarning by remember { mutableStateOf<String?>(null) }
     val mapRef = remember { mutableStateOf<MapLibreMap?>(null) }
     var styleReady by remember { mutableStateOf(false) }
     var lastCameraKey by remember { mutableStateOf<String?>(null) }
@@ -128,6 +130,25 @@ fun PlanningMapView(
     }
 
     LaunchedEffect(mapView) {
+        // The style is fetched and repointed before MapLibre sees it, because the map server
+        // advertises placeholder URLs for its tiles and glyphs. Falling back to the raw URL keeps
+        // an unreachable server from leaving the planning surface with no basemap at all.
+        val styleBuilder = MapStyleLoader.loadRewrittenStyle().fold(
+            onSuccess = { Style.Builder().fromJson(it) },
+            onFailure = { cause ->
+                if (MapBasemapConfig.isServerConfigured()) {
+                    val reason = cause.message ?: cause.javaClass.simpleName
+                    styleFallbackWarning =
+                        "Map server unreachable (${MapBasemapConfig.serverBase()}): $reason"
+                }
+                Style.Builder().fromUri(MapBasemapConfig.styleUrl())
+            }
+        )
+        styleFallbackWarning?.let { warning ->
+            mapReadyError = warning
+            errorRef.get().invoke(warning)
+        }
+
         mapView.getMapAsync { map ->
             mapRef.value = map
             MapViewportBoundsBridge.map = map
@@ -141,11 +162,13 @@ fun PlanningMapView(
                     true
                 }
             }
-            map.setStyle(MapBasemapConfig.styleUrl()) { style ->
+            map.setStyle(styleBuilder) { style ->
                 ensureOverlayLayers(style)
                 styleReady = true
-                mapReadyError = null
-                onStyleError(null)
+                // A config warning outlives a successful load: the fallback style can load fine
+                // and still show no tiles.
+                mapReadyError = styleFallbackWarning
+                onStyleError(styleFallbackWarning)
                 syncOverlays(style, layout, selectedObjectId)
                 centerCamera(map, layout, force = true)
                 lastCameraKey = cameraKey(layout)
@@ -170,6 +193,20 @@ fun PlanningMapView(
         AndroidView(
             factory = { mapView },
             modifier = Modifier.fillMaxSize()
+        )
+
+        Text(
+            text = MapBasemapConfig.ATTRIBUTION,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(6.dp)
+                .background(
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
+                    RoundedCornerShape(4.dp)
+                )
+                .padding(horizontal = 6.dp, vertical = 3.dp)
         )
 
         val error = mapReadyError

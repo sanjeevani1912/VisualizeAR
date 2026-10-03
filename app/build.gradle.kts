@@ -29,6 +29,10 @@ android {
         // Optional direct PMTiles archive URL (empty = use style JSON above). Example:
         // "pmtiles://https://example.com/region.pmtiles"
         buildConfigField("String", "PMTILES_URL", "\"\"")
+        // Self-hosted India map server (tiles + glyphs + /search). Empty = fall back to
+        // MAP_STYLE_URL above and disable place search. See docs/Map-Server-Configuration.md.
+        // No trailing slash. Cleartext hosts must also be listed in res/xml/network_security_config.xml.
+        buildConfigField("String", "MAP_SERVER_BASE", "\"http://192.168.1.205:8080\"")
     }
 
     buildTypes {
@@ -66,6 +70,8 @@ dependencies {
     implementation(libs.play.services.location)
     // MapLibre Native Android — PMTiles via pmtiles:// requires >= 11.7.0 (pinned 11.8.0)
     implementation(libs.maplibre.android.sdk)
+    // Map server style fetch + place search
+    implementation(libs.okhttp)
     testImplementation(libs.junit)
     testImplementation("org.json:json:20240303")
     androidTestImplementation(libs.androidx.junit)
