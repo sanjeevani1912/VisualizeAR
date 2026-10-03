@@ -4,6 +4,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dhruvar.data.location.DefaultDeviceLocationControllerProvider
+import com.example.dhruvar.data.map.DefaultPlaceSearchGateway
+import com.example.dhruvar.data.map.MapBasemapConfig
+import com.example.dhruvar.data.map.PlaceSearchGateway
 import com.example.dhruvar.data.repository.DefaultLayoutRepositoryProvider
 import com.example.dhruvar.data.repository.LayoutRepository
 import com.example.dhruvar.domain.location.DeviceLocationController
@@ -13,16 +16,38 @@ import com.example.dhruvar.domain.model.GeoBounds
 import com.example.dhruvar.domain.model.Layout
 import com.example.dhruvar.domain.model.LayoutObject
 import com.example.dhruvar.domain.model.MapInteractionMode
+import com.example.dhruvar.domain.model.PlaceSearchHit
 import com.example.dhruvar.domain.model.PlanningSurface
 import com.example.dhruvar.domain.sensors.CompassHeadingController
 import com.example.dhruvar.domain.spatial.CoordinateTransformer
 import com.example.dhruvar.domain.spatial.MapLayoutProjection
+import com.example.dhruvar.ui.map.MapCameraBridge
 import java.util.UUID
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+/**
+ * Expandable place search over the planning map.
+ *
+ * [results] is only ever written by the newest query, because each keystroke cancels the previous
+ * request — a slow early response cannot overwrite a fast later one.
+ */
+data class PlaceSearchUiState(
+    val isExpanded: Boolean = false,
+    val query: String = "",
+    val results: List<PlaceSearchHit> = emptyList(),
+    val isSearching: Boolean = false,
+    val error: String? = null
+) {
+    /** True when a finished search genuinely found nothing, as opposed to not having run yet. */
+    val isEmptyResult: Boolean
+        get() = query.isNotBlank() && !isSearching && error == null && results.isEmpty()
+}
 
 /**
  * UI State for the 2D Top-Down Planning Canvas and persistence lifecycle.
@@ -54,7 +79,9 @@ data class PlanningUiState(
     // Phase 4: MapLibre planning surface
     val planningSurface: PlanningSurface = PlanningSurface.MAP,
     val mapInteractionMode: MapInteractionMode = MapInteractionMode.NAVIGATE,
-    val mapStyleError: String? = null
+    val mapStyleError: String? = null,
+    // Phase 5: map server place search
+    val placeSearch: PlaceSearchUiState = PlaceSearchUiState()
 ) {
     /**
      * Currently selected [LayoutObject], or null if no object is selected.
@@ -71,8 +98,12 @@ data class PlanningUiState(
 class PlanningViewModel(
     private val repository: LayoutRepository = DefaultLayoutRepositoryProvider.getRepository(),
     private val locationController: DeviceLocationController =
-        DefaultDeviceLocationControllerProvider.getController()
+        DefaultDeviceLocationControllerProvider.getController(),
+    private val placeSearch: PlaceSearchGateway = DefaultPlaceSearchGateway,
+    private val searchDebounceMillis: Long = SEARCH_DEBOUNCE_MILLIS
 ) : ViewModel() {
+
+    private var searchJob: Job? = null
 
     private val _uiState = MutableStateFlow(
         PlanningUiState(locationState = locationController.state.value)
@@ -303,6 +334,110 @@ class PlanningViewModel(
 
     fun setMapStyleError(message: String?) {
         _uiState.update { it.copy(mapStyleError = message) }
+    }
+
+    // ==========================================
+    // PLACE SEARCH (Phase 5)
+    // ==========================================
+
+    /** Collapsing discards the query and any in-flight request, so reopening starts clean. */
+    fun setSearchExpanded(expanded: Boolean) {
+        searchJob?.cancel()
+        searchJob = null
+        // Search and the origin sheet both claim the top of the map, and leaving the sheet open
+        // behind the field would also leave GNSS running out of sight.
+        if (expanded && _uiState.value.isGeoOriginPanelExpanded) {
+            setGeoOriginPanelExpanded(false)
+        }
+        _uiState.update {
+            it.copy(
+                placeSearch = if (expanded) {
+                    PlaceSearchUiState(
+                        isExpanded = true,
+                        error = if (placeSearch.isConfigured) null else SEARCH_NOT_CONFIGURED
+                    )
+                } else {
+                    PlaceSearchUiState()
+                }
+            )
+        }
+    }
+
+    /**
+     * Debounces by [searchDebounceMillis] and cancels the previous request, so holding down a key
+     * issues one call rather than one per character.
+     */
+    fun onSearchQueryChange(query: String) {
+        searchJob?.cancel()
+        val isBlank = query.isBlank()
+        _uiState.update { state ->
+            state.copy(
+                placeSearch = state.placeSearch.copy(
+                    query = query,
+                    results = if (isBlank) emptyList() else state.placeSearch.results,
+                    isSearching = !isBlank && placeSearch.isConfigured,
+                    error = when {
+                        !placeSearch.isConfigured -> SEARCH_NOT_CONFIGURED
+                        else -> null
+                    }
+                )
+            )
+        }
+        if (isBlank || !placeSearch.isConfigured) {
+            searchJob = null
+            return
+        }
+
+        searchJob = viewModelScope.launch {
+            delay(searchDebounceMillis)
+            val fix = _uiState.value.locationState.lastFix
+            val near = fix
+                ?.takeIf { it.isFinite }
+                ?.let { it.latitude to it.longitude }
+
+            placeSearch.search(query.trim(), near).fold(
+                onSuccess = { hits ->
+                    _uiState.update {
+                        it.copy(
+                            placeSearch = it.placeSearch.copy(
+                                results = hits,
+                                isSearching = false,
+                                error = null
+                            )
+                        )
+                    }
+                },
+                onFailure = {
+                    _uiState.update { state ->
+                        state.copy(
+                            placeSearch = state.placeSearch.copy(
+                                results = emptyList(),
+                                isSearching = false,
+                                error = SEARCH_UNAVAILABLE
+                            )
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    /** Flies the map to [hit] and collapses search. Does not touch the origin or region. */
+    fun onSearchResultSelected(hit: PlaceSearchHit) {
+        MapCameraBridge.moveTo(
+            latitude = hit.latitude,
+            longitude = hit.longitude,
+            zoom = MapBasemapConfig.SEARCH_RESULT_ZOOM
+        )
+        searchJob?.cancel()
+        searchJob = null
+        _uiState.update {
+            it.copy(
+                planningSurface = PlanningSurface.MAP,
+                placeSearch = PlaceSearchUiState(),
+                userFeedbackMessage = "Centered on ${hit.displayName}"
+            )
+        }
     }
 
     /**
@@ -1003,5 +1138,10 @@ class PlanningViewModel(
     companion object {
         const val SITE_LEVEL_ACCURACY_WARNING =
             "Site-level only; relative meter placement remains precise"
+
+        /** Long enough that ordinary typing issues one request per word, not per letter. */
+        const val SEARCH_DEBOUNCE_MILLIS = 250L
+        const val SEARCH_NOT_CONFIGURED = "Map search server not configured"
+        const val SEARCH_UNAVAILABLE = "Search unavailable — check the map server"
     }
 }

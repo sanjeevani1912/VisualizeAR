@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,6 +68,7 @@ private const val LAYER_REGION_LINE = "dhruvar-region-line"
 private const val LAYER_FOOTPRINTS = "dhruvar-footprints-fill"
 private const val LAYER_ASSETS = "dhruvar-assets-circle"
 private const val LAYER_ANCHOR = "dhruvar-anchor-circle"
+private const val CAMERA_FLY_MILLIS = 900
 
 /**
  * MapLibre planning surface backed by a PMTiles style ([MapBasemapConfig.styleUrl]).
@@ -199,6 +201,23 @@ fun PlanningMapView(
             lastCameraKey = key
         }
         MapViewportBoundsBridge.map = map
+    }
+
+    // Search results and any other outside caller fly the camera through the bridge. Held until
+    // the style is ready so a request made during loading is not silently dropped.
+    val cameraTarget by MapCameraBridge.target.collectAsState()
+    LaunchedEffect(cameraTarget, styleReady) {
+        val target = cameraTarget ?: return@LaunchedEffect
+        if (!styleReady) return@LaunchedEffect
+        val map = mapRef.value ?: return@LaunchedEffect
+        map.animateCamera(
+            CameraUpdateFactory.newLatLngZoom(
+                MapLatLng(target.latitude, target.longitude),
+                target.zoom
+            ),
+            CAMERA_FLY_MILLIS
+        )
+        MapCameraBridge.consumed(target)
     }
 
     Box(modifier = modifier.fillMaxSize()) {

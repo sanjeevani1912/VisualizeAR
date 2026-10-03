@@ -74,6 +74,8 @@ dependencies {
     implementation(libs.okhttp)
     testImplementation(libs.junit)
     testImplementation("org.json:json:20240303")
+    // Virtual time for the search debounce, so the tests do not actually wait 250 ms.
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

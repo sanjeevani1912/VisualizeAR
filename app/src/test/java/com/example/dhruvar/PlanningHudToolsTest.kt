@@ -113,6 +113,54 @@ class PlanningHudToolsTest {
     }
 
     @Test
+    fun `the grid keeps the switcher, which is the only way back to the map`() {
+        val tools = planningHudToolsFor(PlanningSurface.METRIC_GRID, MapInteractionMode.NAVIGATE)
+
+        assertTrue(tools.showSurfaceSwitcher)
+        assertTrue(tools.showOriginChip)
+    }
+
+    @Test
+    fun `expanded search takes the whole top row`() {
+        val tools = planningHudToolsFor(
+            surface = PlanningSurface.MAP,
+            mode = MapInteractionMode.SELECT_REGION,
+            isSearchExpanded = true
+        )
+
+        assertFalse(tools.showSearch)
+        assertFalse(tools.showOriginChip)
+        assertFalse(tools.showSurfaceSwitcher)
+        assertFalse("region tools competed with the results list", tools.hasModeContext)
+        assertTrue("the rail is at the bottom and does not conflict", tools.showModeRail)
+    }
+
+    @Test
+    fun `expanded search on the grid is ignored since search is unavailable there`() {
+        val tools = planningHudToolsFor(
+            surface = PlanningSurface.METRIC_GRID,
+            mode = MapInteractionMode.NAVIGATE,
+            isSearchExpanded = true
+        )
+
+        assertTrue(tools.showSurfaceSwitcher)
+        assertFalse(tools.showSearch)
+    }
+
+    @Test
+    fun `an open editor leaves the top row alone`() {
+        val tools = planningHudToolsFor(
+            surface = PlanningSurface.MAP,
+            mode = MapInteractionMode.EDIT,
+            hasSelection = true,
+            isEditorOpen = true
+        )
+
+        assertTrue(tools.showOriginChip)
+        assertTrue(tools.showSurfaceSwitcher)
+    }
+
+    @Test
     fun `an open selection editor clears the bottom edge but keeps search`() {
         for (mode in MapInteractionMode.entries) {
             val tools = planningHudToolsFor(

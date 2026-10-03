@@ -100,13 +100,32 @@ Behaviour confirmed against the live server, where it differs from `docs/android
 - `name_en` is present **only** when `name` is non-Latin. `Delhi` has no `name_en`;
   `Muzaffarabad` has an Urdu `name` plus `name_en`. Use `PlaceSearchHit.displayName`.
 
-Cancelling the calling coroutine cancels the HTTP call, so the search UI can fire on every
-keystroke. Debouncing (~250 ms) belongs to the caller and is part of UX Phase 03
-(`docs/prompts/ux-field-kit/03-LOCATION-SEARCH.md`), which owns the search UI. No search UI exists
-yet — this is the client layer only.
-
 Street names are not indexed; the index covers places, amenities, shops, tourism, historic sites,
 stations, airports and peaks.
+
+### Search UI
+
+The search icon in the planning HUD expands into a field with a results list. `PlanningViewModel`
+owns the state (`PlaceSearchUiState`) and talks to a `PlaceSearchGateway`, which exists so the
+debounce and cancellation logic can be tested without a server.
+
+- **Debounce** `PlanningViewModel.SEARCH_DEBOUNCE_MILLIS` (250 ms). Each keystroke cancels the
+  previous job, and cancelling the job cancels the HTTP call, so a slow early response cannot
+  overwrite a newer query.
+- **Nearby bias** when the device has a finite fix, by adding `sort=_geoPoint(lat,lng):asc`.
+- **No `filter`.** `filter=kind = place AND rank <= 2` would drop hospitals, stations and airports,
+  which are exactly what an operational planner looks up. The server already returns results in
+  rank order, so settlements lead anyway — a query for `delhi` returns the state and the city
+  before any shop that happens to be named Delhi.
+- **Unconfigured base** shows `Map search server not configured` on expanding, and issues no
+  request at all. Tiles and the rest of planning are unaffected.
+- **Request failure** shows `Search unavailable — check the map server`. The map stays pannable on
+  already-cached tiles.
+- Choosing a result moves only the camera, to `MapBasemapConfig.SEARCH_RESULT_ZOOM`, via
+  `MapCameraBridge`. The layout origin and region bounds are untouched.
+
+Search is hidden on the **metric grid** surface, because a result can only be expressed as a camera
+move and the grid has no camera. Switch to Map first.
 
 ## Attribution
 

@@ -3,36 +3,54 @@ package com.example.dhruvar.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.example.dhruvar.domain.model.MapInteractionMode
+import com.example.dhruvar.domain.model.PlaceSearchHit
 import com.example.dhruvar.domain.model.PlanningSurface
+import com.example.dhruvar.viewmodel.PlaceSearchUiState
 
 /**
  * Which planning HUD controls are visible. Derived state, kept separate from the composables so
@@ -40,6 +58,8 @@ import com.example.dhruvar.domain.model.PlanningSurface
  */
 data class PlanningHudTools(
     val showSearch: Boolean,
+    val showOriginChip: Boolean,
+    val showSurfaceSwitcher: Boolean,
     val showModeRail: Boolean,
     val showRegionTools: Boolean,
     val showAnchorHint: Boolean,
@@ -53,6 +73,8 @@ data class PlanningHudTools(
 
 private val NOTHING = PlanningHudTools(
     showSearch = false,
+    showOriginChip = false,
+    showSurfaceSwitcher = false,
     showModeRail = false,
     showRegionTools = false,
     showAnchorHint = false,
@@ -72,19 +94,29 @@ private val NOTHING = PlanningHudTools(
  * @param isEditorOpen clears the bottom edge for [SelectedObjectEditorOverlay], which is tall
  *   enough to cover the rail. Minimising or deselecting brings the rail back.
  * @param isOriginExpanded suppresses mode context while the origin sheet is open over the map.
+ * @param isSearchExpanded gives the search field the whole top row, since the field plus its
+ *   results need the width that the chip and switcher would otherwise take.
  */
 fun planningHudToolsFor(
     surface: PlanningSurface,
     mode: MapInteractionMode,
     hasSelection: Boolean = false,
     isEditorOpen: Boolean = false,
-    isOriginExpanded: Boolean = false
+    isOriginExpanded: Boolean = false,
+    isSearchExpanded: Boolean = false
 ): PlanningHudTools {
-    if (surface != PlanningSurface.MAP) return NOTHING
-    if (isEditorOpen) return NOTHING.copy(showSearch = true)
-    if (isOriginExpanded) return NOTHING.copy(showSearch = true, showModeRail = true)
-    return NOTHING.copy(
-        showSearch = true,
+    val isMap = surface == PlanningSurface.MAP
+    if (isMap && isSearchExpanded) return NOTHING.copy(showModeRail = true)
+
+    // The grid keeps the switcher — it is the only way back to the map.
+    val topRow = NOTHING.copy(
+        showSearch = isMap,
+        showOriginChip = true,
+        showSurfaceSwitcher = true
+    )
+    if (!isMap || isEditorOpen) return topRow
+    if (isOriginExpanded) return topRow.copy(showModeRail = true)
+    return topRow.copy(
         showModeRail = true,
         showRegionTools = mode == MapInteractionMode.SELECT_REGION,
         showAnchorHint = mode == MapInteractionMode.SET_ANCHOR,
@@ -233,10 +265,7 @@ private fun HudStrip(
     }
 }
 
-/**
- * Top-of-map search control. UX-03 expands this into the live place-search field against the map
- * server; the position is fixed now so it does not move once it gains behaviour.
- */
+/** Collapsed search affordance in the top HUD row. */
 @Composable
 fun PlanningSearchButton(
     onClick: () -> Unit,
@@ -258,5 +287,154 @@ fun PlanningSearchButton(
                 .padding(10.dp)
                 .size(20.dp)
         )
+    }
+}
+
+/**
+ * Expanded place search: field plus results, taking the whole top row.
+ *
+ * The result list is height-capped so the lower map stays visible and usable — you need to see
+ * where you are flying to.
+ */
+@Composable
+fun PlanningSearchField(
+    state: PlaceSearchUiState,
+    onQueryChange: (String) -> Unit,
+    onCollapse: () -> Unit,
+    onHitSelected: (PlaceSearchHit) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    Column(modifier = modifier) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+            tonalElevation = 3.dp,
+            shadowElevation = 4.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onCollapse) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Close search",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                BasicTextField(
+                    value = state.query,
+                    onValueChange = onQueryChange,
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(focusRequester),
+                    decorationBox = { field ->
+                        if (state.query.isEmpty()) {
+                            Text(
+                                // Street names are not indexed and Latin script matches best.
+                                text = "Search place (English)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
+                        field()
+                    }
+                )
+                if (state.isSearching) {
+                    CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp)
+                            .size(18.dp)
+                    )
+                } else if (state.query.isNotEmpty()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Clear query",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+
+        val message = state.error ?: "No matches".takeIf { state.isEmptyResult }
+        if (message != null) {
+            HudStrip(Modifier.padding(top = 6.dp)) {
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (state.error != null) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.padding(vertical = 7.dp)
+                )
+            }
+        }
+
+        if (state.results.isNotEmpty()) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+                tonalElevation = 3.dp,
+                shadowElevation = 4.dp,
+                modifier = Modifier
+                    .padding(top = 6.dp)
+                    .fillMaxWidth()
+            ) {
+                LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
+                    items(state.results, key = { it.id }) { hit ->
+                        PlaceSearchRow(hit = hit, onClick = { onHitSelected(hit) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlaceSearchRow(hit: PlaceSearchHit, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.Place,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.size(18.dp)
+        )
+        Column(modifier = Modifier.padding(start = 10.dp)) {
+            Text(
+                text = hit.displayName,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            hit.displayCategory?.let { category ->
+                Text(
+                    text = category,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }

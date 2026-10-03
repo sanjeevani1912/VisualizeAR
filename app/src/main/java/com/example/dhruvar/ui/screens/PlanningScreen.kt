@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -77,6 +78,7 @@ import com.example.dhruvar.ui.components.PlanningCanvas
 import com.example.dhruvar.ui.components.PlanningModeContext
 import com.example.dhruvar.ui.components.PlanningModeRail
 import com.example.dhruvar.ui.components.PlanningSearchButton
+import com.example.dhruvar.ui.components.PlanningSearchField
 import com.example.dhruvar.ui.components.PlanningSurfaceSwitcher
 import com.example.dhruvar.ui.components.planningHudToolsFor
 import com.example.dhruvar.ui.components.SelectedObjectEditorOverlay
@@ -161,6 +163,10 @@ fun PlanningScreen(
         if (uiState.isGeoOriginPanelExpanded) {
             viewModel.onLocationPermissionResult(hasLocationPermission())
         }
+    }
+
+    BackHandler(enabled = uiState.placeSearch.isExpanded) {
+        viewModel.setSearchExpanded(false)
     }
 
     // Battery: stop GNSS when leaving Planning
@@ -413,7 +419,8 @@ fun PlanningScreen(
                 mode = uiState.mapInteractionMode,
                 hasSelection = uiState.selectedObjectId != null,
                 isEditorOpen = uiState.selectedObject != null && !isPropertyEditorMinimized,
-                isOriginExpanded = uiState.isGeoOriginPanelExpanded
+                isOriginExpanded = uiState.isGeoOriginPanelExpanded,
+                isSearchExpanded = uiState.placeSearch.isExpanded
             )
             // The map renders a mandatory attribution line along its bottom edge; bottom-anchored
             // HUD sits above it. The grid has no basemap and so no attribution to clear.
@@ -506,32 +513,35 @@ fun PlanningScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (hudTools.showSearch) {
-                        PlanningSearchButton(
-                            onClick = {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Place search arrives in the next update")
-                                }
-                            }
+                if (uiState.placeSearch.isExpanded) {
+                    PlanningSearchField(
+                        state = uiState.placeSearch,
+                        onQueryChange = { viewModel.onSearchQueryChange(it) },
+                        onCollapse = { viewModel.setSearchExpanded(false) },
+                        onHitSelected = { viewModel.onSearchResultSelected(it) }
+                    )
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (hudTools.showSearch) {
+                            PlanningSearchButton(onClick = { viewModel.setSearchExpanded(true) })
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        GeoOriginChip(
+                            expanded = uiState.isGeoOriginPanelExpanded,
+                            onExpandedChange = { viewModel.setGeoOriginPanelExpanded(it) },
+                            anchor = uiState.currentLayout.anchor,
+                            locationState = uiState.locationState,
+                            modifier = Modifier.weight(1f)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
+                        PlanningSurfaceSwitcher(
+                            surface = uiState.planningSurface,
+                            onSurfaceChange = { viewModel.setPlanningSurface(it) }
+                        )
                     }
-                    GeoOriginChip(
-                        expanded = uiState.isGeoOriginPanelExpanded,
-                        onExpandedChange = { viewModel.setGeoOriginPanelExpanded(it) },
-                        anchor = uiState.currentLayout.anchor,
-                        locationState = uiState.locationState,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    PlanningSurfaceSwitcher(
-                        surface = uiState.planningSurface,
-                        onSurfaceChange = { viewModel.setPlanningSurface(it) }
-                    )
                 }
 
                 if (uiState.isGeoOriginPanelExpanded) {
