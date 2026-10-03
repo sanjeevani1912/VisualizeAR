@@ -23,10 +23,12 @@ Tactical how-to for geo-accurate layouts (MapLibre + GNSS + ARCore). Tone matche
 
 ## 2. Select region on the map
 
+The mode rail along the bottom of the map is contextual: it shows only the tools the active mode needs, so **Navigate** leaves the map almost entirely clear. The rail is hidden on the **Metric grid** surface, where taps select and drag objects directly instead of switching modes.
+
 1. Stay on the **Map** surface (not Metric grid).
 2. Choose mode **Region**.
 3. Pan/zoom so the visible area covers your site.
-4. Tap **Use visible area** to store `regionBounds`.
+4. Tap **Use area** to store `regionBounds`.
 5. **Clear region** removes bounds.
 
 **Policy:** Region is optional. If unset, map placement is allowed site-wide. If set, taps outside the box are **rejected** (not silently clamped).

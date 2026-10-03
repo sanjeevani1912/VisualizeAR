@@ -45,6 +45,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dhruvar.domain.model.AssetType
@@ -96,7 +97,9 @@ fun PlanningCanvas(
     modifier: Modifier = Modifier,
     selectedObjectId: String? = null,
     showDistances: Boolean = true,
-    onToggleShowDistances: () -> Unit = {}
+    onToggleShowDistances: () -> Unit = {},
+    /** Keeps the top readouts clear of the planning HUD row drawn above this canvas. */
+    topInset: Dp = 0.dp
 ) {
     val gridColor = GridLine
     val axisColor = GridAxis
@@ -323,14 +326,14 @@ fun PlanningCanvas(
             cursorCoordinates = cursorCoordinatesMeters,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(10.dp)
+                .padding(start = 10.dp, end = 10.dp, top = topInset + 10.dp)
         )
 
         // 2. Top-Right: Fixed north-up directions. +Z is north (top), +X is east (right).
         FixedCardinalRose(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(10.dp)
+                .padding(start = 10.dp, end = 10.dp, top = topInset + 10.dp)
         )
 
         // 3. Bottom-Left: Dynamic Scale Bar
@@ -344,7 +347,7 @@ fun PlanningCanvas(
                 .padding(10.dp)
         )
 
-        // 4. Bottom-Left: Viewport Zoom & Reset Floating Controls
+        // 4. Bottom-Left: Viewport Zoom & Reset Floating Controls, stacked above the scale bar.
         // (Bottom-right reserved for the Add Asset FAB on PlanningScreen)
         ViewportControlsWidget(
             onZoomIn = onZoomIn,
@@ -354,7 +357,7 @@ fun PlanningCanvas(
             onToggleShowDistances = onToggleShowDistances,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(10.dp)
+                .padding(start = 10.dp, end = 10.dp, bottom = 44.dp)
         )
     }
 }

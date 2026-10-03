@@ -1,10 +1,5 @@
 package com.example.dhruvar.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -49,12 +44,68 @@ import com.example.dhruvar.viewmodel.PlanningViewModel
 import java.util.Locale
 
 /**
- * Compact geo-origin control: collapsed chip on the map; expands as an overlay sheet.
+ * Collapsed origin control: chip height, sized to share the top HUD row.
+ *
+ * The detail is a separate [GeoOriginSheet] rather than an inline expansion, because the chip is
+ * only as wide as the row leaves it and the sheet's action buttons need the full width.
  */
 @Composable
-fun GeoOriginPanel(
+fun GeoOriginChip(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
+    anchor: Anchor,
+    locationState: DeviceLocationState,
+    modifier: Modifier = Modifier
+) {
+    val readiness = locationState.readiness
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        tonalElevation = 2.dp,
+        shadowElevation = 3.dp,
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onExpandedChange(!expanded) }
+                .padding(horizontal = 10.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.MyLocation,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Origin",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            StatusPill(
+                text = originChipLabel(anchor.hasGeographicFix, readiness),
+                readiness = readiness,
+                stamped = anchor.hasGeographicFix
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Icon(
+                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = if (expanded) "Collapse origin" else "Expand origin",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+/** Origin detail and actions. Shown below [GeoOriginChip] over a dismissing scrim. */
+@Composable
+fun GeoOriginSheet(
     anchor: Anchor,
     locationState: DeviceLocationState,
     liveHeadingDegrees: Float,
@@ -70,167 +121,128 @@ fun GeoOriginPanel(
     modifier: Modifier = Modifier
 ) {
     val readiness = locationState.readiness
-    val chipLabel = originChipLabel(anchor.hasGeographicFix, readiness)
 
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
-        tonalElevation = 2.dp,
-        shadowElevation = 3.dp,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+        tonalElevation = 3.dp,
+        shadowElevation = 4.dp,
         modifier = modifier
     ) {
-        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onExpandedChange(!expanded) },
-                verticalAlignment = Alignment.CenterVertically
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)) {
+            StampedOriginSummary(anchor = anchor, liveHeadingDegrees = liveHeadingDegrees)
+            Spacer(modifier = Modifier.height(8.dp))
+            LiveFixSummary(
+                locationState = locationState,
+                liveHeadingDegrees = liveHeadingDegrees,
+                compassAvailable = compassAvailable
+            )
+
+            if (locationState.availability == LocationAvailability.PERMISSION_MISSING ||
+                !locationState.permissionGranted
             ) {
-                Icon(
-                    imageVector = Icons.Default.MyLocation,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Origin",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = if (permissionPermanentlyDenied) {
+                        "Location permission permanently denied. Open settings to enable GNSS."
+                    } else {
+                        "Location permission is required to capture origin."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                StatusPill(text = chipLabel, readiness = readiness, stamped = anchor.hasGeographicFix)
-                Spacer(modifier = Modifier.weight(1f))
-                Icon(
-                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "Collapse origin" else "Expand origin",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+                if (permissionPermanentlyDenied && onOpenAppSettings != null) {
+                    TextButton(onClick = onOpenAppSettings) {
+                        Text("Open app settings", fontWeight = FontWeight.SemiBold)
+                    }
+                } else {
+                    TextButton(onClick = onRequestPermission) {
+                        Text("Grant location permission", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            } else if (locationState.availability == LocationAvailability.GPS_DISABLED) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = locationState.statusMessage
+                        ?: "Location services disabled — enable GPS, then retry.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Rust
+                )
+                TextButton(onClick = onRefreshLocation) {
+                    Text("Retry location", fontWeight = FontWeight.SemiBold)
+                }
+            } else if (locationState.availability == LocationAvailability.PROVIDER_ERROR) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = locationState.statusMessage
+                        ?: "Location provider error — retry or check Play Services.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Rust
+                )
+                TextButton(onClick = onRefreshLocation) {
+                    Text("Retry location", fontWeight = FontWeight.SemiBold)
+                }
+            }
+
+            if (geoAccuracyWarning != null || readiness == GeoOriginReadiness.ACCURACY_POOR) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = geoAccuracyWarning
+                        ?: PlanningViewModel.SITE_LEVEL_ACCURACY_WARNING,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Rust
                 )
             }
 
-            AnimatedVisibility(
-                visible = expanded,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(modifier = Modifier.padding(top = 10.dp)) {
-                    StampedOriginSummary(anchor = anchor, liveHeadingDegrees = liveHeadingDegrees)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LiveFixSummary(
-                        locationState = locationState,
-                        liveHeadingDegrees = liveHeadingDegrees,
-                        compassAvailable = compassAvailable
+                Button(
+                    onClick = onUseMyLocation,
+                    enabled = locationState.hasFix && locationState.permissionGranted,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    modifier = Modifier.weight(1.2f)
+                ) {
+                    Icon(
+                        Icons.Default.MyLocation,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
                     )
-
-                    if (locationState.availability == LocationAvailability.PERMISSION_MISSING ||
-                        !locationState.permissionGranted
-                    ) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = if (permissionPermanentlyDenied) {
-                                "Location permission permanently denied. Open settings to enable GNSS."
-                            } else {
-                                "Location permission is required to capture origin."
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        if (permissionPermanentlyDenied && onOpenAppSettings != null) {
-                            TextButton(onClick = onOpenAppSettings) {
-                                Text("Open app settings", fontWeight = FontWeight.SemiBold)
-                            }
-                        } else {
-                            TextButton(onClick = onRequestPermission) {
-                                Text("Grant location permission", fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    } else if (locationState.availability == LocationAvailability.GPS_DISABLED) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = locationState.statusMessage
-                                ?: "Location services disabled — enable GPS, then retry.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Rust
-                        )
-                        TextButton(onClick = onRefreshLocation) {
-                            Text("Retry location", fontWeight = FontWeight.SemiBold)
-                        }
-                    } else if (locationState.availability == LocationAvailability.PROVIDER_ERROR) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = locationState.statusMessage
-                                ?: "Location provider error — retry or check Play Services.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Rust
-                        )
-                        TextButton(onClick = onRefreshLocation) {
-                            Text("Retry location", fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-
-                    if (geoAccuracyWarning != null || readiness == GeoOriginReadiness.ACCURACY_POOR) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = geoAccuracyWarning
-                                ?: PlanningViewModel.SITE_LEVEL_ACCURACY_WARNING,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Rust
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = onUseMyLocation,
-                            enabled = locationState.hasFix && locationState.permissionGranted,
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
-                            ),
-                            modifier = Modifier.weight(1.2f)
-                        ) {
-                            Icon(
-                                Icons.Default.MyLocation,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Use location", fontSize = 12.sp)
-                        }
-                        OutlinedButton(
-                            onClick = onCaptureHeading,
-                            enabled = compassAvailable,
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                Icons.Default.Navigation,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Heading", fontSize = 12.sp)
-                        }
-                        OutlinedButton(
-                            onClick = onClear,
-                            enabled = anchor.hasGeographicFix || anchor.headingDegrees != null,
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.weight(0.7f)
-                        ) {
-                            Icon(
-                                Icons.Outlined.Clear,
-                                contentDescription = "Clear geographic origin",
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Use location", fontSize = 12.sp)
+                }
+                OutlinedButton(
+                    onClick = onCaptureHeading,
+                    enabled = compassAvailable,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        Icons.Default.Navigation,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Heading", fontSize = 12.sp)
+                }
+                OutlinedButton(
+                    onClick = onClear,
+                    enabled = anchor.hasGeographicFix || anchor.headingDegrees != null,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.weight(0.7f)
+                ) {
+                    Icon(
+                        Icons.Outlined.Clear,
+                        contentDescription = "Clear geographic origin",
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
         }

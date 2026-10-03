@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -160,6 +161,10 @@ fun PlanningMapView(
             mapRef.value = map
             MapViewportBoundsBridge.map = map
             map.uiSettings.isTiltGesturesEnabled = false
+            // The Compose attribution line below carries the same credit, and MapLibre's own
+            // bottom-left logo and info button collide with it.
+            map.uiSettings.isLogoEnabled = false
+            map.uiSettings.isAttributionEnabled = false
             map.addOnMapClickListener { latLng ->
                 val mode = modeRef.get()
                 if (mode == MapInteractionMode.NAVIGATE) {
@@ -202,18 +207,18 @@ fun PlanningMapView(
             modifier = Modifier.fillMaxSize()
         )
 
+        // Licence notice, so it must stay legible in full rather than ellipsize. It owns the
+        // bottom edge of the map; PlanningScreen's HUD is inset above it.
         Text(
             text = MapBasemapConfig.ATTRIBUTION,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.labelSmall,
+            textAlign = TextAlign.Center,
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(6.dp)
-                .background(
-                    MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
-                    RoundedCornerShape(4.dp)
-                )
-                .padding(horizontal = 6.dp, vertical = 3.dp)
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
+                .padding(horizontal = 8.dp, vertical = 3.dp)
         )
 
         val error = mapReadyError

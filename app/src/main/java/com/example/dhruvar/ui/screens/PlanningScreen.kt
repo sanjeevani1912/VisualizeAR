@@ -8,6 +8,10 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -55,6 +59,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
@@ -65,10 +71,14 @@ import com.example.dhruvar.domain.model.PlanningSurface
 import com.example.dhruvar.domain.spatial.CoordinateTransformer
 import com.example.dhruvar.ui.components.AppTopBar
 import com.example.dhruvar.ui.components.FloatingAssetPickerOverlay
-import com.example.dhruvar.ui.components.GeoOriginPanel
-import com.example.dhruvar.ui.components.MapModeToolbar
+import com.example.dhruvar.ui.components.GeoOriginChip
+import com.example.dhruvar.ui.components.GeoOriginSheet
 import com.example.dhruvar.ui.components.PlanningCanvas
+import com.example.dhruvar.ui.components.PlanningModeContext
+import com.example.dhruvar.ui.components.PlanningModeRail
+import com.example.dhruvar.ui.components.PlanningSearchButton
 import com.example.dhruvar.ui.components.PlanningSurfaceSwitcher
+import com.example.dhruvar.ui.components.planningHudToolsFor
 import com.example.dhruvar.ui.components.SelectedObjectEditorOverlay
 import com.example.dhruvar.ui.components.rememberCompassState
 import com.example.dhruvar.ui.map.MapViewportBoundsBridge
@@ -285,6 +295,29 @@ fun PlanningScreen(
                 subtitle = planSubtitle,
                 onNavigateBack = onNavigateBack,
                 actions = {
+                    // AR is an infrequent, deliberate hand-off, so it sits in the top bar and
+                    // leaves the frequently used mode rail sole occupant of the bottom edge.
+                    IconButton(onClick = {
+                        if (uiState.hasUnsavedChanges) {
+                            if (uiState.isPersisted) {
+                                viewModel.saveCurrentLayout()
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Layout '${uiState.currentLayout.name}' saved automatically")
+                                }
+                                onNavigateToVisualization()
+                            } else {
+                                showSaveBeforeVisualizeDialog = true
+                            }
+                        } else {
+                            onNavigateToVisualization()
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.ViewInAr,
+                            contentDescription = "Visualize in AR"
+                        )
+                    }
+
                     IconButton(onClick = {
                         if (!uiState.isPersisted) {
                             layoutNameInput = uiState.currentLayout.name
@@ -375,6 +408,20 @@ fun PlanningScreen(
             val viewportWidthPx = with(density) { maxWidth.toPx() }
             val viewportHeightPx = with(density) { maxHeight.toPx() }
 
+            val hudTools = planningHudToolsFor(
+                surface = uiState.planningSurface,
+                mode = uiState.mapInteractionMode,
+                hasSelection = uiState.selectedObjectId != null,
+                isEditorOpen = uiState.selectedObject != null && !isPropertyEditorMinimized,
+                isOriginExpanded = uiState.isGeoOriginPanelExpanded
+            )
+            // The map renders a mandatory attribution line along its bottom edge; bottom-anchored
+            // HUD sits above it. The grid has no basemap and so no attribution to clear.
+            val bottomHudInset =
+                if (uiState.planningSurface == PlanningSurface.MAP) 42.dp else 12.dp
+            // Stop the contextual strip short of the asset FAB column at BottomEnd.
+            val modeContextWidth = maxWidth - 84.dp
+
             if (uiState.planningSurface == PlanningSurface.MAP) {
                 PlanningMapView(
                     layout = uiState.currentLayout,
@@ -432,7 +479,24 @@ fun PlanningScreen(
                     },
                     selectedObjectId = uiState.selectedObjectId,
                     showDistances = uiState.showDistances,
-                    onToggleShowDistances = { viewModel.toggleShowDistances() }
+                    onToggleShowDistances = { viewModel.toggleShowDistances() },
+                    topInset = 52.dp
+                )
+            }
+
+            // Origin expands downward over the map. The scrim keeps it transient so it never
+            // becomes a second permanent panel stacked against the mode rail.
+            if (uiState.isGeoOriginPanelExpanded) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.18f))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { viewModel.setGeoOriginPanelExpanded(false) }
+                        )
+                        .semantics { contentDescription = "Dismiss origin panel" }
                 )
             }
 
@@ -444,11 +508,35 @@ fun PlanningScreen(
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Top
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    GeoOriginPanel(
+                    if (hudTools.showSearch) {
+                        PlanningSearchButton(
+                            onClick = {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Place search arrives in the next update")
+                                }
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    GeoOriginChip(
                         expanded = uiState.isGeoOriginPanelExpanded,
                         onExpandedChange = { viewModel.setGeoOriginPanelExpanded(it) },
+                        anchor = uiState.currentLayout.anchor,
+                        locationState = uiState.locationState,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    PlanningSurfaceSwitcher(
+                        surface = uiState.planningSurface,
+                        onSurfaceChange = { viewModel.setPlanningSurface(it) }
+                    )
+                }
+
+                if (uiState.isGeoOriginPanelExpanded) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    GeoOriginSheet(
                         anchor = uiState.currentLayout.anchor,
                         locationState = uiState.locationState,
                         liveHeadingDegrees = compassState.magneticHeadingDegrees,
@@ -467,7 +555,7 @@ fun PlanningScreen(
                         onUseMyLocation = {
                             if (!hasLocationPermission()) {
                                 requestLocationPermission()
-                                return@GeoOriginPanel
+                                return@GeoOriginSheet
                             }
                             viewModel.setGeographicAnchorFromDeviceFix(compassState.magneticHeadingDegrees)
                         },
@@ -475,12 +563,7 @@ fun PlanningScreen(
                             viewModel.updateGeographicHeading(compassState.magneticHeadingDegrees)
                         },
                         onClear = { viewModel.clearGeographicAnchor() },
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    PlanningSurfaceSwitcher(
-                        surface = uiState.planningSurface,
-                        onSurfaceChange = { viewModel.setPlanningSurface(it) }
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
 
@@ -503,15 +586,15 @@ fun PlanningScreen(
 
             Column(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 12.dp)
+                    .align(Alignment.BottomStart)
+                    .padding(start = 12.dp, bottom = bottomHudInset),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (uiState.planningSurface == PlanningSurface.MAP) {
-                    MapModeToolbar(
-                        mode = uiState.mapInteractionMode,
-                        onModeChange = { viewModel.setMapInteractionMode(it) },
+                if (hudTools.hasModeContext) {
+                    PlanningModeContext(
+                        tools = hudTools,
                         hasRegion = uiState.currentLayout.regionBounds != null,
+                        selectedAssetName = uiState.selectedAssetType.displayName,
                         onConfirmViewportRegion = {
                             val bounds = MapViewportBoundsBridge.queryVisibleBounds()
                             if (bounds == null) {
@@ -528,36 +611,15 @@ fun PlanningScreen(
                             }
                         },
                         onClearRegion = { viewModel.clearRegionBounds() },
-                        modifier = Modifier.padding(bottom = 10.dp)
+                        modifier = Modifier.width(modeContextWidth)
                     )
                 }
 
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    FloatingActionButton(
-                        onClick = {
-                            if (uiState.hasUnsavedChanges) {
-                                if (uiState.isPersisted) {
-                                    viewModel.saveCurrentLayout()
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar("Layout '${uiState.currentLayout.name}' saved automatically")
-                                    }
-                                    onNavigateToVisualization()
-                                } else {
-                                    showSaveBeforeVisualizeDialog = true
-                                }
-                            } else {
-                                onNavigateToVisualization()
-                            }
-                        },
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.align(Alignment.CenterStart)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ViewInAr,
-                            contentDescription = "Visualize in AR"
-                        )
-                    }
+                if (hudTools.showModeRail) {
+                    PlanningModeRail(
+                        mode = uiState.mapInteractionMode,
+                        onModeChange = { viewModel.setMapInteractionMode(it) }
+                    )
                 }
             }
 
@@ -565,9 +627,7 @@ fun PlanningScreen(
                 isOpen = isAssetMenuOpen,
                 onToggle = { isAssetMenuOpen = !isAssetMenuOpen },
                 onDismiss = { isAssetMenuOpen = false },
-                modifier = Modifier.padding(
-                    bottom = if (uiState.planningSurface == PlanningSurface.MAP) 88.dp else 12.dp
-                ),
+                modifier = Modifier.padding(bottom = bottomHudInset - 12.dp),
                 onAssetChosen = { assetType ->
                     viewModel.selectAssetType(assetType)
                     if (uiState.planningSurface == PlanningSurface.METRIC_GRID) {
@@ -614,7 +674,8 @@ fun PlanningScreen(
                 onUpdatePosition = { x, z -> viewModel.updateSelectedObjectPosition(x, z) },
                 onUpdateDimensions = { w, l, h ->
                     viewModel.updateSelectedObjectDimensions(w, l, h)
-                }
+                },
+                bottomInset = bottomHudInset
             )
         }
     }

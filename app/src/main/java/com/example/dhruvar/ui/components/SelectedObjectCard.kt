@@ -61,6 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dhruvar.domain.model.LayoutObject
@@ -91,7 +92,9 @@ fun BoxScope.SelectedObjectEditorOverlay(
     onRotate: (deltaDegrees: Float) -> Unit,
     onSetRotation: (degrees: Float) -> Unit,
     onUpdatePosition: (x: Float, z: Float) -> Unit,
-    onUpdateDimensions: (width: Float, length: Float, height: Float) -> Unit
+    onUpdateDimensions: (width: Float, length: Float, height: Float) -> Unit,
+    /** Keeps a bottom-aligned panel off the map attribution line. */
+    bottomInset: Dp = 12.dp
 ) {
     if (selectedObject == null) return
 
@@ -116,9 +119,9 @@ fun BoxScope.SelectedObjectEditorOverlay(
     }
     // Leave room for the live compass widget at TopEnd
     val panelPadding = when (panelAlignment) {
-        Alignment.TopEnd -> Modifier.padding(top = 108.dp, end = 12.dp, start = 12.dp, bottom = 12.dp)
-        Alignment.TopStart -> Modifier.padding(top = 12.dp, end = 12.dp, start = 12.dp, bottom = 12.dp)
-        else -> Modifier.padding(12.dp)
+        Alignment.TopEnd -> Modifier.padding(top = 108.dp, end = 12.dp, start = 12.dp, bottom = bottomInset)
+        Alignment.TopStart -> Modifier.padding(top = 12.dp, end = 12.dp, start = 12.dp, bottom = bottomInset)
+        else -> Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = bottomInset)
     }
 
     AnimatedVisibility(
