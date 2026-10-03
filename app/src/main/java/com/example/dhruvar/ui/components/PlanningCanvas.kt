@@ -54,13 +54,14 @@ import com.example.dhruvar.domain.spatial.CoordinateTransformer
 import com.example.dhruvar.domain.spatial.ObjectHitTester
 import com.example.dhruvar.domain.spatial.ScaleBarInfo
 import com.example.dhruvar.domain.spatial.SpatialDistanceCalculator
-import com.example.dhruvar.ui.theme.AnchorOrange
-import com.example.dhruvar.ui.theme.PrecisionBlue
-import com.example.dhruvar.ui.theme.Slate300
-import com.example.dhruvar.ui.theme.Slate400
-import com.example.dhruvar.ui.theme.Slate700
-import com.example.dhruvar.ui.theme.Slate800
-import com.example.dhruvar.ui.theme.Slate900
+import com.example.dhruvar.ui.theme.FieldAnchor
+import com.example.dhruvar.ui.theme.GridAxis
+import com.example.dhruvar.ui.theme.GridLine
+import com.example.dhruvar.ui.theme.Meadow
+import com.example.dhruvar.ui.theme.Moss
+import com.example.dhruvar.ui.theme.OverlayFaint
+import com.example.dhruvar.ui.theme.OverlayFill
+import com.example.dhruvar.ui.theme.OverlayMuted
 import kotlin.math.roundToInt
 
 /**
@@ -97,10 +98,9 @@ fun PlanningCanvas(
     showDistances: Boolean = true,
     onToggleShowDistances: () -> Unit = {}
 ) {
-    val isDark = MaterialTheme.colorScheme.background == Slate900
-    val gridColor = if (isDark) Slate800 else Slate300
-    val axisColor = if (isDark) Slate700 else Slate400
-    val canvasBg = MaterialTheme.colorScheme.surface
+    val gridColor = GridLine
+    val axisColor = GridAxis
+    val canvasBg = MaterialTheme.colorScheme.background
 
     BoxWithConstraints(
         modifier = modifier
@@ -264,7 +264,7 @@ fun PlanningCanvas(
                         anchor = layout.anchor,
                         transformer = transformer,
                         textMeasurer = textMeasurer,
-                        measurementColor = AnchorOrange,
+                        measurementColor = FieldAnchor,
                         badgeBgColor = canvasBg
                     )
                 }
@@ -277,7 +277,7 @@ fun PlanningCanvas(
                     transformer = transformer,
                     isSelected = (obj.id == selectedObjectId),
                     textMeasurer = textMeasurer,
-                    primaryColor = PrecisionBlue
+                    primaryColor = Moss
                 )
             }
 
@@ -449,12 +449,12 @@ private fun DrawScope.drawAnchorMarker(
 
     // 1. Radar circles
     drawCircle(
-        color = AnchorOrange.copy(alpha = 0.18f),
+        color = FieldAnchor.copy(alpha = 0.18f),
         radius = outerRadius * 2.2f,
         center = Offset(cx, cy)
     )
     drawCircle(
-        color = AnchorOrange,
+        color = FieldAnchor,
         radius = outerRadius,
         center = Offset(cx, cy),
         style = Stroke(width = 2.dp.toPx())
@@ -462,14 +462,14 @@ private fun DrawScope.drawAnchorMarker(
 
     // 2. Precision Crosshair ticks
     val tickStroke = 2.dp.toPx()
-    drawLine(AnchorOrange, Offset(cx - crosshairLength, cy), Offset(cx - outerRadius - 2f, cy), strokeWidth = tickStroke)
-    drawLine(AnchorOrange, Offset(cx + outerRadius + 2f, cy), Offset(cx + crosshairLength, cy), strokeWidth = tickStroke)
-    drawLine(AnchorOrange, Offset(cx, cy - crosshairLength), Offset(cx, cy - outerRadius - 2f), strokeWidth = tickStroke)
-    drawLine(AnchorOrange, Offset(cx, cy + outerRadius + 2f), Offset(cx, cy + crosshairLength), strokeWidth = tickStroke)
+    drawLine(FieldAnchor, Offset(cx - crosshairLength, cy), Offset(cx - outerRadius - 2f, cy), strokeWidth = tickStroke)
+    drawLine(FieldAnchor, Offset(cx + outerRadius + 2f, cy), Offset(cx + crosshairLength, cy), strokeWidth = tickStroke)
+    drawLine(FieldAnchor, Offset(cx, cy - crosshairLength), Offset(cx, cy - outerRadius - 2f), strokeWidth = tickStroke)
+    drawLine(FieldAnchor, Offset(cx, cy + outerRadius + 2f), Offset(cx, cy + crosshairLength), strokeWidth = tickStroke)
 
     // 3. Central Solid Bullseye (●)
     drawCircle(
-        color = AnchorOrange,
+        color = FieldAnchor,
         radius = innerRadius,
         center = Offset(cx, cy)
     )
@@ -482,7 +482,7 @@ private fun DrawScope.drawAnchorMarker(
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            color = AnchorOrange
+            color = FieldAnchor
         )
     )
     drawText(
@@ -510,8 +510,8 @@ private fun DrawScope.drawDistinctLayoutObject(
         val rectSize = Size(widthPx, lengthPx)
 
         // 1. Base footprint fill & stroke
-        val baseFillColor = if (isSelected) primaryColor.copy(alpha = 0.22f) else Color(0x32334155)
-        val baseStrokeColor = if (isSelected) primaryColor else Color(0xFF475569)
+        val baseFillColor = if (isSelected) primaryColor.copy(alpha = 0.22f) else Meadow.copy(alpha = 0.25f)
+        val baseStrokeColor = if (isSelected) primaryColor else OverlayMuted
         val strokeWidth = if (isSelected) 2.2.dp.toPx() else 1.2.dp.toPx()
 
         drawRoundRect(
@@ -649,7 +649,7 @@ private fun DrawScope.drawDistinctLayoutObject(
                 // Elongated trench center conduit
                 val insetX = widthPx * 0.2f
                 drawRect(
-                    color = Color(0x600F172A),
+                    color = OverlayFill,
                     topLeft = Offset(rectTopLeft.x + insetX, rectTopLeft.y),
                     size = Size(widthPx - (insetX * 2f), lengthPx)
                 )
@@ -720,7 +720,7 @@ private fun DrawScope.drawDistinctLayoutObject(
             fontSize = if (isSelected) 10.sp else 9.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) primaryColor else Color(0xFF64748B)
+            color = if (isSelected) primaryColor else OverlayFaint
         )
     )
     drawText(
@@ -752,7 +752,7 @@ private fun TacticalHudCard(
                     fontFamily = FontFamily.Monospace,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = AnchorOrange
+                    color = FieldAnchor
                 )
             )
             Spacer(modifier = Modifier.height(2.dp))
@@ -764,7 +764,7 @@ private fun TacticalHudCard(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = PrecisionBlue
+                        color = Moss
                     )
                 )
             } else {
@@ -841,7 +841,7 @@ private fun DynamicScaleBarWidget(
                 val barW = size.width
                 val tickH = 6.dp.toPx()
                 val lineStroke = 1.5.dp.toPx()
-                val color = Color(0xFF475569)
+                val color = OverlayMuted
 
                 drawLine(color, Offset(0f, tickH / 2f), Offset(barW, tickH / 2f), strokeWidth = lineStroke)
                 drawLine(color, Offset(0f, 0f), Offset(0f, tickH), strokeWidth = lineStroke)
@@ -900,7 +900,7 @@ private fun ViewportControlsWidget(
                 Icon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = "Reset View",
-                    tint = PrecisionBlue,
+                    tint = Moss,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -911,7 +911,7 @@ private fun ViewportControlsWidget(
                 Icon(
                     imageVector = Icons.Default.Straighten,
                     contentDescription = if (showDistances) "Hide distance measurement" else "Show distance measurement",
-                    tint = if (showDistances) AnchorOrange else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    tint = if (showDistances) FieldAnchor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                     modifier = Modifier.size(18.dp)
                 )
             }

@@ -67,7 +67,7 @@ fun BoxScope.FloatingAssetPickerOverlay(
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .background(Color.Black.copy(alpha = 0.18f))
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.18f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,

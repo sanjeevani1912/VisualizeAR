@@ -2,26 +2,49 @@ package com.example.dhruvar.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Calm field-tool palette — deep slate surfaces, restrained accent
-val Slate950 = Color(0xFF0B0F14)
-val Slate900 = Color(0xFF111827)
-val Slate850 = Color(0xFF161E2B)
-val Slate800 = Color(0xFF1C2534)
-val Slate700 = Color(0xFF2A3545)
-val Slate600 = Color(0xFF3D4A5C)
-val Slate500 = Color(0xFF64748B)
-val Slate400 = Color(0xFF8B9BB0)
-val Slate300 = Color(0xFFB0BCCB)
-val Slate200 = Color(0xFFD5DCE5)
-val Slate100 = Color(0xFFE8ECF1)
-val Slate50 = Color(0xFFF4F6F8)
+// Field Kit palette — locked by stakeholder for military day-ops use.
+// See docs/prompts/ux-field-kit/00-UX-SHARED.md. Do not reintroduce blue/slate dark HUD glass.
+val Cacao = Color(0xFF603620) // deep brown — secondary surfaces / borders
+val Coal = Color(0xFF231F20) // near-black — primary text / icons on light
+val GoldenHour = Color(0xFFF3E4BD) // warm sand — elevated panels / chips
+val Rust = Color(0xFFB56B37) // terracotta — warnings / attention / secondary CTA
+val Mist = Color(0xFFFCF9F2) // off-white — app backgrounds
+val Moss = Color(0xFF63703D) // olive — primary actions / success / selected
+val Meadow = Color(0xFFB5C37C) // sage — secondary accents / region fill / soft highlights
 
-// Accent — reserved for primary actions, not every chip
-val PrecisionBlue = Color(0xFF3B82C4)
-val PrecisionBlueLight = Color(0xFF5BA3D9)
-val PrecisionBlueDark = Color(0xFF2A6A9E)
+// Semantic aliases. Prefer MaterialTheme.colorScheme in composables; these exist for the places
+// that cannot reach it — map layers, canvas drawing, and GL renderers.
+val FieldBackground = Mist
+val FieldSurface = GoldenHour
+val FieldOnSurface = Coal
+val FieldPrimary = Moss
+val FieldWarning = Rust
+val FieldSuccess = Moss
+val FieldAccent = Meadow
+val FieldBorder = Cacao
 
-// Functional markers (muted)
-val AnchorOrange = Color(0xFFD97706)
-val TacticalGreen = Color(0xFF3D9B6A)
-val TacticalAmber = Color(0xFFC4922A)
+/**
+ * Origin / anchor emphasis. Rust reads as "this is the one fixed reference point" against both
+ * Meadow region fills and OSM basemap greens, which Cacao does not at small marker sizes.
+ */
+val FieldAnchor = Rust
+
+// Day-ops overlay recipe. Panels sit on vector tiles and on the AR camera feed, so they need
+// near-opaque fill plus a thin border rather than the translucent dark glass they replace.
+// Spelled out as constants because Canvas draw scopes, MapLibre layers and GL renderers cannot
+// reach MaterialTheme.colorScheme — composables should still prefer the scheme.
+val OverlayFill = GoldenHour.copy(alpha = 0.95f)
+val OverlayFillStrong = GoldenHour.copy(alpha = 0.97f)
+val OverlayBorder = Cacao.copy(alpha = 0.45f)
+val OverlayHairline = Cacao.copy(alpha = 0.20f)
+
+/** Secondary text and icons on an overlay panel. */
+val OverlayMuted = Cacao
+val OverlayFaint = Cacao.copy(alpha = 0.40f)
+
+/** Dim the camera feed behind a control without going dark-mode. */
+val OverlayScrim = Coal.copy(alpha = 0.30f)
+
+// Metric grid canvas
+val GridLine = Cacao.copy(alpha = 0.16f)
+val GridAxis = Cacao.copy(alpha = 0.38f)

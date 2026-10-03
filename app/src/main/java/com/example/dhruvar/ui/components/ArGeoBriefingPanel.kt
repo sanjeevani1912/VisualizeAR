@@ -29,8 +29,8 @@ import androidx.compose.ui.unit.sp
 import com.example.dhruvar.domain.ar.ArGeoGuidance
 import com.example.dhruvar.domain.ar.ArGeoProximityStatus
 import com.example.dhruvar.domain.ar.ArVisualizationScale
-import com.example.dhruvar.ui.theme.TacticalAmber
-import com.example.dhruvar.ui.theme.TacticalGreen
+import com.example.dhruvar.ui.theme.Rust
+import com.example.dhruvar.ui.theme.Moss
 import java.util.Locale
 
 /**
@@ -42,9 +42,9 @@ fun ArGeoBriefingPanel(
     modifier: Modifier = Modifier
 ) {
     val chipColor = when (guidance.status) {
-        ArGeoProximityStatus.NEAR_ORIGIN -> TacticalGreen
-        ArGeoProximityStatus.TOO_FAR -> TacticalAmber
-        ArGeoProximityStatus.NO_DEVICE_FIX -> TacticalAmber
+        ArGeoProximityStatus.NEAR_ORIGIN -> Moss
+        ArGeoProximityStatus.TOO_FAR -> Rust
+        ArGeoProximityStatus.NO_DEVICE_FIX -> Rust
         ArGeoProximityStatus.NO_GEO -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
@@ -118,7 +118,7 @@ fun ArGeoBriefingPanel(
                         ArGeoProximityStatus.NO_DEVICE_FIX -> Text(
                             text = "Enable location to see distance to origin. You may still calibrate.",
                             style = monoBody(),
-                            color = TacticalAmber
+                            color = Rust
                         )
                         ArGeoProximityStatus.TOO_FAR -> {
                             Text(
@@ -129,12 +129,12 @@ fun ArGeoBriefingPanel(
                                     guidance.bearingDegrees ?: 0f
                                 ),
                                 style = monoBody(),
-                                color = TacticalAmber
+                                color = Rust
                             )
                             Text(
                                 text = "Too far — walk closer if possible; proceed allowed.",
                                 style = monoBody(),
-                                color = TacticalAmber
+                                color = Rust
                             )
                         }
                         ArGeoProximityStatus.NEAR_ORIGIN -> Text(
@@ -148,7 +148,7 @@ fun ArGeoBriefingPanel(
                                 } ?: "—"
                             ),
                             style = monoBody(),
-                            color = TacticalGreen
+                            color = Moss
                         )
                         else -> Unit
                     }

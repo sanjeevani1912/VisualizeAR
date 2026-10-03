@@ -34,7 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dhruvar.domain.model.AssetType
-import com.example.dhruvar.ui.theme.PrecisionBlue
+import com.example.dhruvar.ui.theme.Moss
 
 /**
  * Maps each domain [AssetType] to a representative Material icon.
@@ -110,9 +110,9 @@ private fun AssetChip(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val borderColor = if (isSelected) PrecisionBlue else MaterialTheme.colorScheme.outline
+    val borderColor = if (isSelected) Moss else MaterialTheme.colorScheme.outline
     val bgColor = if (isSelected) {
-        PrecisionBlue.copy(alpha = 0.12f)
+        Moss.copy(alpha = 0.12f)
     } else {
         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     }
@@ -130,7 +130,7 @@ private fun AssetChip(
         Icon(
             imageVector = assetType.toIcon(),
             contentDescription = assetType.displayName,
-            tint = if (isSelected) PrecisionBlue else MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = if (isSelected) Moss else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.height(6.dp))
@@ -138,7 +138,7 @@ private fun AssetChip(
             text = assetType.displayName,
             style = MaterialTheme.typography.labelMedium.copy(
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isSelected) PrecisionBlue else MaterialTheme.colorScheme.onSurface
+                color = if (isSelected) Moss else MaterialTheme.colorScheme.onSurface
             ),
             maxLines = 1
         )

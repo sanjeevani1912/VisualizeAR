@@ -73,7 +73,7 @@ import com.example.dhruvar.ui.components.SelectedObjectEditorOverlay
 import com.example.dhruvar.ui.components.rememberCompassState
 import com.example.dhruvar.ui.map.MapViewportBoundsBridge
 import com.example.dhruvar.ui.map.PlanningMapView
-import com.example.dhruvar.ui.theme.TacticalAmber
+import com.example.dhruvar.ui.theme.Rust
 import com.example.dhruvar.viewmodel.PlanningViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -494,7 +494,7 @@ fun PlanningScreen(
                         Text(
                             text = "Map tiles unavailable: $err",
                             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                            color = TacticalAmber,
+                            color = Rust,
                             modifier = Modifier.padding(10.dp)
                         )
                     }

@@ -30,7 +30,14 @@ import com.example.dhruvar.data.map.MapStyleLoader
 import com.example.dhruvar.domain.model.Layout
 import com.example.dhruvar.domain.model.MapInteractionMode
 import com.example.dhruvar.domain.spatial.MapLayoutProjection
-import com.example.dhruvar.ui.theme.TacticalAmber
+import androidx.compose.ui.graphics.toArgb
+import com.example.dhruvar.ui.theme.Cacao
+import com.example.dhruvar.ui.theme.Coal
+import com.example.dhruvar.ui.theme.FieldAnchor
+import com.example.dhruvar.ui.theme.Meadow
+import com.example.dhruvar.ui.theme.Mist
+import com.example.dhruvar.ui.theme.Moss
+import com.example.dhruvar.ui.theme.Rust
 import java.util.concurrent.atomic.AtomicReference
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -213,7 +220,7 @@ fun PlanningMapView(
         if (error != null) {
             Text(
                 text = "Map tiles unavailable: $error",
-                color = TacticalAmber,
+                color = Rust,
                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -286,18 +293,23 @@ private fun centerCamera(map: MapLibreMap, layout: Layout, force: Boolean) {
     )
 }
 
+/**
+ * Overlay colours come from the Field Kit tokens rather than literals so the map stays in step
+ * with the rest of the chrome. Three roles must stay tellable apart on an OSM basemap: Rust marks
+ * the single origin, Cacao marks placed assets, and Meadow/Moss marks the region.
+ */
 private fun ensureOverlayLayers(style: Style) {
     if (style.getSource(SOURCE_REGION) == null) {
         style.addSource(GeoJsonSource(SOURCE_REGION, FeatureCollection.fromFeatures(emptyArray())))
         style.addLayer(
             FillLayer(LAYER_REGION_FILL, SOURCE_REGION).withProperties(
-                PropertyFactory.fillColor(Color.parseColor("#330284C7")),
-                PropertyFactory.fillOutlineColor(Color.parseColor("#0284C7"))
+                PropertyFactory.fillColor(Meadow.copy(alpha = 0.22f).toArgb()),
+                PropertyFactory.fillOutlineColor(Moss.toArgb())
             )
         )
         style.addLayer(
             LineLayer(LAYER_REGION_LINE, SOURCE_REGION).withProperties(
-                PropertyFactory.lineColor(Color.parseColor("#0284C7")),
+                PropertyFactory.lineColor(Moss.toArgb()),
                 PropertyFactory.lineWidth(2f)
             )
         )
@@ -306,8 +318,8 @@ private fun ensureOverlayLayers(style: Style) {
         style.addSource(GeoJsonSource(SOURCE_FOOTPRINTS, FeatureCollection.fromFeatures(emptyArray())))
         style.addLayer(
             FillLayer(LAYER_FOOTPRINTS, SOURCE_FOOTPRINTS).withProperties(
-                PropertyFactory.fillColor(Color.parseColor("#6638BDF8")),
-                PropertyFactory.fillOutlineColor(Color.parseColor("#0F172A"))
+                PropertyFactory.fillColor(Meadow.copy(alpha = 0.40f).toArgb()),
+                PropertyFactory.fillOutlineColor(Coal.toArgb())
             )
         )
     }
@@ -322,9 +334,11 @@ private fun ensureOverlayLayers(style: Style) {
                         Expression.literal(7f)
                     )
                 ),
-                PropertyFactory.circleColor(Color.parseColor("#EA580C")),
+                // Selection is already signalled by radius; recolouring to Moss as well makes the
+                // selected asset read as a second origin marker.
+                PropertyFactory.circleColor(Cacao.toArgb()),
                 PropertyFactory.circleStrokeWidth(2f),
-                PropertyFactory.circleStrokeColor(Color.parseColor("#FFFFFF"))
+                PropertyFactory.circleStrokeColor(Mist.toArgb())
             )
         )
     }
@@ -333,9 +347,9 @@ private fun ensureOverlayLayers(style: Style) {
         style.addLayer(
             CircleLayer(LAYER_ANCHOR, SOURCE_ANCHOR).withProperties(
                 PropertyFactory.circleRadius(9f),
-                PropertyFactory.circleColor(Color.parseColor("#EA580C")),
+                PropertyFactory.circleColor(FieldAnchor.toArgb()),
                 PropertyFactory.circleStrokeWidth(3f),
-                PropertyFactory.circleStrokeColor(Color.parseColor("#FFFFFF"))
+                PropertyFactory.circleStrokeColor(Mist.toArgb())
             )
         )
     }

@@ -43,8 +43,8 @@ import com.example.dhruvar.domain.location.DeviceLocationState
 import com.example.dhruvar.domain.location.GeoOriginReadiness
 import com.example.dhruvar.domain.location.LocationAvailability
 import com.example.dhruvar.domain.model.Anchor
-import com.example.dhruvar.ui.theme.TacticalAmber
-import com.example.dhruvar.ui.theme.TacticalGreen
+import com.example.dhruvar.ui.theme.Rust
+import com.example.dhruvar.ui.theme.Moss
 import com.example.dhruvar.viewmodel.PlanningViewModel
 import java.util.Locale
 
@@ -152,7 +152,7 @@ fun GeoOriginPanel(
                             text = locationState.statusMessage
                                 ?: "Location services disabled — enable GPS, then retry.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = TacticalAmber
+                            color = Rust
                         )
                         TextButton(onClick = onRefreshLocation) {
                             Text("Retry location", fontWeight = FontWeight.SemiBold)
@@ -163,7 +163,7 @@ fun GeoOriginPanel(
                             text = locationState.statusMessage
                                 ?: "Location provider error — retry or check Play Services.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = TacticalAmber
+                            color = Rust
                         )
                         TextButton(onClick = onRefreshLocation) {
                             Text("Retry location", fontWeight = FontWeight.SemiBold)
@@ -176,7 +176,7 @@ fun GeoOriginPanel(
                             text = geoAccuracyWarning
                                 ?: PlanningViewModel.SITE_LEVEL_ACCURACY_WARNING,
                             style = MaterialTheme.typography.bodySmall,
-                            color = TacticalAmber
+                            color = Rust
                         )
                     }
 
@@ -249,9 +249,9 @@ private fun originChipLabel(stamped: Boolean, readiness: GeoOriginReadiness): St
 @Composable
 private fun StatusPill(text: String, readiness: GeoOriginReadiness, stamped: Boolean) {
     val color = when {
-        stamped -> TacticalGreen
-        readiness == GeoOriginReadiness.READY -> TacticalGreen
-        readiness == GeoOriginReadiness.ACCURACY_POOR -> TacticalAmber
+        stamped -> Moss
+        readiness == GeoOriginReadiness.READY -> Moss
+        readiness == GeoOriginReadiness.ACCURACY_POOR -> Rust
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     Text(

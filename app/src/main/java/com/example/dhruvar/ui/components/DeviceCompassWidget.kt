@@ -34,8 +34,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.dhruvar.domain.sensors.CompassHeadingController
 import com.example.dhruvar.domain.sensors.CompassState
-import com.example.dhruvar.ui.theme.AnchorOrange
-import com.example.dhruvar.ui.theme.PrecisionBlue
+import com.example.dhruvar.ui.theme.FieldAnchor
+import com.example.dhruvar.ui.theme.Moss
+import com.example.dhruvar.ui.theme.OverlayHairline
+import com.example.dhruvar.ui.theme.OverlayMuted
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -93,7 +95,7 @@ fun FixedCardinalRose(
                     val cy = size.height / 2f
                     val radius = size.minDimension / 2f - 3.dp.toPx()
                     drawCircle(
-                        color = Color(0xFF334155),
+                        color = OverlayHairline,
                         radius = radius,
                         center = Offset(cx, cy),
                         style = Stroke(width = 1.5.dp.toPx())
@@ -105,21 +107,21 @@ fun FixedCardinalRose(
                     )
                     val needleLen = radius - 14.dp.toPx()
                     drawLine(
-                        color = AnchorOrange,
+                        color = FieldAnchor,
                         start = Offset(cx, cy + 6.dp.toPx()),
                         end = Offset(cx, cy - needleLen),
                         strokeWidth = 2.5.dp.toPx(),
                         cap = StrokeCap.Round
                     )
                     drawLine(
-                        color = Color(0xFF94A3B8),
+                        color = OverlayMuted,
                         start = Offset(cx, cy),
                         end = Offset(cx, cy + needleLen * 0.55f),
                         strokeWidth = 2.dp.toPx(),
                         cap = StrokeCap.Round
                     )
                     drawCircle(
-                        color = AnchorOrange,
+                        color = FieldAnchor,
                         radius = 2.5.dp.toPx(),
                         center = Offset(cx, cy)
                     )
@@ -132,7 +134,7 @@ fun FixedCardinalRose(
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
                     fontSize = 11.sp,
-                    color = AnchorOrange
+                    color = FieldAnchor
                 )
             )
             Text(
@@ -189,13 +191,13 @@ fun DeviceCompassWidget(
 
                     // Outer ring
                     drawCircle(
-                        color = Color(0xFF334155),
+                        color = OverlayHairline,
                         radius = radius,
                         center = Offset(cx, cy),
                         style = Stroke(width = 1.5.dp.toPx())
                     )
                     drawCircle(
-                        color = Color(0x22334155),
+                        color = OverlayHairline,
                         radius = radius,
                         center = Offset(cx, cy)
                     )
@@ -210,7 +212,7 @@ fun DeviceCompassWidget(
                         // North needle (red)
                         val needleLen = radius - 14.dp.toPx()
                         drawLine(
-                            color = AnchorOrange,
+                            color = FieldAnchor,
                             start = Offset(cx, cy + 6.dp.toPx()),
                             end = Offset(cx, cy - needleLen),
                             strokeWidth = 2.5.dp.toPx(),
@@ -218,7 +220,7 @@ fun DeviceCompassWidget(
                         )
                         // South stub
                         drawLine(
-                            color = Color(0xFF94A3B8),
+                            color = OverlayMuted,
                             start = Offset(cx, cy),
                             end = Offset(cx, cy + needleLen * 0.55f),
                             strokeWidth = 2.dp.toPx(),
@@ -229,21 +231,21 @@ fun DeviceCompassWidget(
                     // Fixed device-forward marker (top of widget = phone top)
                     val tipY = 4.dp.toPx()
                     drawLine(
-                        color = PrecisionBlue,
+                        color = Moss,
                         start = Offset(cx - 5.dp.toPx(), tipY + 7.dp.toPx()),
                         end = Offset(cx, tipY),
                         strokeWidth = 2.dp.toPx(),
                         cap = StrokeCap.Round
                     )
                     drawLine(
-                        color = PrecisionBlue,
+                        color = Moss,
                         start = Offset(cx + 5.dp.toPx(), tipY + 7.dp.toPx()),
                         end = Offset(cx, tipY),
                         strokeWidth = 2.dp.toPx(),
                         cap = StrokeCap.Round
                     )
                     drawCircle(
-                        color = PrecisionBlue,
+                        color = Moss,
                         radius = 2.5.dp.toPx(),
                         center = Offset(cx, cy)
                     )
@@ -257,7 +259,7 @@ fun DeviceCompassWidget(
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
                     fontSize = 11.sp,
-                    color = PrecisionBlue
+                    color = Moss
                 )
             )
             Text(
@@ -272,7 +274,7 @@ fun DeviceCompassWidget(
                     fontFamily = FontFamily.Monospace,
                     fontSize = 8.sp,
                     color = if (compassState.needsCalibration) {
-                        AnchorOrange
+                        FieldAnchor
                     } else {
                         MaterialTheme.colorScheme.secondary
                     }
@@ -306,7 +308,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCardinalLabels(
         val x = cx + cos(rad).toFloat() * radius
         val y = cy + sin(rad).toFloat() * radius + 4.dp.toPx()
         paint.color = if (label == "N") {
-            android.graphics.Color.rgb(217, 119, 6) // AnchorOrange
+            android.graphics.Color.rgb(217, 119, 6) // FieldAnchor
         } else {
             android.graphics.Color.rgb(100, 116, 139)
         }

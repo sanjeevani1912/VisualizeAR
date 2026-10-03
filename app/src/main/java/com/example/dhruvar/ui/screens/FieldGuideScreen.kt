@@ -18,8 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dhruvar.ui.components.AppTopBar
-import com.example.dhruvar.ui.theme.PrecisionBlue
-import com.example.dhruvar.ui.theme.TacticalAmber
+import com.example.dhruvar.ui.theme.Moss
+import com.example.dhruvar.ui.theme.Rust
 
 /**
  * In-app Field Guide (geo planning + AR). Content mirrors `docs/FieldGuide.md`.
@@ -104,7 +104,7 @@ fun FieldGuideScreen(
                 text = "Full markdown: docs/FieldGuide.md",
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontFamily = FontFamily.Monospace,
-                    color = PrecisionBlue
+                    color = Moss
                 )
             )
             Spacer(modifier = Modifier.height(24.dp))
@@ -124,7 +124,7 @@ private fun GuideSection(
         text = "$number  ${title.uppercase()}",
         style = MaterialTheme.typography.titleSmall.copy(
             fontWeight = FontWeight.Bold,
-            color = if (accentAmber) TacticalAmber else PrecisionBlue
+            color = if (accentAmber) Rust else Moss
         ),
         modifier = Modifier.fillMaxWidth()
     )

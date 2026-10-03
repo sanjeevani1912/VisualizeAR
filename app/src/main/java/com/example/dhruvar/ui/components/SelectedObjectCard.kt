@@ -66,8 +66,9 @@ import androidx.compose.ui.unit.sp
 import com.example.dhruvar.domain.model.LayoutObject
 import com.example.dhruvar.domain.spatial.CoordinateTransformer
 import com.example.dhruvar.domain.spatial.SpatialDistanceCalculator
-import com.example.dhruvar.ui.theme.AnchorOrange
-import com.example.dhruvar.ui.theme.PrecisionBlue
+import com.example.dhruvar.ui.theme.FieldAnchor
+import com.example.dhruvar.ui.theme.Moss
+import com.example.dhruvar.ui.theme.Rust
 import java.util.Locale
 
 /**
@@ -135,7 +136,7 @@ fun BoxScope.SelectedObjectEditorOverlay(
             shadowElevation = 4.dp,
             border = androidx.compose.foundation.BorderStroke(
                 1.dp,
-                PrecisionBlue.copy(alpha = 0.55f)
+                Moss.copy(alpha = 0.55f)
             ),
             modifier = Modifier
                 .clickable { onMinimizedChange(false) }
@@ -148,7 +149,7 @@ fun BoxScope.SelectedObjectEditorOverlay(
                 Icon(
                     imageVector = Icons.Default.Edit,
                     contentDescription = null,
-                    tint = PrecisionBlue,
+                    tint = Moss,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
@@ -302,7 +303,7 @@ fun SelectedObjectCard(
         shadowElevation = 8.dp,
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            PrecisionBlue.copy(alpha = 0.45f)
+            Moss.copy(alpha = 0.45f)
         ),
         modifier = modifier.semantics { contentDescription = "Properties for ${selectedObject.name}" }
     ) {
@@ -325,12 +326,12 @@ fun SelectedObjectCard(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(PrecisionBlue.copy(alpha = 0.14f))
+                            .background(Moss.copy(alpha = 0.14f))
                     ) {
                         Icon(
                             imageVector = selectedObject.assetType.toIcon(),
                             contentDescription = selectedObject.assetType.displayName,
-                            tint = PrecisionBlue,
+                            tint = Moss,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -347,7 +348,7 @@ fun SelectedObjectCard(
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = PrecisionBlue
+                                color = Moss
                             )
                         )
                     }
@@ -393,7 +394,7 @@ fun SelectedObjectCard(
                         .height(32.dp)
                         .clip(RoundedCornerShape(6.dp))
                         .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
-                        .border(1.dp, PrecisionBlue.copy(alpha = 0.55f), RoundedCornerShape(6.dp))
+                        .border(1.dp, Moss.copy(alpha = 0.55f), RoundedCornerShape(6.dp))
                         .padding(horizontal = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -419,7 +420,7 @@ fun SelectedObjectCard(
                                 imeAction = ImeAction.Done
                             ),
                             keyboardActions = KeyboardActions(onDone = { commitRotation() }),
-                            cursorBrush = SolidColor(PrecisionBlue),
+                            cursorBrush = SolidColor(Moss),
                             modifier = Modifier.weight(1f)
                         )
                         Text(
@@ -428,7 +429,7 @@ fun SelectedObjectCard(
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = PrecisionBlue
+                                color = Moss
                             )
                         )
                     }
@@ -470,7 +471,7 @@ fun SelectedObjectCard(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = AnchorOrange
+                        color = FieldAnchor
                     )
                 )
             }
@@ -484,8 +485,8 @@ fun SelectedObjectCard(
                     onClick = onDuplicate,
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = PrecisionBlue.copy(alpha = 0.14f),
-                        contentColor = PrecisionBlue
+                        containerColor = Moss.copy(alpha = 0.14f),
+                        contentColor = Moss
                     ),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 6.dp),
                     modifier = Modifier
@@ -500,8 +501,8 @@ fun SelectedObjectCard(
                     onClick = onDelete,
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFDC2626).copy(alpha = 0.12f),
-                        contentColor = Color(0xFFDC2626)
+                        containerColor = Rust.copy(alpha = 0.12f),
+                        contentColor = Rust
                     ),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 6.dp),
                     modifier = Modifier
@@ -599,7 +600,7 @@ private fun CoordinateInputField(
                 imeAction = ImeAction.Done
             ),
             keyboardActions = KeyboardActions(onDone = { onDone() }),
-            cursorBrush = SolidColor(PrecisionBlue),
+            cursorBrush = SolidColor(Moss),
             modifier = Modifier.weight(1f)
         )
         Text(
@@ -624,7 +625,7 @@ private fun RotationStepButton(
         shape = RoundedCornerShape(6.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-            contentColor = PrecisionBlue
+            contentColor = Moss
         ),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,

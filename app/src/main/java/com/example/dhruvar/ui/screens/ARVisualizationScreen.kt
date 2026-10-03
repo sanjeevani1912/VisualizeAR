@@ -107,10 +107,20 @@ import com.example.dhruvar.ui.components.DeviceCompassWidget
 import com.example.dhruvar.ui.components.PrimaryButton
 import com.example.dhruvar.ui.components.rememberCompassState
 import com.example.dhruvar.ui.components.toIcon
-import com.example.dhruvar.ui.theme.AnchorOrange
-import com.example.dhruvar.ui.theme.PrecisionBlue
-import com.example.dhruvar.ui.theme.TacticalAmber
-import com.example.dhruvar.ui.theme.TacticalGreen
+import com.example.dhruvar.ui.theme.Cacao
+import com.example.dhruvar.ui.theme.Coal
+import com.example.dhruvar.ui.theme.FieldAnchor
+import com.example.dhruvar.ui.theme.GoldenHour
+import com.example.dhruvar.ui.theme.Meadow
+import com.example.dhruvar.ui.theme.Mist
+import com.example.dhruvar.ui.theme.Moss
+import com.example.dhruvar.ui.theme.OverlayFaint
+import com.example.dhruvar.ui.theme.OverlayFill
+import com.example.dhruvar.ui.theme.OverlayFillStrong
+import com.example.dhruvar.ui.theme.OverlayHairline
+import com.example.dhruvar.ui.theme.OverlayMuted
+import com.example.dhruvar.ui.theme.OverlayScrim
+import com.example.dhruvar.ui.theme.Rust
 import com.example.dhruvar.viewmodel.PlanningViewModel
 import com.google.ar.core.ArCoreApk
 import com.google.ar.core.Config
@@ -473,7 +483,7 @@ fun ARVisualizationScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = PrecisionBlue)
+                        CircularProgressIndicator(color = Moss)
                     }
                 }
 
@@ -535,11 +545,11 @@ fun ARVisualizationScreen(
                                         }
                                         .clip(RoundedCornerShape(6.dp))
                                         .background(
-                                            if (label.isSelected) AnchorOrange.copy(alpha = 0.90f) else Color(0xCC0F172A)
+                                            if (label.isSelected) FieldAnchor.copy(alpha = 0.90f) else OverlayFill
                                         )
                                         .border(
                                             1.dp,
-                                            if (label.isSelected) Color.White else PrecisionBlue.copy(alpha = 0.6f),
+                                            if (label.isSelected) Mist else Moss.copy(alpha = 0.6f),
                                             RoundedCornerShape(6.dp)
                                         )
                                         .clickable { viewModel.selectObject(label.objectId) }
@@ -550,7 +560,7 @@ fun ARVisualizationScreen(
                                             modifier = Modifier
                                                 .size(6.dp)
                                                 .clip(CircleShape)
-                                                .background(if (label.isSelected) Color.White else PrecisionBlue)
+                                                .background(if (label.isSelected) Mist else Moss)
                                         )
                                         Spacer(modifier = Modifier.width(5.dp))
                                         Text(
@@ -559,7 +569,8 @@ fun ARVisualizationScreen(
                                                 fontFamily = FontFamily.Monospace,
                                                 fontSize = 9.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = Color.White
+                                                // Selected labels sit on Rust, unselected on cream
+                                                color = if (label.isSelected) Mist else Coal
                                             )
                                         )
                                     }
@@ -579,8 +590,8 @@ fun ARVisualizationScreen(
                                             )
                                         }
                                         .clip(RoundedCornerShape(6.dp))
-                                        .background(Color(0xCC0F172A))
-                                        .border(1.dp, AnchorOrange, RoundedCornerShape(6.dp))
+                                        .background(OverlayFill)
+                                        .border(1.dp, FieldAnchor, RoundedCornerShape(6.dp))
                                         .padding(horizontal = 7.dp, vertical = 2.dp)
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -588,7 +599,7 @@ fun ARVisualizationScreen(
                                             modifier = Modifier
                                                 .size(6.dp)
                                                 .clip(CircleShape)
-                                                .background(AnchorOrange)
+                                                .background(FieldAnchor)
                                         )
                                         Spacer(modifier = Modifier.width(5.dp))
                                         Text(
@@ -597,7 +608,7 @@ fun ARVisualizationScreen(
                                                 fontFamily = FontFamily.Monospace,
                                                 fontSize = 8.5.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = AnchorOrange
+                                                color = FieldAnchor
                                             )
                                         )
                                     }
@@ -617,15 +628,15 @@ fun ARVisualizationScreen(
                                             )
                                         }
                                         .clip(RoundedCornerShape(6.dp))
-                                        .background(AnchorOrange.copy(alpha = 0.92f))
-                                        .border(1.dp, Color.White.copy(alpha = 0.8f), RoundedCornerShape(6.dp))
+                                        .background(FieldAnchor.copy(alpha = 0.92f))
+                                        .border(1.dp, Mist.copy(alpha = 0.8f), RoundedCornerShape(6.dp))
                                         .padding(horizontal = 8.dp, vertical = 3.dp)
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
                                             imageVector = Icons.Default.Straighten,
                                             contentDescription = null,
-                                            tint = Color.White,
+                                            tint = Mist,
                                             modifier = Modifier.size(11.dp)
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
@@ -635,7 +646,7 @@ fun ARVisualizationScreen(
                                                 fontFamily = FontFamily.Monospace,
                                                 fontSize = 9.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = Color.White
+                                                color = Mist
                                             )
                                         )
                                     }
@@ -658,10 +669,12 @@ fun ARVisualizationScreen(
                                     modifier = Modifier
                                         .size(44.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0x66000000))
+                                        .background(OverlayScrim)
+                                        // The reticle sits on a scrim over live camera rather than
+                                        // a cream panel, so it needs the light end of the palette.
                                         .border(
                                             2.dp,
-                                            if (canSetOrigin) TacticalGreen else Color(0x99FFFFFF),
+                                            if (canSetOrigin) Meadow else Mist.copy(alpha = 0.70f),
                                             CircleShape
                                         ),
                                     contentAlignment = Alignment.Center
@@ -669,7 +682,7 @@ fun ARVisualizationScreen(
                                     Icon(
                                         imageVector = Icons.Default.Adjust,
                                         contentDescription = "Target reticle",
-                                        tint = if (canSetOrigin) TacticalGreen else Color.White,
+                                        tint = if (canSetOrigin) Meadow else Mist,
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
@@ -678,7 +691,7 @@ fun ARVisualizationScreen(
 
                                 Box(
                                     modifier = Modifier
-                                        .background(Color(0xCC0F172A), RoundedCornerShape(4.dp))
+                                        .background(OverlayFill, RoundedCornerShape(4.dp))
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
@@ -687,7 +700,7 @@ fun ARVisualizationScreen(
                                             fontFamily = FontFamily.Monospace,
                                             fontSize = 9.5.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (canSetOrigin) TacticalGreen else Color.White
+                                            color = if (canSetOrigin) Moss else Coal
                                         )
                                     )
                                 }
@@ -701,15 +714,15 @@ fun ARVisualizationScreen(
                             modifier = Modifier
                                 .align(Alignment.Center)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xEE0F172A))
-                                .border(1.dp, PrecisionBlue, RoundedCornerShape(10.dp))
+                                .background(OverlayFillStrong)
+                                .border(1.dp, Moss, RoundedCornerShape(10.dp))
                                 .padding(horizontal = 20.dp, vertical = 14.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(18.dp),
                                     strokeWidth = 2.dp,
-                                    color = PrecisionBlue
+                                    color = Moss
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
@@ -718,7 +731,7 @@ fun ARVisualizationScreen(
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.White
+                                        color = Coal
                                     )
                                 )
                             }
@@ -744,10 +757,10 @@ fun ARVisualizationScreen(
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(Color(0xCC0F172A))
+                                            .background(OverlayFill)
                                             .border(
                                                 1.dp,
-                                                if (isOriginCalibrated) AnchorOrange else PrecisionBlue.copy(alpha = 0.6f),
+                                                if (isOriginCalibrated) FieldAnchor else Moss.copy(alpha = 0.6f),
                                                 RoundedCornerShape(8.dp)
                                             )
                                             .padding(horizontal = 10.dp, vertical = 6.dp)
@@ -759,9 +772,11 @@ fun ARVisualizationScreen(
                                                     .clip(CircleShape)
                                                     .background(
                                                         when {
-                                                            isOriginCalibrated -> AnchorOrange
-                                                            canSetOrigin -> TacticalGreen
-                                                            else -> Color(0xFFF59E0B)
+                                                            isOriginCalibrated -> FieldAnchor
+                                                            canSetOrigin -> Moss
+                                                            // Rust is the origin's colour here, so
+                                                            // "still tracking" gets neutral Cacao.
+                                                            else -> Cacao
                                                         }
                                                     )
                                             )
@@ -772,29 +787,31 @@ fun ARVisualizationScreen(
                                                     fontFamily = FontFamily.Monospace,
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = Color.White
+                                                    color = Coal
                                                 )
                                             )
                                         }
                                     }
 
-                                    // Counter Pill
+                                    // Counter Pill. Three states that must stay distinct on cream:
+                                    // calibrated, planes found but not calibrated, nothing yet.
+                                    val counterAccent = when {
+                                        isOriginCalibrated -> Moss
+                                        detectedPlaneCount > 0 -> Cacao
+                                        else -> Rust
+                                    }
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(Color(0xCC0F172A))
-                                            .border(
-                                                1.dp,
-                                                if (isOriginCalibrated) PrecisionBlue else (if (detectedPlaneCount > 0) TacticalGreen else Color(0x6694A3B8)),
-                                                RoundedCornerShape(8.dp)
-                                            )
+                                            .background(OverlayFill)
+                                            .border(1.dp, counterAccent, RoundedCornerShape(8.dp))
                                             .padding(horizontal = 10.dp, vertical = 6.dp)
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(
                                                 imageVector = if (isOriginCalibrated) Icons.Default.CheckCircle else Icons.Default.Sensors,
                                                 contentDescription = null,
-                                                tint = if (isOriginCalibrated) PrecisionBlue else (if (detectedPlaneCount > 0) TacticalGreen else Color(0xFF94A3B8)),
+                                                tint = counterAccent,
                                                 modifier = Modifier.size(12.dp)
                                             )
                                             Spacer(modifier = Modifier.width(6.dp))
@@ -804,7 +821,7 @@ fun ARVisualizationScreen(
                                                     fontFamily = FontFamily.Monospace,
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = if (isOriginCalibrated) PrecisionBlue else (if (detectedPlaneCount > 0) TacticalGreen else Color(0xFF94A3B8))
+                                                    color = counterAccent
                                                 )
                                             )
                                         }
@@ -829,20 +846,20 @@ fun ARVisualizationScreen(
                                             fontFamily = FontFamily.Monospace,
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = TacticalGreen
+                                            color = Moss
                                         ),
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(Color(0xCC0F172A))
+                                            .background(OverlayFill)
                                             .padding(horizontal = 10.dp, vertical = 6.dp)
                                     )
                                 }
 
                                 // 3-Step AR Preparation Progress Bar
                                 Card(
-                                    colors = CardDefaults.cardColors(containerColor = Color(0xD90F172A)),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x3394A3B8)),
+                                    colors = CardDefaults.cardColors(containerColor = OverlayFill),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, OverlayHairline),
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
@@ -859,14 +876,14 @@ fun ARVisualizationScreen(
                                             isCompleted = detectedPlaneCount > 0,
                                             isActive = detectedPlaneCount == 0
                                         )
-                                        Text("›", color = Color(0x6694A3B8), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                                        Text("›", color = OverlayFaint, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
                                         StepIndicator(
                                             stepNumber = "2",
                                             label = "Set Origin",
                                             isCompleted = isOriginCalibrated,
                                             isActive = detectedPlaneCount > 0 && !isOriginCalibrated
                                         )
-                                        Text("›", color = Color(0x6694A3B8), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                                        Text("›", color = OverlayFaint, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
                                         StepIndicator(
                                             stepNumber = "3",
                                             label = "Visualize Layout",
@@ -878,8 +895,8 @@ fun ARVisualizationScreen(
 
                                 if (isOriginCalibrated && uiState.currentLayout.objects.isEmpty()) {
                                     Card(
-                                        colors = CardDefaults.cardColors(containerColor = Color(0xD90F172A)),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, AnchorOrange),
+                                        colors = CardDefaults.cardColors(containerColor = OverlayFill),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, FieldAnchor),
                                         shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
@@ -890,7 +907,7 @@ fun ARVisualizationScreen(
                                             Icon(
                                                 imageVector = Icons.Default.Warning,
                                                 contentDescription = null,
-                                                tint = AnchorOrange,
+                                                tint = FieldAnchor,
                                                 modifier = Modifier.size(14.dp)
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
@@ -899,7 +916,7 @@ fun ARVisualizationScreen(
                                                 style = TextStyle(
                                                     fontFamily = FontFamily.Monospace,
                                                     fontSize = 9.5.sp,
-                                                    color = Color.White
+                                                    color = Coal
                                                 )
                                             )
                                         }
@@ -919,11 +936,11 @@ fun ARVisualizationScreen(
                                 Card(
                                     shape = RoundedCornerShape(10.dp),
                                     colors = CardDefaults.cardColors(
-                                        containerColor = Color(0xEE0F172A)
+                                        containerColor = OverlayFillStrong
                                     ),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .border(1.5.dp, AnchorOrange, RoundedCornerShape(10.dp))
+                                        .border(1.5.dp, FieldAnchor, RoundedCornerShape(10.dp))
                                 ) {
                                     Column(modifier = Modifier.padding(12.dp)) {
                                         // Header: Name, Type, and Close Action
@@ -937,13 +954,13 @@ fun ARVisualizationScreen(
                                                     modifier = Modifier
                                                         .size(24.dp)
                                                         .clip(RoundedCornerShape(4.dp))
-                                                        .background(AnchorOrange.copy(alpha = 0.2f)),
+                                                        .background(FieldAnchor.copy(alpha = 0.2f)),
                                                     contentAlignment = Alignment.Center
                                                 ) {
                                                     Icon(
                                                         imageVector = selectedObj.assetType.toIcon(),
                                                         contentDescription = null,
-                                                        tint = AnchorOrange,
+                                                        tint = FieldAnchor,
                                                         modifier = Modifier.size(14.dp)
                                                     )
                                                 }
@@ -951,7 +968,7 @@ fun ARVisualizationScreen(
                                                 Text(
                                                     text = selectedObj.name,
                                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                                    color = Color.White
+                                                    color = Coal
                                                 )
                                                 Spacer(modifier = Modifier.width(6.dp))
                                                 Text(
@@ -959,7 +976,7 @@ fun ARVisualizationScreen(
                                                     style = TextStyle(
                                                         fontFamily = FontFamily.Monospace,
                                                         fontSize = 8.5.sp,
-                                                        color = PrecisionBlue
+                                                        color = Moss
                                                     )
                                                 )
                                             }
@@ -971,7 +988,7 @@ fun ARVisualizationScreen(
                                                 Icon(
                                                     imageVector = Icons.Default.Close,
                                                     contentDescription = "Deselect",
-                                                    tint = Color(0xFF94A3B8),
+                                                    tint = OverlayMuted,
                                                     modifier = Modifier.size(14.dp)
                                                 )
                                             }
@@ -989,7 +1006,7 @@ fun ARVisualizationScreen(
                                                 style = TextStyle(
                                                     fontFamily = FontFamily.Monospace,
                                                     fontSize = 9.5.sp,
-                                                    color = Color(0xFFCBD5E1)
+                                                    color = Coal
                                                 )
                                             )
                                             Text(
@@ -997,7 +1014,7 @@ fun ARVisualizationScreen(
                                                 style = TextStyle(
                                                     fontFamily = FontFamily.Monospace,
                                                     fontSize = 9.5.sp,
-                                                    color = Color(0xFFCBD5E1)
+                                                    color = Coal
                                                 )
                                             )
                                         }
@@ -1014,7 +1031,7 @@ fun ARVisualizationScreen(
                                                     fontFamily = FontFamily.Monospace,
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = AnchorOrange
+                                                    color = FieldAnchor
                                                 )
                                             )
                                             Text(
@@ -1022,7 +1039,7 @@ fun ARVisualizationScreen(
                                                 style = TextStyle(
                                                     fontFamily = FontFamily.Monospace,
                                                     fontSize = 8.5.sp,
-                                                    color = Color(0xFF94A3B8)
+                                                    color = OverlayMuted
                                                 )
                                             )
                                         }
@@ -1049,7 +1066,7 @@ fun ARVisualizationScreen(
                                                     style = TextStyle(
                                                         fontFamily = FontFamily.Monospace,
                                                         fontSize = 8.5.sp,
-                                                        color = PrecisionBlue
+                                                        color = Moss
                                                     )
                                                 )
                                             }
@@ -1079,10 +1096,10 @@ fun ARVisualizationScreen(
                                         enabled = canSetOrigin,
                                         shape = RoundedCornerShape(8.dp),
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = PrecisionBlue,
-                                            contentColor = Color.White,
-                                            disabledContainerColor = Color(0x660F172A),
-                                            disabledContentColor = Color(0x6694A3B8)
+                                            containerColor = Moss,
+                                            contentColor = Mist,
+                                            disabledContainerColor = OverlayHairline,
+                                            disabledContentColor = OverlayFaint
                                         ),
                                         modifier = Modifier
                                             .weight(1f)
@@ -1133,8 +1150,8 @@ fun ARVisualizationScreen(
                                         },
                                         shape = RoundedCornerShape(8.dp),
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = TacticalGreen,
-                                            contentColor = Color.Black
+                                            containerColor = Moss,
+                                            contentColor = Mist
                                         ),
                                         modifier = Modifier
                                             .weight(1.1f)
@@ -1157,10 +1174,10 @@ fun ARVisualizationScreen(
                                         },
                                         shape = RoundedCornerShape(8.dp),
                                         colors = ButtonDefaults.outlinedButtonColors(
-                                            containerColor = Color(0xCC0F172A),
-                                            contentColor = Color.White
+                                            containerColor = OverlayFill,
+                                            contentColor = Coal
                                         ),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, AnchorOrange),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, FieldAnchor),
                                         modifier = Modifier
                                             .weight(0.85f)
                                             .height(48.dp)
@@ -1168,11 +1185,11 @@ fun ARVisualizationScreen(
                                         Icon(
                                             imageVector = Icons.Default.Refresh,
                                             contentDescription = "Reset Origin",
-                                            tint = AnchorOrange,
+                                            tint = FieldAnchor,
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Reset", color = AnchorOrange, style = MaterialTheme.typography.labelMedium)
+                                        Text("Reset", color = FieldAnchor, style = MaterialTheme.typography.labelMedium)
                                     }
                                 }
 
@@ -1190,8 +1207,8 @@ fun ARVisualizationScreen(
                                     },
                                     shape = RoundedCornerShape(8.dp),
                                     colors = ButtonDefaults.outlinedButtonColors(
-                                        containerColor = Color(0xCC0F172A),
-                                        contentColor = Color.White
+                                        containerColor = OverlayFill,
+                                        contentColor = Coal
                                     ),
                                     modifier = Modifier
                                         .weight(0.65f)
@@ -1213,7 +1230,7 @@ fun ARVisualizationScreen(
                                 style = TextStyle(
                                     fontFamily = FontFamily.Default,
                                     fontSize = 9.5.sp,
-                                    color = Color(0x99FFFFFF),
+                                    color = OverlayFaint,
                                     textAlign = TextAlign.Center
                                 ),
                                 modifier = Modifier.fillMaxWidth()
@@ -1231,15 +1248,15 @@ fun ARVisualizationScreen(
                         .align(Alignment.TopCenter)
                         .padding(top = 16.dp, start = 16.dp, end = 16.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xF00F172A))
-                        .border(1.dp, TacticalGreen, RoundedCornerShape(8.dp))
+                        .background(OverlayFillStrong)
+                        .border(1.dp, Moss, RoundedCornerShape(8.dp))
                         .padding(horizontal = 14.dp, vertical = 10.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = TacticalGreen,
+                            tint = Moss,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -1249,7 +1266,7 @@ fun ARVisualizationScreen(
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = Coal
                             )
                         )
                     }
@@ -1268,7 +1285,7 @@ fun ARVisualizationScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color(0xE60F172A))
+                            .background(OverlayFillStrong)
                             .padding(20.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -1277,8 +1294,8 @@ fun ARVisualizationScreen(
                                 .fillMaxWidth(0.95f)
                                 .padding(vertical = 16.dp),
                             shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, PrecisionBlue.copy(alpha = 0.5f))
+                            colors = CardDefaults.cardColors(containerColor = GoldenHour),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Moss.copy(alpha = 0.5f))
                         ) {
                             Column(
                                 modifier = Modifier
@@ -1297,7 +1314,7 @@ fun ARVisualizationScreen(
                                             fontFamily = FontFamily.Monospace,
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color.White
+                                            color = Coal
                                         )
                                     )
                                     IconButton(
@@ -1310,7 +1327,7 @@ fun ARVisualizationScreen(
                                         Icon(
                                             imageVector = Icons.Default.Close,
                                             contentDescription = "Close preview",
-                                            tint = Color(0xFF94A3B8)
+                                            tint = OverlayMuted
                                         )
                                     }
                                 }
@@ -1323,8 +1340,8 @@ fun ARVisualizationScreen(
                                         .fillMaxWidth()
                                         .height(380.dp)
                                         .clip(RoundedCornerShape(8.dp))
-                                        .border(1.dp, Color(0x3394A3B8), RoundedCornerShape(8.dp))
-                                        .background(Color.Black),
+                                        .border(1.dp, OverlayHairline, RoundedCornerShape(8.dp))
+                                        .background(Coal),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Image(
@@ -1352,8 +1369,8 @@ fun ARVisualizationScreen(
                                             .height(48.dp),
                                         shape = RoundedCornerShape(8.dp),
                                         colors = ButtonDefaults.outlinedButtonColors(
-                                            containerColor = Color(0x33334155),
-                                            contentColor = Color.White
+                                            containerColor = OverlayHairline,
+                                            contentColor = Coal
                                         )
                                     ) {
                                         Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -1388,8 +1405,8 @@ fun ARVisualizationScreen(
                                             .height(48.dp),
                                         shape = RoundedCornerShape(8.dp),
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = TacticalGreen,
-                                            contentColor = Color.Black
+                                            containerColor = Moss,
+                                            contentColor = Mist
                                         ),
                                         enabled = !isSavingImage
                                     ) {
@@ -1422,11 +1439,13 @@ private fun StepIndicator(
             modifier = Modifier
                 .size(16.dp)
                 .clip(CircleShape)
+                // Done and in-progress must stay tellable apart: Moss fill for completed,
+                // lighter Meadow for the step currently being worked.
                 .background(
                     when {
-                        isCompleted -> TacticalGreen
-                        isActive -> PrecisionBlue
-                        else -> Color(0xFF334155)
+                        isCompleted -> Moss
+                        isActive -> Meadow
+                        else -> OverlayHairline
                     }
                 ),
             contentAlignment = Alignment.Center
@@ -1435,7 +1454,7 @@ private fun StepIndicator(
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
-                    tint = Color.Black,
+                    tint = Mist,
                     modifier = Modifier.size(12.dp)
                 )
             } else {
@@ -1445,7 +1464,7 @@ private fun StepIndicator(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isActive) Color.White else Color(0xFF94A3B8)
+                        color = if (isActive) Coal else OverlayMuted
                     )
                 )
             }
@@ -1457,9 +1476,9 @@ private fun StepIndicator(
                 fontSize = 9.5.sp,
                 fontWeight = if (isActive || isCompleted) FontWeight.Bold else FontWeight.Normal,
                 color = when {
-                    isCompleted -> TacticalGreen
-                    isActive -> Color.White
-                    else -> Color(0xFF94A3B8)
+                    isCompleted -> Moss
+                    isActive -> Coal
+                    else -> OverlayMuted
                 }
             )
         )
@@ -1497,12 +1516,12 @@ private fun PermissionRequiredView(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(PrecisionBlue.copy(alpha = 0.15f))
+                        .background(Moss.copy(alpha = 0.15f))
                 ) {
                     Icon(
                         imageVector = Icons.Default.CameraAlt,
                         contentDescription = null,
-                        tint = PrecisionBlue,
+                        tint = Moss,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -1581,7 +1600,7 @@ private fun UnsupportedDeviceView(onNavigateBack: () -> Unit) {
                 Icon(
                     imageVector = Icons.Default.Warning,
                     contentDescription = null,
-                    tint = Color(0xFFF59E0B),
+                    tint = Rust,
                     modifier = Modifier.size(48.dp)
                 )
 
@@ -1641,7 +1660,7 @@ private fun NeedsInstallView(
                 Icon(
                     imageVector = Icons.Default.Sensors,
                     contentDescription = null,
-                    tint = PrecisionBlue,
+                    tint = Moss,
                     modifier = Modifier.size(48.dp)
                 )
 

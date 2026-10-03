@@ -13,7 +13,7 @@ import kotlin.math.sin
  * OpenGL ES 2.0 renderer that visualizes the calibrated AR Planning Origin on the physical ground.
  *
  * Displays:
- * 1. Concentric tactical datum rings in AnchorOrange.
+ * 1. Concentric tactical datum rings in FieldAnchor.
  * 2. Crosshair coordinate orientation axes (+X lateral, +Z depth).
  * 3. Solid center datum point.
  */

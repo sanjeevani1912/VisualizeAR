@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat
 import com.example.dhruvar.data.location.DefaultDeviceLocationControllerProvider
 import com.example.dhruvar.data.repository.DefaultLayoutRepositoryProvider
 import com.example.dhruvar.navigation.AppNavigation
@@ -21,8 +22,14 @@ class MainActivity : ComponentActivity() {
         DefaultDeviceLocationControllerProvider.init(applicationContext)
         MapLibre.getInstance(this)
         enableEdgeToEdge()
+        // Field Kit is light-only, so the status/navigation icons must be dark to stay legible
+        // over Mist. enableEdgeToEdge() otherwise picks them from the system theme.
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
+        }
         setContent {
-            DhruvARTheme(darkTheme = true) {
+            DhruvARTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
