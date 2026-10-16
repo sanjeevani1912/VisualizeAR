@@ -216,7 +216,9 @@ class PlaceSearchStateTest {
         val target = MapCameraBridge.target.value
         assertEquals(chosen.latitude, target?.latitude)
         assertEquals(chosen.longitude, target?.longitude)
-        assertFalse(vm.uiState.value.placeSearch.isExpanded)
+        assertTrue(vm.uiState.value.placeSearch.isExpanded)
+        assertTrue(vm.uiState.value.placeSearch.results.isEmpty())
+        assertEquals("Delhi", vm.uiState.value.setupSession.chosenLocation?.displayName)
         assertEquals("Centered on Delhi", vm.uiState.value.userFeedbackMessage)
 
         target?.let { MapCameraBridge.consumed(it) }

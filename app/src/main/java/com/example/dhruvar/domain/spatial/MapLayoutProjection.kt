@@ -4,6 +4,8 @@ import com.example.dhruvar.domain.model.Anchor
 import com.example.dhruvar.domain.model.GeoBounds
 import com.example.dhruvar.domain.model.LayoutObject
 import kotlin.math.cos
+import kotlin.math.hypot
+import kotlin.math.max
 import kotlin.math.sin
 
 /**
@@ -14,8 +16,14 @@ import kotlin.math.sin
  */
 object MapLayoutProjection {
 
-    /** Maximum distance (meters) for tap-to-select on the map. */
+    /** Floor for tap-to-select. A large asset uses its own half-diagonal instead. */
     const val SELECT_HIT_RADIUS_METERS: Float = 8f
+
+    /** How far from the centre a finger can be and still grab this asset. */
+    fun selectionRadiusMeters(obj: LayoutObject): Float {
+        val halfDiagonal = hypot(obj.widthMeters / 2.0, obj.lengthMeters / 2.0).toFloat()
+        return max(SELECT_HIT_RADIUS_METERS, halfDiagonal + 1.5f)
+    }
 
     fun objectCenterLatLng(anchor: Anchor, obj: LayoutObject): LatLng? {
         if (!anchor.hasGeographicFix) return null
@@ -82,6 +90,14 @@ object MapLayoutProjection {
         return bounds == null || bounds.contains(latitude, longitude)
     }
 
+    /**
+     * Origin must sit inside a confirmed region. Corners are inclusive.
+     * Unlike [isInsideRegionOrUnbounded], a missing region is not treated as unbounded.
+     */
+    fun isUsableOrigin(region: GeoBounds, latitude: Double, longitude: Double): Boolean {
+        return region.contains(latitude, longitude)
+    }
+
     fun findNearestObjectId(
         anchor: Anchor,
         objects: List<LayoutObject>,
@@ -96,8 +112,9 @@ object MapLayoutProjection {
         for (obj in objects) {
             val dx = obj.x - targetMeters.first
             val dz = obj.z - targetMeters.second
-            val dist = kotlin.math.hypot(dx.toDouble(), dz.toDouble()).toFloat()
-            if (dist <= maxDistanceMeters && dist < bestDist) {
+            val dist = hypot(dx.toDouble(), dz.toDouble()).toFloat()
+            val reach = max(maxDistanceMeters, selectionRadiusMeters(obj))
+            if (dist <= reach && dist < bestDist) {
                 bestDist = dist
                 bestId = obj.id
             }

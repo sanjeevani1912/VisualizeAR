@@ -1,6 +1,7 @@
 package com.example.dhruvar
 
 import com.example.dhruvar.domain.model.MapInteractionMode
+import com.example.dhruvar.domain.model.PlanningSetupStep
 import com.example.dhruvar.domain.model.PlanningSurface
 import com.example.dhruvar.ui.components.planningHudToolsFor
 import org.junit.Assert.assertEquals
@@ -209,5 +210,116 @@ class PlanningHudToolsTest {
 
         assertEquals(false, tools.showModeRail)
         assertEquals(false, tools.hasModeContext)
+    }
+
+    @Test
+    fun `find location hides origin assets rail and AR`() {
+        val tools = planningHudToolsFor(
+            surface = PlanningSurface.MAP,
+            mode = MapInteractionMode.NAVIGATE,
+            setupStep = PlanningSetupStep.FIND_LOCATION
+        )
+
+        assertTrue(tools.showSearch)
+        assertTrue(tools.showSetupContinue)
+        assertFalse(tools.showOriginChip)
+        assertFalse(tools.showSurfaceSwitcher)
+        assertFalse(tools.showModeRail)
+        assertFalse(tools.showRegionTools)
+        assertFalse(tools.showAssetPicker)
+        assertFalse(tools.showArAction)
+    }
+
+    @Test
+    fun `set region shows only region tools`() {
+        val tools = planningHudToolsFor(
+            surface = PlanningSurface.MAP,
+            mode = MapInteractionMode.SELECT_REGION,
+            setupStep = PlanningSetupStep.SET_REGION
+        )
+
+        assertTrue(tools.showRegionTools)
+        assertFalse(tools.showSearch)
+        assertFalse(tools.showOriginChip)
+        assertFalse(tools.showModeRail)
+        assertFalse(tools.showAssetPicker)
+        assertFalse(tools.showArAction)
+    }
+
+    @Test
+    fun `set region hides search even when the field is still expanded`() {
+        val tools = planningHudToolsFor(
+            surface = PlanningSurface.MAP,
+            mode = MapInteractionMode.SELECT_REGION,
+            isSearchExpanded = true,
+            setupStep = PlanningSetupStep.SET_REGION
+        )
+
+        assertFalse(tools.showSearch)
+        assertTrue(tools.showRegionTools)
+        assertFalse(tools.showModeRail)
+    }
+
+    @Test
+    fun `set origin shows only the origin chip`() {
+        val tools = planningHudToolsFor(
+            surface = PlanningSurface.MAP,
+            mode = MapInteractionMode.NAVIGATE,
+            setupStep = PlanningSetupStep.SET_ORIGIN
+        )
+
+        assertTrue(tools.showOriginChip)
+        assertFalse(tools.showSearch)
+        assertFalse(tools.showRegionTools)
+        assertFalse(tools.showModeRail)
+        assertFalse(tools.showAssetPicker)
+        assertFalse(tools.showArAction)
+        assertFalse(tools.showSetupContinue)
+        assertFalse(tools.showAnchorHint)
+    }
+
+    @Test
+    fun `set origin continue appears when origin already exists`() {
+        val tools = planningHudToolsFor(
+            surface = PlanningSurface.MAP,
+            mode = MapInteractionMode.NAVIGATE,
+            setupStep = PlanningSetupStep.SET_ORIGIN,
+            hasGeographicFix = true
+        )
+
+        assertTrue(tools.showOriginChip)
+        assertTrue(tools.showSetupContinue)
+        assertFalse(tools.showAssetPicker)
+        assertFalse(tools.showArAction)
+        assertFalse(tools.showModeRail)
+    }
+
+    @Test
+    fun `set origin tap mode shows the inside-region hint and hides continue`() {
+        val tools = planningHudToolsFor(
+            surface = PlanningSurface.MAP,
+            mode = MapInteractionMode.SET_ANCHOR,
+            setupStep = PlanningSetupStep.SET_ORIGIN,
+            hasGeographicFix = true
+        )
+
+        assertTrue(tools.showOriginChip)
+        assertTrue(tools.showAnchorHint)
+        assertFalse(tools.showSetupContinue)
+        assertFalse(tools.showModeRail)
+    }
+
+    @Test
+    fun `place assets restores workspace chrome including AR and assets`() {
+        val tools = planningHudToolsFor(
+            surface = PlanningSurface.MAP,
+            mode = MapInteractionMode.NAVIGATE,
+            setupStep = PlanningSetupStep.PLACE_ASSETS
+        )
+
+        assertTrue(tools.showModeRail)
+        assertTrue(tools.showOriginChip)
+        assertTrue(tools.showAssetPicker)
+        assertTrue(tools.showArAction)
     }
 }

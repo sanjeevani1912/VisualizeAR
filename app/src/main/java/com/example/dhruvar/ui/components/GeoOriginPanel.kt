@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
-import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -27,6 +26,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +41,7 @@ import com.example.dhruvar.domain.location.DeviceLocationState
 import com.example.dhruvar.domain.location.GeoOriginReadiness
 import com.example.dhruvar.domain.location.LocationAvailability
 import com.example.dhruvar.domain.model.Anchor
+import com.example.dhruvar.ui.theme.Coal
 import com.example.dhruvar.ui.theme.Rust
 import com.example.dhruvar.ui.theme.Moss
 import com.example.dhruvar.viewmodel.PlanningViewModel
@@ -76,7 +80,11 @@ fun GeoOriginChip(
             Icon(
                 imageVector = Icons.Default.MyLocation,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = when {
+                    anchor.hasGeographicFix -> Moss
+                    readiness == GeoOriginReadiness.ACCURACY_POOR -> Rust
+                    else -> Coal
+                },
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -88,7 +96,7 @@ fun GeoOriginChip(
             )
             Spacer(modifier = Modifier.width(8.dp))
             StatusPill(
-                text = originChipLabel(anchor.hasGeographicFix, readiness),
+                text = originChipStatusText(anchor.hasGeographicFix),
                 readiness = readiness,
                 stamped = anchor.hasGeographicFix
             )
@@ -116,11 +124,14 @@ fun GeoOriginSheet(
     permissionPermanentlyDenied: Boolean = false,
     onRefreshLocation: () -> Unit,
     onUseMyLocation: () -> Unit,
+    onTapOnMap: () -> Unit,
     onCaptureHeading: () -> Unit,
     onClear: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val readiness = locationState.readiness
+    var showDetails by remember { mutableStateOf(false) }
+    val canStamp = locationState.hasFix && locationState.permissionGranted
 
     Surface(
         shape = RoundedCornerShape(12.dp),
@@ -130,14 +141,6 @@ fun GeoOriginSheet(
         modifier = modifier
     ) {
         Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)) {
-            StampedOriginSummary(anchor = anchor, liveHeadingDegrees = liveHeadingDegrees)
-            Spacer(modifier = Modifier.height(8.dp))
-            LiveFixSummary(
-                locationState = locationState,
-                liveHeadingDegrees = liveHeadingDegrees,
-                compassAvailable = compassAvailable
-            )
-
             if (locationState.availability == LocationAvailability.PERMISSION_MISSING ||
                 !locationState.permissionGranted
             ) {
@@ -196,28 +199,49 @@ fun GeoOriginSheet(
 
             Spacer(modifier = Modifier.height(10.dp))
 
+            Button(
+                onClick = onUseMyLocation,
+                enabled = canStamp,
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    Icons.Default.MyLocation,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Stamp GPS")
+            }
+            if (!canStamp && locationState.permissionGranted &&
+                locationState.availability != LocationAvailability.GPS_DISABLED
+            ) {
+                Text(
+                    text = "Waiting for a GPS fix",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Rust,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onTapOnMap,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Tap on map")
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
-                    onClick = onUseMyLocation,
-                    enabled = locationState.hasFix && locationState.permissionGranted,
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    modifier = Modifier.weight(1.2f)
-                ) {
-                    Icon(
-                        Icons.Default.MyLocation,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Use location", fontSize = 12.sp)
-                }
                 OutlinedButton(
                     onClick = onCaptureHeading,
                     enabled = compassAvailable,
@@ -230,7 +254,7 @@ fun GeoOriginSheet(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Heading", fontSize = 12.sp)
+                    Text("Capture heading", fontSize = 12.sp)
                 }
                 OutlinedButton(
                     onClick = onClear,
@@ -238,25 +262,28 @@ fun GeoOriginSheet(
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.weight(0.7f)
                 ) {
-                    Icon(
-                        Icons.Outlined.Clear,
-                        contentDescription = "Clear geographic origin",
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Text("Clear")
                 }
+            }
+
+            TextButton(onClick = { showDetails = !showDetails }) {
+                Text(if (showDetails) "Hide details" else "Details")
+            }
+            if (showDetails) {
+                StampedOriginSummary(anchor = anchor, liveHeadingDegrees = liveHeadingDegrees)
+                Spacer(modifier = Modifier.height(8.dp))
+                LiveFixSummary(
+                    locationState = locationState,
+                    liveHeadingDegrees = liveHeadingDegrees,
+                    compassAvailable = compassAvailable
+                )
             }
         }
     }
 }
 
-private fun originChipLabel(stamped: Boolean, readiness: GeoOriginReadiness): String {
-    return when {
-        stamped -> "Set"
-        readiness == GeoOriginReadiness.READY -> "Ready"
-        readiness == GeoOriginReadiness.ACCURACY_POOR -> "Poor GPS"
-        else -> "No fix"
-    }
-}
+/** Pill copy. Readiness is colour, not a second status word, so the chip stays one glance. */
+internal fun originChipStatusText(stamped: Boolean): String = if (stamped) "Set" else "Not set"
 
 @Composable
 private fun StatusPill(text: String, readiness: GeoOriginReadiness, stamped: Boolean) {

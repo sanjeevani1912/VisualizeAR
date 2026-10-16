@@ -176,7 +176,8 @@ class GeoRegressionTest {
 
         val state = viewModel.uiState.value
         assertEquals(PlanningSurface.MAP, state.planningSurface)
-        assertEquals(MapInteractionMode.NAVIGATE, state.mapInteractionMode)
+        // Origin without region is legacy: resume at Set region, which owns SELECT_REGION.
+        assertEquals(MapInteractionMode.SELECT_REGION, state.mapInteractionMode)
         assertNull(state.mapStyleError)
         assertFalse(location.state.value.isUpdating)
         assertTrue(state.currentLayout.anchor.hasGeographicFix)

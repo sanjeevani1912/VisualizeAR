@@ -12,15 +12,22 @@ import com.example.dhruvar.data.repository.LayoutRepository
 import com.example.dhruvar.domain.location.DeviceLocationController
 import com.example.dhruvar.domain.location.DeviceLocationState
 import com.example.dhruvar.domain.model.AssetType
+import com.example.dhruvar.domain.model.ChosenMapLocation
 import com.example.dhruvar.domain.model.GeoBounds
 import com.example.dhruvar.domain.model.Layout
 import com.example.dhruvar.domain.model.LayoutObject
 import com.example.dhruvar.domain.model.MapInteractionMode
 import com.example.dhruvar.domain.model.PlaceSearchHit
+import com.example.dhruvar.domain.model.PlanningSetupSession
+import com.example.dhruvar.domain.model.PlanningSetupStep
 import com.example.dhruvar.domain.model.PlanningSurface
+import com.example.dhruvar.domain.model.coerceMapInteractionMode
+import com.example.dhruvar.domain.model.resolvePlanningSetupStep
+import com.example.dhruvar.domain.model.toChosenMapLocation
 import com.example.dhruvar.domain.sensors.CompassHeadingController
 import com.example.dhruvar.domain.spatial.CoordinateTransformer
 import com.example.dhruvar.domain.spatial.MapLayoutProjection
+import com.example.dhruvar.domain.spatial.RegionDraftGeometry
 import com.example.dhruvar.ui.map.MapCameraBridge
 import java.util.UUID
 import kotlinx.coroutines.Job
@@ -81,7 +88,11 @@ data class PlanningUiState(
     val mapInteractionMode: MapInteractionMode = MapInteractionMode.NAVIGATE,
     val mapStyleError: String? = null,
     // Phase 5: map server place search
-    val placeSearch: PlaceSearchUiState = PlaceSearchUiState()
+    val placeSearch: PlaceSearchUiState = PlaceSearchUiState(),
+    // Guided setup (GS-01). Default matches a blank in-memory layout: New Plan, not a workspace.
+    val setupStep: PlanningSetupStep = PlanningSetupStep.FIND_LOCATION,
+    val setupSession: PlanningSetupSession = PlanningSetupSession(),
+    val isBrandNewLayout: Boolean = true
 ) {
     /**
      * Currently selected [LayoutObject], or null if no object is selected.
@@ -189,6 +200,9 @@ class PlanningViewModel(
             }
             return false
         }
+        if (rejectOriginOutsideRegion(fix.latitude, fix.longitude, GPS_OUTSIDE_REGION)) {
+            return false
+        }
         val heading = CompassHeadingController.normalizeDegrees(headingDegrees)
         val poorAccuracy = fix.horizontalAccuracyMeters != null &&
             fix.horizontalAccuracyMeters > DeviceLocationState.POOR_ACCURACY_METERS
@@ -203,12 +217,13 @@ class PlanningViewModel(
             headingDegrees = heading,
             horizontalAccuracyMeters = fix.horizontalAccuracyMeters,
             feedback = if (poorAccuracy) {
-                "Origin set (±${"%.0f".format(fix.horizontalAccuracyMeters)} m). $SITE_LEVEL_ACCURACY_WARNING"
+                "Origin stamped (±${"%.0f".format(fix.horizontalAccuracyMeters)} m). $SITE_LEVEL_ACCURACY_WARNING"
             } else {
-                "Geographic origin set from device GNSS"
+                "Origin stamped"
             },
             accuracyWarning = warning
         )
+        maybeAdvanceAfterOriginStamp()
         return true
     }
 
@@ -233,6 +248,9 @@ class PlanningViewModel(
             _uiState.update { it.copy(userFeedbackMessage = "Heading must be finite") }
             return false
         }
+        if (rejectOriginOutsideRegion(latitude, longitude, ORIGIN_MUST_BE_INSIDE_REGION)) {
+            return false
+        }
         applyGeographicAnchor(
             latitude = latitude,
             longitude = longitude,
@@ -241,6 +259,7 @@ class PlanningViewModel(
             feedback = "Geographic origin set manually",
             accuracyWarning = null
         )
+        maybeAdvanceAfterOriginStamp()
         return true
     }
 
@@ -276,7 +295,7 @@ class PlanningViewModel(
                 headingDegrees = null,
                 horizontalAccuracyMeters = null
             )
-            state.copy(
+            val updated = state.copy(
                 hasUnsavedChanges = true,
                 geoAccuracyWarning = null,
                 currentLayout = state.currentLayout.copy(
@@ -285,7 +304,37 @@ class PlanningViewModel(
                 ),
                 userFeedbackMessage = "Geographic origin cleared"
             )
+            resyncSetupStep(updated)
         }
+    }
+
+    /**
+     * When a region exists, origin must sit inside it (SET_ORIGIN and PLACE_ASSETS).
+     * @return true if the caller should abort without writing the anchor.
+     */
+    private fun rejectOriginOutsideRegion(
+        latitude: Double,
+        longitude: Double,
+        message: String
+    ): Boolean {
+        val region = _uiState.value.currentLayout.regionBounds ?: return false
+        if (MapLayoutProjection.isUsableOrigin(region, latitude, longitude)) return false
+        _uiState.update { it.copy(userFeedbackMessage = message) }
+        return true
+    }
+
+    private fun maybeAdvanceAfterOriginStamp() {
+        val state = _uiState.value
+        if (state.setupStep != PlanningSetupStep.SET_ORIGIN) return
+        if (!state.currentLayout.anchor.hasGeographicFix) return
+        _uiState.update {
+            it.copy(
+                isGeoOriginPanelExpanded = false,
+                mapInteractionMode = MapInteractionMode.NAVIGATE
+            )
+        }
+        locationController.stopUpdates()
+        advanceSetupStep()
     }
 
     private fun applyGeographicAnchor(
@@ -325,11 +374,20 @@ class PlanningViewModel(
     // ==========================================
 
     fun setPlanningSurface(surface: PlanningSurface) {
-        _uiState.update { it.copy(planningSurface = surface) }
+        _uiState.update { state ->
+            val next = if (state.setupStep != PlanningSetupStep.PLACE_ASSETS) {
+                PlanningSurface.MAP
+            } else {
+                surface
+            }
+            state.copy(planningSurface = next)
+        }
     }
 
     fun setMapInteractionMode(mode: MapInteractionMode) {
-        _uiState.update { it.copy(mapInteractionMode = mode) }
+        _uiState.update { state ->
+            state.copy(mapInteractionMode = coerceMapInteractionMode(state.setupStep, mode))
+        }
     }
 
     fun setMapStyleError(message: String?) {
@@ -422,7 +480,13 @@ class PlanningViewModel(
         }
     }
 
-    /** Flies the map to [hit] and collapses search. Does not touch the origin or region. */
+    /**
+     * Flies the map to [hit]. Does not write origin or region JSON.
+     *
+     * On [PlanningSetupStep.FIND_LOCATION] the hit is stored as [PlanningSetupSession.chosenLocation]
+     * and the field stays open with results collapsed so Continue can light up. Other steps still
+     * collapse search entirely.
+     */
     fun onSearchResultSelected(hit: PlaceSearchHit) {
         MapCameraBridge.moveTo(
             latitude = hit.latitude,
@@ -431,17 +495,31 @@ class PlanningViewModel(
         )
         searchJob?.cancel()
         searchJob = null
-        _uiState.update {
-            it.copy(
+        val chosen = hit.toChosenMapLocation(MapBasemapConfig.SEARCH_RESULT_ZOOM)
+        _uiState.update { state ->
+            val keepField = state.setupStep == PlanningSetupStep.FIND_LOCATION
+            state.copy(
                 planningSurface = PlanningSurface.MAP,
-                placeSearch = PlaceSearchUiState(),
+                setupSession = state.setupSession.copy(chosenLocation = chosen),
+                placeSearch = if (keepField) {
+                    state.placeSearch.copy(
+                        isExpanded = true,
+                        query = hit.displayName,
+                        results = emptyList(),
+                        isSearching = false,
+                        error = null
+                    )
+                } else {
+                    PlaceSearchUiState()
+                },
                 userFeedbackMessage = "Centered on ${hit.displayName}"
             )
         }
     }
 
     /**
-     * Sets or replaces [Layout.regionBounds]. Invalid boxes are rejected.
+     * Sets or replaces [Layout.regionBounds]. Does **not** advance guided setup — use
+     * [confirmRegionAndAdvance] on SET_REGION so Confirm / Use visible area move to SET_ORIGIN.
      */
     fun setRegionBounds(bounds: GeoBounds?): Boolean {
         if (bounds == null) {
@@ -457,6 +535,48 @@ class PlanningViewModel(
                 ),
                 userFeedbackMessage = "Region bounds set"
             )
+        }
+        return true
+    }
+
+    /**
+     * Commits [bounds] and, when on [PlanningSetupStep.SET_REGION], advances to SET_ORIGIN.
+     * Rejected boxes stay on the current step.
+     */
+    fun confirmRegionAndAdvance(bounds: GeoBounds): Boolean {
+        val reason = RegionDraftGeometry.rejectionReason(bounds)
+        if (reason != null) {
+            _uiState.update { it.copy(userFeedbackMessage = reason) }
+            return false
+        }
+        if (!setRegionBounds(bounds)) return false
+        val origin = _uiState.value.currentLayout.anchor
+        if (origin.hasGeographicFix &&
+            !MapLayoutProjection.isUsableOrigin(bounds, origin.latitude!!, origin.longitude!!)
+        ) {
+            _uiState.update { state ->
+                val cleared = state.currentLayout.anchor.copy(
+                    latitude = null,
+                    longitude = null,
+                    headingDegrees = null,
+                    horizontalAccuracyMeters = null
+                )
+                resyncSetupStep(
+                    state.copy(
+                        hasUnsavedChanges = true,
+                        geoAccuracyWarning = null,
+                        currentLayout = state.currentLayout.copy(
+                            anchor = cleared,
+                            updatedAtEpochMs = System.currentTimeMillis()
+                        ),
+                        userFeedbackMessage = ORIGIN_OUTSIDE_NEW_REGION
+                    )
+                )
+            }
+            return true
+        }
+        if (_uiState.value.setupStep == PlanningSetupStep.SET_REGION) {
+            advanceSetupStep()
         }
         return true
     }
@@ -479,12 +599,16 @@ class PlanningViewModel(
             }
             return false
         }
-        return setRegionBounds(bounds)
+        return if (_uiState.value.setupStep == PlanningSetupStep.SET_REGION) {
+            confirmRegionAndAdvance(bounds)
+        } else {
+            setRegionBounds(bounds)
+        }
     }
 
     fun clearRegionBounds() {
         _uiState.update { state ->
-            state.copy(
+            val updated = state.copy(
                 hasUnsavedChanges = true,
                 currentLayout = state.currentLayout.copy(
                     regionBounds = null,
@@ -492,6 +616,72 @@ class PlanningViewModel(
                 ),
                 userFeedbackMessage = "Region bounds cleared"
             )
+            resyncSetupStep(updated)
+        }
+    }
+
+    /**
+     * Stores a search-hit location for guided setup. Does not write JSON and does not
+     * auto-advance — Phase 02 owns Continue / auto-advance from Find location.
+     */
+    fun setChosenLocation(location: ChosenMapLocation?) {
+        _uiState.update { state ->
+            state.copy(setupSession = state.setupSession.copy(chosenLocation = location))
+        }
+    }
+
+    /**
+     * Moves FIND_LOCATION → SET_REGION → SET_ORIGIN → PLACE_ASSETS when the current step's
+     * prerequisite is met. Region commit itself does **not** call this (Phase 03).
+     */
+    fun advanceSetupStep() {
+        _uiState.update { state ->
+            when (state.setupStep) {
+                PlanningSetupStep.FIND_LOCATION -> {
+                    if (state.setupSession.chosenLocation == null) {
+                        state.copy(userFeedbackMessage = ADVANCE_NEEDS_LOCATION)
+                    } else {
+                        applySetupStep(
+                            state = state.copy(
+                                isBrandNewLayout = false,
+                                placeSearch = PlaceSearchUiState()
+                            ),
+                            step = PlanningSetupStep.SET_REGION
+                        )
+                    }
+                }
+                PlanningSetupStep.SET_REGION -> {
+                    if (state.currentLayout.regionBounds == null) {
+                        state.copy(userFeedbackMessage = ADVANCE_NEEDS_REGION)
+                    } else {
+                        applySetupStep(state, PlanningSetupStep.SET_ORIGIN)
+                    }
+                }
+                PlanningSetupStep.SET_ORIGIN -> {
+                    if (!state.currentLayout.anchor.hasGeographicFix) {
+                        state.copy(userFeedbackMessage = ADVANCE_NEEDS_ORIGIN)
+                    } else {
+                        applySetupStep(state, PlanningSetupStep.PLACE_ASSETS)
+                    }
+                }
+                PlanningSetupStep.PLACE_ASSETS -> state
+            }
+        }
+    }
+
+    /**
+     * SET_ORIGIN → SET_REGION → FIND_LOCATION. PLACE_ASSETS and FIND_LOCATION are no-ops
+     * (workspace / search back leave Planning via the UI).
+     */
+    fun goToPreviousSetupStep() {
+        _uiState.update { state ->
+            val previous = when (state.setupStep) {
+                PlanningSetupStep.SET_ORIGIN -> PlanningSetupStep.SET_REGION
+                PlanningSetupStep.SET_REGION -> PlanningSetupStep.FIND_LOCATION
+                PlanningSetupStep.FIND_LOCATION,
+                PlanningSetupStep.PLACE_ASSETS -> return@update state
+            }
+            applySetupStep(state, previous)
         }
     }
 
@@ -546,18 +736,27 @@ class PlanningViewModel(
      * Moves an existing object to a geographic point (EDIT mode).
      * Outside-region taps are rejected when bounds are set.
      */
-    fun moveObjectToGeographic(objectId: String, latitude: Double, longitude: Double): Boolean {
+    fun moveObjectToGeographic(
+        objectId: String,
+        latitude: Double,
+        longitude: Double,
+        announce: Boolean = true
+    ): Boolean {
         val layout = _uiState.value.currentLayout
         val anchor = layout.anchor
         if (!anchor.hasGeographicFix) {
-            _uiState.update {
-                it.copy(userFeedbackMessage = "Geographic origin required to move assets on the map")
+            if (announce) {
+                _uiState.update {
+                    it.copy(userFeedbackMessage = "Geographic origin required to move assets on the map")
+                }
             }
             return false
         }
         if (!MapLayoutProjection.isInsideRegionOrUnbounded(layout.regionBounds, latitude, longitude)) {
-            _uiState.update {
-                it.copy(userFeedbackMessage = "Move rejected — outside selected region")
+            if (announce) {
+                _uiState.update {
+                    it.copy(userFeedbackMessage = "Move rejected — outside selected region")
+                }
             }
             return false
         }
@@ -628,7 +827,7 @@ class PlanningViewModel(
     fun loadLayout(layout: Layout) {
         _uiState.update { state ->
             val unselectedObjects = layout.objects.map { it.copy(isSelected = false) }
-            state.copy(
+            val loaded = state.copy(
                 currentLayout = layout.copy(objects = unselectedObjects),
                 selectedObjectId = null,
                 isPersisted = true,
@@ -636,14 +835,21 @@ class PlanningViewModel(
                 cursorCoordinatesMeters = null,
                 panOffset = Offset.Zero,
                 zoom = CoordinateTransformer.DEFAULT_ZOOM,
-                // Session chrome restoration: Map primary + Navigate after load
                 planningSurface = PlanningSurface.MAP,
-                mapInteractionMode = MapInteractionMode.NAVIGATE,
                 mapStyleError = null,
                 isGeoOriginPanelExpanded = false,
                 geoAccuracyWarning = null,
-                userFeedbackMessage = "Loaded layout '${layout.name}'"
+                userFeedbackMessage = "Loaded layout '${layout.name}'",
+                isBrandNewLayout = false,
+                setupSession = PlanningSetupSession(),
+                placeSearch = PlaceSearchUiState()
             )
+            val step = resolvePlanningSetupStep(
+                layout = loaded.currentLayout,
+                session = loaded.setupSession,
+                isBrandNewLayout = false
+            )
+            applySetupStep(loaded, step)
         }
         locationController.stopUpdates()
     }
@@ -661,22 +867,95 @@ class PlanningViewModel(
             updatedAtEpochMs = System.currentTimeMillis()
         )
         _uiState.update { state ->
-            state.copy(
-                currentLayout = freshLayout,
-                selectedObjectId = null,
-                isPersisted = false,
-                hasUnsavedChanges = false,
-                cursorCoordinatesMeters = null,
-                panOffset = Offset.Zero,
-                zoom = CoordinateTransformer.DEFAULT_ZOOM,
-                planningSurface = PlanningSurface.MAP,
-                mapInteractionMode = MapInteractionMode.NAVIGATE,
-                mapStyleError = null,
-                isGeoOriginPanelExpanded = false,
-                geoAccuracyWarning = null
+            applySetupStep(
+                state = state.copy(
+                    currentLayout = freshLayout,
+                    selectedObjectId = null,
+                    isPersisted = false,
+                    hasUnsavedChanges = false,
+                    cursorCoordinatesMeters = null,
+                    panOffset = Offset.Zero,
+                    zoom = CoordinateTransformer.DEFAULT_ZOOM,
+                    planningSurface = PlanningSurface.MAP,
+                    mapStyleError = null,
+                    isGeoOriginPanelExpanded = false,
+                    geoAccuracyWarning = null,
+                    isBrandNewLayout = true,
+                    setupSession = PlanningSetupSession(),
+                    placeSearch = PlaceSearchUiState()
+                ),
+                step = PlanningSetupStep.FIND_LOCATION
             )
         }
         locationController.stopUpdates()
+    }
+
+    /**
+     * Applies [step] and coerces map mode / surface. Does not derive the step from layout —
+     * callers decide (resolver on load/clear, explicit advance/back otherwise).
+     */
+    private fun applySetupStep(state: PlanningUiState, step: PlanningSetupStep): PlanningUiState {
+        val collapsedOrigin = if (step != PlanningSetupStep.SET_ORIGIN) {
+            false
+        } else {
+            state.isGeoOriginPanelExpanded
+        }
+        val withStep = state.copy(
+            setupStep = step,
+            mapInteractionMode = coerceMapInteractionMode(step, state.mapInteractionMode),
+            planningSurface = if (step != PlanningSetupStep.PLACE_ASSETS) {
+                PlanningSurface.MAP
+            } else {
+                state.planningSurface
+            },
+            isGeoOriginPanelExpanded = collapsedOrigin,
+            selectedObjectId = if (step == PlanningSetupStep.PLACE_ASSETS) {
+                state.selectedObjectId
+            } else {
+                null
+            },
+            placeSearch = when (step) {
+                PlanningSetupStep.FIND_LOCATION -> expandedFindLocationSearch(state.placeSearch)
+                PlanningSetupStep.SET_REGION,
+                PlanningSetupStep.SET_ORIGIN -> PlaceSearchUiState()
+                PlanningSetupStep.PLACE_ASSETS -> state.placeSearch
+            }
+        )
+        if (step == PlanningSetupStep.SET_REGION) {
+            state.setupSession.chosenLocation?.let { location ->
+                MapCameraBridge.moveTo(
+                    latitude = location.latitude,
+                    longitude = location.longitude,
+                    zoom = location.zoom ?: MapBasemapConfig.SEARCH_RESULT_ZOOM
+                )
+            }
+        }
+        return withStep
+    }
+
+    /** Opens the search field without wiping a query the user already typed. */
+    private fun expandedFindLocationSearch(current: PlaceSearchUiState): PlaceSearchUiState {
+        if (current.isExpanded) return current
+        return PlaceSearchUiState(
+            isExpanded = true,
+            error = if (placeSearch.isConfigured) null else SEARCH_NOT_CONFIGURED
+        )
+    }
+
+    /**
+     * After region/origin clear, drop back to the first incomplete step. Brand-new layouts stay
+     * on Find location until [advanceSetupStep] runs.
+     */
+    private fun resyncSetupStep(state: PlanningUiState): PlanningUiState {
+        if (state.isBrandNewLayout) {
+            return applySetupStep(state, PlanningSetupStep.FIND_LOCATION)
+        }
+        val resolved = resolvePlanningSetupStep(
+            layout = state.currentLayout,
+            session = state.setupSession,
+            isBrandNewLayout = false
+        )
+        return applySetupStep(state, resolved)
     }
 
     /** Stops GNSS updates when leaving Planning (battery). Safe to call repeatedly. */
@@ -1143,5 +1422,12 @@ class PlanningViewModel(
         const val SEARCH_DEBOUNCE_MILLIS = 250L
         const val SEARCH_NOT_CONFIGURED = "Map search server not configured"
         const val SEARCH_UNAVAILABLE = "Search unavailable — check the map server"
+        const val ADVANCE_NEEDS_LOCATION = "Search and select a place to continue"
+        const val ADVANCE_NEEDS_REGION = "Set a region to continue"
+        const val ADVANCE_NEEDS_ORIGIN = "Set geographic origin to continue"
+        const val GPS_OUTSIDE_REGION =
+            "GPS is outside the selected region — move closer or tap on the map"
+        const val ORIGIN_MUST_BE_INSIDE_REGION = "Origin must be inside the selected region"
+        const val ORIGIN_OUTSIDE_NEW_REGION = "Origin is outside the new region — set it again"
     }
 }

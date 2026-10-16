@@ -26,6 +26,7 @@ class ArGeoWorkflowTest {
         val g = ArGeoGuidance.from(Anchor(), deviceFix = null)
         assertEquals(ArGeoProximityStatus.NO_GEO, g.status)
         assertEquals("NO GEO", g.statusLabel)
+        assertEquals("Geo · Local", g.compactChipLabel())
         assertNull(g.distanceMeters)
     }
 
@@ -34,6 +35,7 @@ class ArGeoWorkflowTest {
         val anchor = Anchor(latitude = anchorLat, longitude = anchorLng, headingDegrees = 12f)
         val g = ArGeoGuidance.from(anchor, deviceFix = null)
         assertEquals(ArGeoProximityStatus.NO_DEVICE_FIX, g.status)
+        assertEquals("Geo · No fix", g.compactChipLabel())
         assertEquals(anchorLat, g.anchorLatitude!!, 1e-9)
         assertEquals(12f, g.anchorHeadingDegrees!!, 0.001f)
     }
@@ -53,6 +55,7 @@ class ArGeoWorkflowTest {
             )
         )
         assertEquals(ArGeoProximityStatus.NEAR_ORIGIN, g.status)
+        assertEquals("Geo · Near", g.compactChipLabel())
         assertTrue(g.distanceMeters!! < ArGeoGuidance.DEFAULT_NEAR_ORIGIN_METERS)
         assertTrue(g.distanceMeters!! > 10.0)
     }
@@ -68,6 +71,7 @@ class ArGeoWorkflowTest {
             DeviceLocationFix(latitude = far.latitude, longitude = far.longitude)
         )
         assertEquals(ArGeoProximityStatus.TOO_FAR, g.status)
+        assertEquals("Geo · Far", g.compactChipLabel())
         assertTrue(g.distanceMeters!! > 50.0)
     }
 

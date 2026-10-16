@@ -64,6 +64,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -167,6 +168,8 @@ fun ARVisualizationScreen(
     // Calibration states
     var canSetOrigin by remember { mutableStateOf(false) }
     var isOriginCalibrated by remember { mutableStateOf(false) }
+    // Expanded while the operator still needs the prep briefing; collapses once the origin is set.
+    var briefingExpanded by rememberSaveable { mutableStateOf(true) }
     var calibrationFeedback by remember { mutableStateOf<String?>(null) }
     var visualizationScaleMode by remember { mutableStateOf(ArVisualizationScale.FULL) }
 
@@ -323,6 +326,7 @@ fun ARVisualizationScreen(
     }
 
     LaunchedEffect(isOriginCalibrated) {
+        briefingExpanded = !isOriginCalibrated
         if (isOriginCalibrated) {
             val n = uiState.currentLayout.objects.size
             calibrationFeedback = "Origin calibrated — rendering $n object${if (n == 1) "" else "s"}"
@@ -830,14 +834,18 @@ fun ARVisualizationScreen(
 
                                 ArGeoBriefingPanel(
                                     guidance = geoGuidance,
+                                    expanded = briefingExpanded,
+                                    onExpandedChange = { briefingExpanded = it },
                                     modifier = Modifier.fillMaxWidth()
                                 )
 
-                                ArScaleModeRow(
-                                    selected = visualizationScaleMode,
-                                    onSelected = { visualizationScaleMode = it },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
+                                if (!isOriginCalibrated || !briefingExpanded) {
+                                    ArScaleModeRow(
+                                        selected = visualizationScaleMode,
+                                        onSelected = { visualizationScaleMode = it },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
 
                                 calibrationFeedback?.let { msg ->
                                     Text(
@@ -856,8 +864,8 @@ fun ARVisualizationScreen(
                                     )
                                 }
 
-                                // 3-Step AR Preparation Progress Bar
-                                Card(
+                                // 3-step prep stays up until the origin is calibrated, then the camera gets the space back.
+                                if (!isOriginCalibrated) Card(
                                     colors = CardDefaults.cardColors(containerColor = OverlayFill),
                                     border = androidx.compose.foundation.BorderStroke(1.dp, OverlayHairline),
                                     shape = RoundedCornerShape(8.dp),

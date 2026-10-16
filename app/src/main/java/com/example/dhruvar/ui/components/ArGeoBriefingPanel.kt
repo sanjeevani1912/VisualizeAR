@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +41,8 @@ import java.util.Locale
 @Composable
 fun ArGeoBriefingPanel(
     guidance: ArGeoGuidance,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val chipColor = when (guidance.status) {
@@ -58,25 +62,36 @@ fun ArGeoBriefingPanel(
         Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onExpandedChange(!expanded) }
             ) {
                 Icon(
                     imageVector = Icons.Default.Explore,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = chipColor,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Geo briefing",
+                    text = guidance.compactChipLabel(),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                StatusChip(label = guidance.statusLabel, color = chipColor)
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (expanded) "Collapse geo briefing" else "Expand geo briefing",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
             }
 
+            if (!expanded) return@Column
+
+            Spacer(modifier = Modifier.height(8.dp))
+            StatusChip(label = guidance.statusLabel, color = chipColor)
             Spacer(modifier = Modifier.height(8.dp))
 
             when (guidance.status) {

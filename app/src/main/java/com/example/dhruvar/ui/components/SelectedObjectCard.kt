@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -124,17 +125,21 @@ fun BoxScope.SelectedObjectEditorOverlay(
         else -> Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = bottomInset)
     }
 
+    val distanceLabel = SpatialDistanceCalculator.formatDistance(
+        SpatialDistanceCalculator.calculateDistanceToAnchor(selectedObject)
+    )
+
     AnimatedVisibility(
         visible = isMinimized,
         enter = fadeIn(),
         exit = fadeOut(),
         modifier = Modifier
-            .align(panelAlignment)
-            .then(panelPadding)
+            .align(Alignment.BottomStart)
+            .padding(start = 12.dp, end = 84.dp, bottom = bottomInset + 64.dp)
     ) {
         Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
             tonalElevation = 3.dp,
             shadowElevation = 4.dp,
             border = androidx.compose.foundation.BorderStroke(
@@ -150,16 +155,31 @@ fun BoxScope.SelectedObjectEditorOverlay(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Edit,
+                    imageVector = selectedObject.assetType.toIcon(),
                     contentDescription = null,
                     tint = Moss,
                     modifier = Modifier.size(16.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = selectedObject.name,
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface
+                Spacer(modifier = Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f, fill = false)) {
+                    Text(
+                        text = selectedObject.name,
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = "$distanceLabel from origin · drag to move",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.ExpandLess,
+                    contentDescription = "Open properties",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
@@ -185,7 +205,7 @@ fun BoxScope.SelectedObjectEditorOverlay(
             onUpdateDimensions = onUpdateDimensions,
             modifier = Modifier
                 .widthIn(min = 240.dp, max = 300.dp)
-                .heightIn(max = 420.dp)
+                .heightIn(max = 280.dp)
         )
     }
 }

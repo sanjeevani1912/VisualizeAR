@@ -51,3 +51,21 @@ Separate series for military day-ops light UI, search, drag-region, origin chip,
 | UX-04 | `ux-field-kit/04-REGION-CORNER-DRAG.md` | Drag rectangle + viewport fallback |
 | UX-05 | `ux-field-kit/05-ORIGIN-HYBRID-CHIP.md` | Hybrid origin chip |
 | UX-06 | `ux-field-kit/06-AR-COLLAPSIBLE-BRIEFING.md` | Collapsible AR briefing |
+
+---
+
+## Guided setup flow (after Field Kit UX 01–06)
+
+Replaces the all-in-one Planning screen with a gated sequence on one MapLibre map: find location → set region → set origin → place assets.
+
+→ See **[`guided-setup/README.md`](guided-setup/README.md)**
+
+| Order | File | Outcome |
+|------|-------|---------|
+| GS-01 | `guided-setup/01-SETUP-STEP-MACHINE.md` | `PlanningSetupStep` + HUD gating |
+| GS-02 | `guided-setup/02-FIND-LOCATION.md` | Search-first New Plan step |
+| GS-03 | `guided-setup/03-SET-REGION.md` | Region-only step; Confirm advances |
+| GS-04 | `guided-setup/04-REGION-WORKSPACE-GRID.md` | Camera lock, outside dim, grid overlay |
+| GS-05 | `guided-setup/05-SET-ORIGIN.md` | Origin inside region, then unlock assets |
+| GS-06 | `guided-setup/06-PLACE-ASSETS.md` | Workspace chrome; change region/origin |
+| GS-07 | `guided-setup/07-RESUME-HARDENING.md` | Resume, Field Guide, regression |

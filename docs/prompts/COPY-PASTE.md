@@ -52,3 +52,23 @@ ux-field-kit/01-THEME-FIELD-KIT
 ```
 
 Each chat: `00-SHARED-CONTEXT.md` + `ux-field-kit/00-UX-SHARED.md` + one phase file.
+
+---
+
+## Guided setup series (after Field Kit UX)
+
+Use `docs/prompts/guided-setup/COPY-PASTE.md`.
+
+Order:
+
+```text
+guided-setup/01-SETUP-STEP-MACHINE
+→ 02-FIND-LOCATION
+→ 03-SET-REGION
+→ 04-REGION-WORKSPACE-GRID
+→ 05-SET-ORIGIN
+→ 06-PLACE-ASSETS
+→ 07-RESUME-HARDENING
+```
+
+Each chat: `00-SHARED-CONTEXT.md` + `ux-field-kit/00-UX-SHARED.md` + `guided-setup/00-SETUP-SHARED.md` + one phase file.

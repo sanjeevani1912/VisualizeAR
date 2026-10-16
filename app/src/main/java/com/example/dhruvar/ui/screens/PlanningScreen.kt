@@ -68,8 +68,16 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dhruvar.domain.model.MapInteractionMode
+import com.example.dhruvar.domain.model.PlanningSetupStep
 import com.example.dhruvar.domain.model.PlanningSurface
+import com.example.dhruvar.domain.model.canContinueFindLocation
+import com.example.dhruvar.domain.model.canContinueSetOrigin
+import com.example.dhruvar.domain.model.handlesSystemBackInternally
+import com.example.dhruvar.domain.model.planningScreenTitle
+import com.example.dhruvar.domain.model.progressSubtitle
+import com.example.dhruvar.domain.model.showsRegionDraftOverlay
 import com.example.dhruvar.domain.spatial.CoordinateTransformer
+import com.example.dhruvar.domain.spatial.RegionDraftGeometry
 import com.example.dhruvar.ui.components.AppTopBar
 import com.example.dhruvar.ui.components.FloatingAssetPickerOverlay
 import com.example.dhruvar.ui.components.GeoOriginChip
@@ -77,14 +85,19 @@ import com.example.dhruvar.ui.components.GeoOriginSheet
 import com.example.dhruvar.ui.components.PlanningCanvas
 import com.example.dhruvar.ui.components.PlanningModeContext
 import com.example.dhruvar.ui.components.PlanningModeRail
+import com.example.dhruvar.ui.components.FindLocationContinueBar
 import com.example.dhruvar.ui.components.PlanningSearchButton
 import com.example.dhruvar.ui.components.PlanningSearchField
 import com.example.dhruvar.ui.components.PlanningSurfaceSwitcher
+import com.example.dhruvar.ui.components.SelectedPlaceChip
 import com.example.dhruvar.ui.components.planningHudToolsFor
 import com.example.dhruvar.ui.components.SelectedObjectEditorOverlay
 import com.example.dhruvar.ui.components.rememberCompassState
 import com.example.dhruvar.ui.map.MapViewportBoundsBridge
 import com.example.dhruvar.ui.map.PlanningMapView
+import com.example.dhruvar.ui.map.RegionDraft
+import com.example.dhruvar.ui.map.RegionDraftOverlay
+import com.example.dhruvar.ui.map.withResolvedBounds
 import com.example.dhruvar.ui.theme.Rust
 import com.example.dhruvar.viewmodel.PlanningViewModel
 import kotlinx.coroutines.launch
@@ -102,7 +115,9 @@ fun PlanningScreen(
     val scope = rememberCoroutineScope()
     var showMenu by remember { mutableStateOf(false) }
     var isAssetMenuOpen by remember { mutableStateOf(false) }
-    var isPropertyEditorMinimized by remember { mutableStateOf(false) }
+    var isPropertyEditorMinimized by remember { mutableStateOf(true) }
+    // Transient: a dragged box is not part of the layout until Confirm.
+    var regionDraft by remember { mutableStateOf<RegionDraft?>(null) }
     val compassState by rememberCompassState()
     val context = LocalContext.current
     var locationPermissionPermanentlyDenied by remember { mutableStateOf(false) }
@@ -165,8 +180,44 @@ fun PlanningScreen(
         }
     }
 
-    BackHandler(enabled = uiState.placeSearch.isExpanded) {
+    BackHandler(
+        enabled = uiState.placeSearch.isExpanded &&
+            uiState.setupStep != PlanningSetupStep.FIND_LOCATION
+    ) {
         viewModel.setSearchExpanded(false)
+    }
+
+    BackHandler(enabled = regionDraft != null) {
+        regionDraft = null
+    }
+
+    BackHandler(enabled = uiState.isGeoOriginPanelExpanded) {
+        viewModel.setGeoOriginPanelExpanded(false)
+    }
+
+    BackHandler(enabled = uiState.setupStep.handlesSystemBackInternally()) {
+        viewModel.goToPreviousSetupStep()
+    }
+
+    BackHandler(
+        enabled = uiState.setupStep == PlanningSetupStep.SET_ORIGIN &&
+            uiState.mapInteractionMode == MapInteractionMode.SET_ANCHOR
+    ) {
+        viewModel.setMapInteractionMode(MapInteractionMode.NAVIGATE)
+    }
+
+    // Overlay is a SET_REGION tool (and PLACE_ASSETS region mode, which is still the current HUD).
+    // Leaving that step abandons an uncommitted box and restores map pan.
+    LaunchedEffect(uiState.mapInteractionMode, uiState.planningSurface, uiState.setupStep) {
+        val regionOverlayActive = showsRegionDraftOverlay(
+            step = uiState.setupStep,
+            mode = uiState.mapInteractionMode,
+            surface = uiState.planningSurface
+        )
+        if (!regionOverlayActive) {
+            regionDraft = null
+            MapViewportBoundsBridge.setGesturesEnabled(true)
+        }
     }
 
     // Battery: stop GNSS when leaving Planning
@@ -183,8 +234,8 @@ fun PlanningScreen(
 
     // Reset minimized flag when selection changes / clears
     LaunchedEffect(uiState.selectedObjectId) {
-        if (uiState.selectedObjectId == null) {
-            isPropertyEditorMinimized = false
+        if (uiState.selectedObjectId != null) {
+            isPropertyEditorMinimized = true
         }
     }
 
@@ -279,7 +330,7 @@ fun PlanningScreen(
         )
     }
 
-    val planSubtitle = buildString {
+    val planSubtitle = uiState.setupStep.progressSubtitle() ?: buildString {
         append(uiState.currentLayout.name)
         append(" · ")
         append(
@@ -297,31 +348,43 @@ fun PlanningScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Planning",
+                title = uiState.setupStep.planningScreenTitle(),
                 subtitle = planSubtitle,
-                onNavigateBack = onNavigateBack,
+                onNavigateBack = {
+                    if (uiState.setupStep == PlanningSetupStep.SET_ORIGIN &&
+                        uiState.mapInteractionMode == MapInteractionMode.SET_ANCHOR
+                    ) {
+                        viewModel.setMapInteractionMode(MapInteractionMode.NAVIGATE)
+                    } else if (uiState.setupStep.handlesSystemBackInternally()) {
+                        viewModel.goToPreviousSetupStep()
+                    } else {
+                        onNavigateBack()
+                    }
+                },
                 actions = {
                     // AR is an infrequent, deliberate hand-off, so it sits in the top bar and
                     // leaves the frequently used mode rail sole occupant of the bottom edge.
-                    IconButton(onClick = {
-                        if (uiState.hasUnsavedChanges) {
-                            if (uiState.isPersisted) {
-                                viewModel.saveCurrentLayout()
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Layout '${uiState.currentLayout.name}' saved automatically")
+                    if (uiState.setupStep == PlanningSetupStep.PLACE_ASSETS) {
+                        IconButton(onClick = {
+                            if (uiState.hasUnsavedChanges) {
+                                if (uiState.isPersisted) {
+                                    viewModel.saveCurrentLayout()
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("Layout '${uiState.currentLayout.name}' saved automatically")
+                                    }
+                                    onNavigateToVisualization()
+                                } else {
+                                    showSaveBeforeVisualizeDialog = true
                                 }
-                                onNavigateToVisualization()
                             } else {
-                                showSaveBeforeVisualizeDialog = true
+                                onNavigateToVisualization()
                             }
-                        } else {
-                            onNavigateToVisualization()
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.ViewInAr,
+                                contentDescription = "Visualize in AR"
+                            )
                         }
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.ViewInAr,
-                            contentDescription = "Visualize in AR"
-                        )
                     }
 
                     IconButton(onClick = {
@@ -420,7 +483,9 @@ fun PlanningScreen(
                 hasSelection = uiState.selectedObjectId != null,
                 isEditorOpen = uiState.selectedObject != null && !isPropertyEditorMinimized,
                 isOriginExpanded = uiState.isGeoOriginPanelExpanded,
-                isSearchExpanded = uiState.placeSearch.isExpanded
+                isSearchExpanded = uiState.placeSearch.isExpanded,
+                setupStep = uiState.setupStep,
+                hasGeographicFix = uiState.currentLayout.anchor.hasGeographicFix
             )
             // The map renders a mandatory attribution line along its bottom edge; bottom-anchored
             // HUD sits above it. The grid has no basemap and so no attribution to clear.
@@ -439,11 +504,14 @@ fun PlanningScreen(
                             MapInteractionMode.NAVIGATE -> Unit
                             MapInteractionMode.SELECT_REGION -> Unit
                             MapInteractionMode.SET_ANCHOR -> {
-                                viewModel.setGeographicAnchorFromMap(
+                                val placed = viewModel.setGeographicAnchorFromMap(
                                     latitude = lat,
                                     longitude = lng,
                                     headingDegrees = compassState.magneticHeadingDegrees
                                 )
+                                if (placed) {
+                                    viewModel.setMapInteractionMode(MapInteractionMode.NAVIGATE)
+                                }
                             }
                             MapInteractionMode.PLACE_ASSET -> {
                                 viewModel.placeAssetAtGeographic(lat, lng)
@@ -454,8 +522,35 @@ fun PlanningScreen(
                         }
                     },
                     onStyleError = { viewModel.setMapStyleError(it) },
+                    onAssetGrabbed = { viewModel.selectObject(it) },
+                    onAssetMoved = { id, lat, lng ->
+                        viewModel.moveObjectToGeographic(id, lat, lng, announce = false)
+                    },
+                    setupStep = uiState.setupStep,
                     modifier = Modifier.fillMaxSize()
                 )
+
+                if (showsRegionDraftOverlay(
+                        step = uiState.setupStep,
+                        mode = uiState.mapInteractionMode,
+                        surface = uiState.planningSurface
+                    )
+                ) {
+                    RegionDraftOverlay(
+                        draft = regionDraft,
+                        onDraftChange = { regionDraft = it },
+                        onDraftFinished = { finished ->
+                            val resolved = finished.withResolvedBounds()
+                            val reason = RegionDraftGeometry.rejectionReason(resolved.bounds)
+                            if (reason == null) {
+                                regionDraft = resolved
+                            } else {
+                                regionDraft = null
+                                scope.launch { snackbarHostState.showSnackbar(reason) }
+                            }
+                        }
+                    )
+                }
             } else {
                 PlanningCanvas(
                     layout = uiState.currentLayout,
@@ -513,13 +608,28 @@ fun PlanningScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
-                if (uiState.placeSearch.isExpanded) {
+                val isFindLocation = uiState.setupStep == PlanningSetupStep.FIND_LOCATION
+                val showExpandedSearch = isFindLocation ||
+                    (
+                        uiState.placeSearch.isExpanded &&
+                            uiState.setupStep != PlanningSetupStep.SET_REGION &&
+                            uiState.setupStep != PlanningSetupStep.SET_ORIGIN
+                        )
+                if (showExpandedSearch) {
                     PlanningSearchField(
                         state = uiState.placeSearch,
                         onQueryChange = { viewModel.onSearchQueryChange(it) },
                         onCollapse = { viewModel.setSearchExpanded(false) },
-                        onHitSelected = { viewModel.onSearchResultSelected(it) }
+                        onHitSelected = { viewModel.onSearchResultSelected(it) },
+                        showCollapseControl = !isFindLocation
                     )
+                    uiState.setupSession.chosenLocation?.let { chosen ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        SelectedPlaceChip(
+                            displayName = chosen.displayName,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 } else {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -527,24 +637,36 @@ fun PlanningScreen(
                     ) {
                         if (hudTools.showSearch) {
                             PlanningSearchButton(onClick = { viewModel.setSearchExpanded(true) })
-                            Spacer(modifier = Modifier.width(8.dp))
+                            if (hudTools.showOriginChip || hudTools.showSurfaceSwitcher) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
                         }
-                        GeoOriginChip(
-                            expanded = uiState.isGeoOriginPanelExpanded,
-                            onExpandedChange = { viewModel.setGeoOriginPanelExpanded(it) },
-                            anchor = uiState.currentLayout.anchor,
-                            locationState = uiState.locationState,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        PlanningSurfaceSwitcher(
-                            surface = uiState.planningSurface,
-                            onSurfaceChange = { viewModel.setPlanningSurface(it) }
-                        )
+                        if (hudTools.showOriginChip) {
+                            GeoOriginChip(
+                                expanded = uiState.isGeoOriginPanelExpanded,
+                                onExpandedChange = { viewModel.setGeoOriginPanelExpanded(it) },
+                                anchor = uiState.currentLayout.anchor,
+                                locationState = uiState.locationState,
+                                modifier = if (hudTools.showSurfaceSwitcher) {
+                                    Modifier.weight(1f)
+                                } else {
+                                    Modifier.fillMaxWidth()
+                                }
+                            )
+                        }
+                        if (hudTools.showSurfaceSwitcher) {
+                            if (hudTools.showOriginChip) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                            PlanningSurfaceSwitcher(
+                                surface = uiState.planningSurface,
+                                onSurfaceChange = { viewModel.setPlanningSurface(it) }
+                            )
+                        }
                     }
                 }
 
-                if (uiState.isGeoOriginPanelExpanded) {
+                if (uiState.isGeoOriginPanelExpanded && hudTools.showOriginChip) {
                     Spacer(modifier = Modifier.height(8.dp))
                     GeoOriginSheet(
                         anchor = uiState.currentLayout.anchor,
@@ -567,7 +689,16 @@ fun PlanningScreen(
                                 requestLocationPermission()
                                 return@GeoOriginSheet
                             }
-                            viewModel.setGeographicAnchorFromDeviceFix(compassState.magneticHeadingDegrees)
+                            val stamped = viewModel.setGeographicAnchorFromDeviceFix(
+                                compassState.magneticHeadingDegrees
+                            )
+                            if (stamped) {
+                                viewModel.setGeoOriginPanelExpanded(false)
+                            }
+                        },
+                        onTapOnMap = {
+                            viewModel.setMapInteractionMode(MapInteractionMode.SET_ANCHOR)
+                            viewModel.setGeoOriginPanelExpanded(false)
                         },
                         onCaptureHeading = {
                             viewModel.updateGeographicHeading(compassState.magneticHeadingDegrees)
@@ -605,6 +736,29 @@ fun PlanningScreen(
                         tools = hudTools,
                         hasRegion = uiState.currentLayout.regionBounds != null,
                         selectedAssetName = uiState.selectedAssetType.displayName,
+                        regionDraftLabel = regionDraft?.let { draft ->
+                            val bounds = draft.bounds
+                            if (bounds != null) {
+                                "Box ${RegionDraftGeometry.sizeLabel(bounds)}"
+                            } else {
+                                "Release to finish the box"
+                            }
+                        },
+                        isRegionDraftActive = regionDraft != null,
+                        isRegionDraftCommittable = regionDraft?.bounds != null,
+                        guidedSetup = uiState.setupStep == PlanningSetupStep.SET_REGION,
+                        onConfirmDraft = {
+                            val bounds = regionDraft?.bounds
+                                ?: uiState.currentLayout.regionBounds
+                            if (bounds == null) return@PlanningModeContext
+                            val committed = if (uiState.setupStep == PlanningSetupStep.SET_REGION) {
+                                viewModel.confirmRegionAndAdvance(bounds)
+                            } else {
+                                viewModel.setRegionBounds(bounds)
+                            }
+                            if (committed) regionDraft = null
+                        },
+                        onCancelDraft = { regionDraft = null },
                         onConfirmViewportRegion = {
                             val bounds = MapViewportBoundsBridge.queryVisibleBounds()
                             if (bounds == null) {
@@ -618,9 +772,15 @@ fun PlanningScreen(
                                     eastLongitude = bounds.east,
                                     westLongitude = bounds.west
                                 )
+                                if (uiState.setupStep == PlanningSetupStep.SET_REGION) {
+                                    regionDraft = null
+                                }
                             }
                         },
                         onClearRegion = { viewModel.clearRegionBounds() },
+                        onCancelAnchorTap = {
+                            viewModel.setMapInteractionMode(MapInteractionMode.NAVIGATE)
+                        },
                         modifier = Modifier.width(modeContextWidth)
                     )
                 }
@@ -633,60 +793,82 @@ fun PlanningScreen(
                 }
             }
 
-            FloatingAssetPickerOverlay(
-                isOpen = isAssetMenuOpen,
-                onToggle = { isAssetMenuOpen = !isAssetMenuOpen },
-                onDismiss = { isAssetMenuOpen = false },
-                modifier = Modifier.padding(bottom = bottomHudInset - 12.dp),
-                onAssetChosen = { assetType ->
-                    viewModel.selectAssetType(assetType)
-                    if (uiState.planningSurface == PlanningSurface.METRIC_GRID) {
-                        val transformer = CoordinateTransformer(
-                            viewportWidth = viewportWidthPx,
-                            viewportHeight = viewportHeightPx,
-                            panOffset = uiState.panOffset,
-                            zoom = uiState.zoom,
-                            basePixelsPerMeter = uiState.basePixelsPerMeter
-                        )
-                        val (worldX, worldZ) = transformer.canvasToWorld(
-                            Offset(viewportWidthPx / 2f, viewportHeightPx / 2f)
-                        )
-                        val snappedX = (worldX * 2f).roundToInt() / 2f
-                        val snappedZ = (worldZ * 2f).roundToInt() / 2f
-                        viewModel.addAssetOfType(assetType, snappedX, snappedZ)
+            if (hudTools.showSetupContinue) {
+                val originContinue = uiState.setupStep == PlanningSetupStep.SET_ORIGIN
+                FindLocationContinueBar(
+                    enabled = if (originContinue) {
+                        canContinueSetOrigin(uiState.currentLayout.anchor.hasGeographicFix)
                     } else {
-                        viewModel.setMapInteractionMode(MapInteractionMode.PLACE_ASSET)
-                        scope.launch {
-                            snackbarHostState.showSnackbar(
-                                "Place mode: tap the map to drop ${assetType.displayName}"
-                            )
-                        }
-                    }
-                    isAssetMenuOpen = false
-                    isPropertyEditorMinimized = false
-                }
-            )
+                        canContinueFindLocation(uiState.setupSession)
+                    },
+                    onContinue = { viewModel.advanceSetupStep() },
+                    buttonText = if (originContinue) "Use this origin" else "Continue",
+                    disabledHint = if (originContinue) {
+                        null
+                    } else {
+                        "Search and select a place to continue"
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(start = 12.dp, end = 12.dp, bottom = bottomHudInset)
+                )
+            }
 
-            SelectedObjectEditorOverlay(
-                selectedObject = uiState.selectedObject,
-                isMinimized = isPropertyEditorMinimized,
-                onMinimizedChange = { isPropertyEditorMinimized = it },
-                viewportWidthPx = viewportWidthPx,
-                viewportHeightPx = viewportHeightPx,
-                panOffset = uiState.panOffset,
-                zoom = uiState.zoom,
-                basePixelsPerMeter = uiState.basePixelsPerMeter,
-                onDelete = { viewModel.deleteSelectedObject() },
-                onDeselect = { viewModel.deselectObject() },
-                onDuplicate = { viewModel.duplicateSelectedObject() },
-                onRotate = { delta -> viewModel.rotateSelectedObject(delta) },
-                onSetRotation = { degrees -> viewModel.setSelectedObjectRotation(degrees) },
-                onUpdatePosition = { x, z -> viewModel.updateSelectedObjectPosition(x, z) },
-                onUpdateDimensions = { w, l, h ->
-                    viewModel.updateSelectedObjectDimensions(w, l, h)
-                },
-                bottomInset = bottomHudInset
-            )
+            if (hudTools.showAssetPicker) {
+                FloatingAssetPickerOverlay(
+                    isOpen = isAssetMenuOpen,
+                    onToggle = { isAssetMenuOpen = !isAssetMenuOpen },
+                    onDismiss = { isAssetMenuOpen = false },
+                    modifier = Modifier.padding(bottom = bottomHudInset - 12.dp),
+                    onAssetChosen = { assetType ->
+                        viewModel.selectAssetType(assetType)
+                        if (uiState.planningSurface == PlanningSurface.METRIC_GRID) {
+                            val transformer = CoordinateTransformer(
+                                viewportWidth = viewportWidthPx,
+                                viewportHeight = viewportHeightPx,
+                                panOffset = uiState.panOffset,
+                                zoom = uiState.zoom,
+                                basePixelsPerMeter = uiState.basePixelsPerMeter
+                            )
+                            val (worldX, worldZ) = transformer.canvasToWorld(
+                                Offset(viewportWidthPx / 2f, viewportHeightPx / 2f)
+                            )
+                            val snappedX = (worldX * 2f).roundToInt() / 2f
+                            val snappedZ = (worldZ * 2f).roundToInt() / 2f
+                            viewModel.addAssetOfType(assetType, snappedX, snappedZ)
+                        } else {
+                            viewModel.setMapInteractionMode(MapInteractionMode.PLACE_ASSET)
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    "Place mode: tap the map to drop ${assetType.displayName}"
+                                )
+                            }
+                        }
+                        isAssetMenuOpen = false
+                    }
+                )
+
+                SelectedObjectEditorOverlay(
+                    selectedObject = uiState.selectedObject,
+                    isMinimized = isPropertyEditorMinimized,
+                    onMinimizedChange = { isPropertyEditorMinimized = it },
+                    viewportWidthPx = viewportWidthPx,
+                    viewportHeightPx = viewportHeightPx,
+                    panOffset = uiState.panOffset,
+                    zoom = uiState.zoom,
+                    basePixelsPerMeter = uiState.basePixelsPerMeter,
+                    onDelete = { viewModel.deleteSelectedObject() },
+                    onDeselect = { viewModel.deselectObject() },
+                    onDuplicate = { viewModel.duplicateSelectedObject() },
+                    onRotate = { delta -> viewModel.rotateSelectedObject(delta) },
+                    onSetRotation = { degrees -> viewModel.setSelectedObjectRotation(degrees) },
+                    onUpdatePosition = { x, z -> viewModel.updateSelectedObjectPosition(x, z) },
+                    onUpdateDimensions = { w, l, h ->
+                        viewModel.updateSelectedObjectDimensions(w, l, h)
+                    },
+                    bottomInset = bottomHudInset
+                )
+            }
         }
     }
 }

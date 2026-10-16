@@ -49,6 +49,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.example.dhruvar.domain.model.MapInteractionMode
 import com.example.dhruvar.domain.model.PlaceSearchHit
+import com.example.dhruvar.domain.model.PlanningSetupStep
 import com.example.dhruvar.domain.model.PlanningSurface
 import com.example.dhruvar.viewmodel.PlaceSearchUiState
 
@@ -64,7 +65,10 @@ data class PlanningHudTools(
     val showRegionTools: Boolean,
     val showAnchorHint: Boolean,
     val showPlaceHint: Boolean,
-    val showEditHint: Boolean
+    val showEditHint: Boolean,
+    val showAssetPicker: Boolean = false,
+    val showArAction: Boolean = false,
+    val showSetupContinue: Boolean = false
 ) {
     /** True when a contextual strip sits above the mode rail and needs vertical room. */
     val hasModeContext: Boolean
@@ -96,6 +100,9 @@ private val NOTHING = PlanningHudTools(
  * @param isOriginExpanded suppresses mode context while the origin sheet is open over the map.
  * @param isSearchExpanded gives the search field the whole top row, since the field plus its
  *   results need the width that the chip and switcher would otherwise take.
+ * @param setupStep hides chrome the current guided-setup step does not own. Defaults to
+ *   [PlanningSetupStep.PLACE_ASSETS] so existing mode-only call sites keep today's HUD.
+ * @param hasGeographicFix shows SET_ORIGIN Continue when an origin already exists.
  */
 fun planningHudToolsFor(
     surface: PlanningSurface,
@@ -103,13 +110,35 @@ fun planningHudToolsFor(
     hasSelection: Boolean = false,
     isEditorOpen: Boolean = false,
     isOriginExpanded: Boolean = false,
-    isSearchExpanded: Boolean = false
+    isSearchExpanded: Boolean = false,
+    setupStep: PlanningSetupStep = PlanningSetupStep.PLACE_ASSETS,
+    hasGeographicFix: Boolean = false
 ): PlanningHudTools {
     val isMap = surface == PlanningSurface.MAP
-    if (isMap && isSearchExpanded) return NOTHING.copy(showModeRail = true)
+    when (setupStep) {
+        PlanningSetupStep.FIND_LOCATION -> {
+            if (!isMap) return NOTHING
+            // Search stays the only chrome; the field is composed expanded by the screen.
+            return NOTHING.copy(showSearch = true, showSetupContinue = true)
+        }
+        PlanningSetupStep.SET_REGION -> {
+            return NOTHING.copy(showRegionTools = isMap)
+        }
+        PlanningSetupStep.SET_ORIGIN -> {
+            return NOTHING.copy(
+                showOriginChip = true,
+                showAnchorHint = isMap && mode == MapInteractionMode.SET_ANCHOR,
+                showSetupContinue = hasGeographicFix && mode != MapInteractionMode.SET_ANCHOR
+            )
+        }
+        PlanningSetupStep.PLACE_ASSETS -> Unit
+    }
+
+    val workspace = NOTHING.copy(showAssetPicker = true, showArAction = true)
+    if (isMap && isSearchExpanded) return workspace.copy(showModeRail = true)
 
     // The grid keeps the switcher — it is the only way back to the map.
-    val topRow = NOTHING.copy(
+    val topRow = workspace.copy(
         showSearch = isMap,
         showOriginChip = true,
         showSurfaceSwitcher = true
@@ -203,43 +232,139 @@ fun PlanningModeContext(
     tools: PlanningHudTools,
     hasRegion: Boolean,
     selectedAssetName: String,
+    regionDraftLabel: String?,
+    isRegionDraftActive: Boolean,
+    isRegionDraftCommittable: Boolean,
+    onConfirmDraft: () -> Unit,
+    onCancelDraft: () -> Unit,
     onConfirmViewportRegion: () -> Unit,
     onClearRegion: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    guidedSetup: Boolean = false,
+    onCancelAnchorTap: (() -> Unit)? = null
 ) {
     when {
-        tools.showRegionTools -> HudStrip(modifier) {
+        tools.showRegionTools -> RegionTools(
+            hasRegion = hasRegion,
+            draftLabel = regionDraftLabel,
+            isDraftActive = isRegionDraftActive,
+            isDraftCommittable = isRegionDraftCommittable,
+            onConfirmDraft = onConfirmDraft,
+            onCancelDraft = onCancelDraft,
+            onConfirmViewportRegion = onConfirmViewportRegion,
+            onClearRegion = onClearRegion,
+            guidedSetup = guidedSetup,
+            modifier = modifier
+        )
+
+        tools.showAnchorHint -> HudHint(
+            text = "Tap inside the region to set origin",
+            modifier = modifier,
+            onCancel = onCancelAnchorTap
+        )
+        tools.showPlaceHint -> HudHint("Tap the map to drop a $selectedAssetName", modifier)
+        tools.showEditHint -> HudHint("Drag an asset to move it", modifier)
+    }
+}
+
+/**
+ * Drag-a-box is the primary path, so the actions on offer switch to Confirm and Cancel the moment
+ * a draft exists. Confirming the whole viewport stays available as the quick fallback.
+ */
+@Composable
+private fun RegionTools(
+    hasRegion: Boolean,
+    draftLabel: String?,
+    isDraftActive: Boolean,
+    isDraftCommittable: Boolean,
+    onConfirmDraft: () -> Unit,
+    onCancelDraft: () -> Unit,
+    onConfirmViewportRegion: () -> Unit,
+    onClearRegion: () -> Unit,
+    modifier: Modifier = Modifier,
+    guidedSetup: Boolean = false
+) {
+    val hint = draftLabel ?: when {
+        guidedSetup && hasRegion -> "Region set · drag a new box to replace it"
+        guidedSetup -> "Drag a box on the map, or use the visible area."
+        hasRegion -> "Region set · drag a new box to replace it"
+        else -> "Drag a box on the map"
+    }
+    val showConfirm = if (guidedSetup) {
+        isDraftCommittable || (hasRegion && !isDraftActive)
+    } else {
+        isDraftActive
+    }
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+        tonalElevation = 2.dp,
+        shadowElevation = 3.dp,
+        modifier = modifier
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
             Text(
-                text = if (hasRegion) "Region set" else "Pan to the site, then confirm",
+                text = hint,
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            TextButton(onClick = onConfirmViewportRegion) {
-                Text("Use area", fontWeight = FontWeight.SemiBold)
-            }
-            if (hasRegion) {
-                TextButton(onClick = onClearRegion) {
-                    Text("Clear")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (showConfirm) {
+                    TextButton(
+                        onClick = onConfirmDraft,
+                        enabled = isDraftCommittable || (guidedSetup && hasRegion && !isDraftActive)
+                    ) {
+                        Text(
+                            text = when {
+                                isDraftActive -> if (guidedSetup) "Confirm region" else "Confirm"
+                                guidedSetup && hasRegion -> "Continue with current region"
+                                else -> "Confirm"
+                            },
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+                if (isDraftActive) {
+                    TextButton(onClick = onCancelDraft) {
+                        Text("Cancel")
+                    }
+                }
+                TextButton(onClick = onConfirmViewportRegion) {
+                    Text(
+                        "Use visible area",
+                        fontWeight = if (showConfirm) FontWeight.Normal else FontWeight.SemiBold
+                    )
+                }
+                if (hasRegion) {
+                    TextButton(onClick = onClearRegion) {
+                        Text("Clear")
+                    }
                 }
             }
         }
-
-        tools.showAnchorHint -> HudHint("Tap the map to set the origin", modifier)
-        tools.showPlaceHint -> HudHint("Tap the map to drop a $selectedAssetName", modifier)
-        tools.showEditHint -> HudHint("Tap an asset to select it", modifier)
     }
 }
 
 @Composable
-private fun HudHint(text: String, modifier: Modifier = Modifier) {
+private fun HudHint(
+    text: String,
+    modifier: Modifier = Modifier,
+    onCancel: (() -> Unit)? = null
+) {
     HudStrip(modifier) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(vertical = 7.dp)
+            modifier = Modifier
+                .weight(1f)
+                .padding(vertical = 7.dp)
         )
+        if (onCancel != null) {
+            TextButton(onClick = onCancel) {
+                Text("Cancel")
+            }
+        }
     }
 }
 
@@ -302,7 +427,8 @@ fun PlanningSearchField(
     onQueryChange: (String) -> Unit,
     onCollapse: () -> Unit,
     onHitSelected: (PlaceSearchHit) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showCollapseControl: Boolean = true
 ) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
@@ -319,11 +445,22 @@ fun PlanningSearchField(
                 modifier = Modifier.padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onCollapse) {
+                if (showCollapseControl) {
+                    IconButton(onClick = onCollapse) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Close search",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Close search",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp)
+                            .size(20.dp)
                     )
                 }
                 BasicTextField(
@@ -436,5 +573,49 @@ private fun PlaceSearchRow(hit: PlaceSearchHit, onClick: () -> Unit) {
                 )
             }
         }
+    }
+}
+
+@Composable
+fun SelectedPlaceChip(
+    displayName: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        modifier = modifier.semantics { contentDescription = "Selected: $displayName" }
+    ) {
+        Text(
+            text = "Selected: $displayName",
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+        )
+    }
+}
+
+@Composable
+fun FindLocationContinueBar(
+    enabled: Boolean,
+    onContinue: () -> Unit,
+    modifier: Modifier = Modifier,
+    buttonText: String = "Continue",
+    disabledHint: String? = "Search and select a place to continue"
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        if (!enabled && disabledHint != null) {
+            Text(
+                text = disabledHint,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+        PrimaryButton(
+            text = buttonText,
+            onClick = onContinue,
+            enabled = enabled
+        )
     }
 }

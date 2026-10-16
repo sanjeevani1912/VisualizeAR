@@ -42,6 +42,14 @@ data class ArGeoGuidance(
             ArGeoProximityStatus.NEAR_ORIGIN -> "NEAR ORIGIN"
         }
 
+    /** One-line chip after calibration. Details stay behind expand. */
+    fun compactChipLabel(): String = when (status) {
+        ArGeoProximityStatus.NO_GEO -> "Geo · Local"
+        ArGeoProximityStatus.NO_DEVICE_FIX -> "Geo · No fix"
+        ArGeoProximityStatus.TOO_FAR -> "Geo · Far"
+        ArGeoProximityStatus.NEAR_ORIGIN -> "Geo · Near"
+    }
+
     companion object {
         const val DEFAULT_NEAR_ORIGIN_METERS: Double = 50.0
 
