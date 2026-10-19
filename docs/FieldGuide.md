@@ -4,56 +4,65 @@ Tactical how-to for geo-accurate layouts (MapLibre + GNSS + ARCore). Tone matche
 
 ---
 
-## 1. Set geographic origin (GNSS + heading)
+New Plan is a sequence on one map. Search, region, and origin are finished before assets or AR appear.
 
-1. Open **Planning**.
-2. Expand **GEO ORIGIN**.
-3. Grant location permission if prompted. If permanently denied, use **Open app settings**.
-4. Wait for a fix. Status chips:
-   - **NO FIX** — wait / enable GPS
-   - **ACCURACY POOR (>15m)** — usable for site-level stamp; relative meters stay precise
-   - **READY** — good enough to stamp
-5. Tap **Use my location** to write lat / lng / accuracy onto the layout anchor.
-6. Tap **Heading** to capture compass azimuth (planning +Z alignment).
-7. Save the layout when ready.
+## 1. Find a location (search)
+
+1. **Create New Plan**. Planning opens on **Find location**.
+2. Search and **select a result**. Panning the map does not count.
+3. Tap **Continue**.
+
+If search fails, check the map server. There is no skip.
+
+---
+
+## 2. Set region (drag or visible area)
+
+1. Drag a box on the map, or tap **Use visible area**.
+2. Confirm a box at least 25 m on each side.
+3. Confirming the box places the origin at its center and opens planning. The camera fits that box: outside is dimmed, and a grid is drawn inside it.
+
+**Policy:** Once a region is set, taps outside the box are **rejected** (not silently clamped).
+
+---
+
+## 3. Origin at the center
+
+Confirming the region places the origin at the center of the box and opens the asset workspace.
+
+**Change origin** when the site needs a different point:
+
+1. Open the **Origin** chip and choose **Move origin**.
+2. **Tap on map** inside the region, or **Stamp GPS** when the phone has a fix inside the box.
+3. **Use region center** snaps the origin back to the midpoint.
+4. Accuracy worse than 15 m still stamps, with a site-level warning. Relative meters stay precise.
+5. **Capture heading** is optional. Missing compass uses 0°.
+
+A point you chose stays while a later box still contains it. If a new box leaves that point outside, the origin returns to the new center and assets stay on the same ground. A manual move keeps meter offsets, so assets shift on the map.
 
 **GPS vs relative precision:** Absolute GNSS error can be several meters. Object-to-object and object-to-anchor distances use planning meters and stay precise relative to the stamped origin.
 
 ---
 
-## 2. Select region on the map
+## 4. Place assets
 
-The mode rail along the bottom of the map is contextual: it shows only the tools the active mode needs, so **Navigate** leaves the map almost entirely clear. The rail is hidden on the **Metric grid** surface, where taps select and drag objects directly instead of switching modes.
+1. Origin and region are already set. The rail is **Navigate / Place / Edit** only.
+2. Pick an asset from **+** (switches to Place) and tap inside the box.
+3. Positions are stored as `(x, z)` meters relative to the origin.
+4. **Edit**: tap an asset to select; drag to move it. Outside taps are rejected.
+5. **Change region** and **Change origin** are explicit. They do not delete assets. A new origin keeps meter offsets, so assets shift on the map.
 
-1. Stay on the **Map** surface (not Metric grid).
-2. Choose mode **Region**.
-3. Pan/zoom so the visible area covers your site.
-4. Tap **Use area** to store `regionBounds`.
-5. **Clear region** removes bounds.
-
-**Policy:** Region is optional. If unset, map placement is allowed site-wide. If set, taps outside the box are **rejected** (not silently clamped).
+**Metric grid** is available here for precise nudges. Same layout — one source of truth. It is hidden during setup.
 
 ---
 
-## 3. Place assets (meters under the hood)
-
-1. Set a geographic origin first (map placement is blocked without it).
-2. Mode **Place** (or pick an asset from **+** — switches to Place).
-3. Tap the map. Positions are stored as `(x, z)` meters relative to the geographic anchor (east / north of plan, rotated by heading).
-4. Mode **Edit**: tap an asset to select; tap empty ground to move it.
-5. Mode **Anchor**: tap to move the geographic origin (heading preserved or refreshed from compass).
-
-Use **Metric grid** for precise relative nudges without map tiles. Same `Layout` / ViewModel — one source of truth.
-
----
-
-## 4. Save
+## 5. Save
 
 Use the toolbar **Save**. Layout JSON is schema **version 2** with optional geo fields. Old v1 files still load (geo null).
 
 ---
 
-## 5. On-site AR calibration
+## 6. On-site AR calibration
 
 1. Walk near the planned origin. Open **Visualize in AR**.
 2. Read **GEO BRIEFING**: distance / bearing / `NEAR ORIGIN` / `TOO FAR` / `NO GEO`.
@@ -63,11 +72,11 @@ Use the toolbar **Save**. Layout JSON is schema **version 2** with optional geo 
 6. Optional scale: **1:1** full field, **1:20** / **1:50** sand-table.
 7. **Reset** recalibrates; relative layout should repeat.
 
-Layouts without geo still work: local AR mode from a user-placed origin.
+AR stays closed until the plan has both a region and an origin. A plan with zero assets can still be visualized.
 
 ---
 
-## 6. What GPS accuracy means
+## 7. What GPS accuracy means
 
 | Concept | Meaning |
 |--------|---------|
@@ -86,6 +95,8 @@ Site tip: stamp origin outdoors with clear sky; poor accuracy still OK for brief
 | Permission denied | Grant / Open app settings |
 | GPS disabled | Enable Location in system settings → Retry |
 | Map tiles unavailable | Check network / PMTiles URL (`docs/PMTiles-Configuration.md`) |
-| Can’t place on map | Set GEO ORIGIN first |
-| Outside region | Expand region or Clear region |
+| Continue disabled on step 1 | Select a search result, not just pan |
+| GPS stamp rejected | Stand inside the box or tap the map inside it |
+| Cannot place assets | Finish origin (step 3) |
+| Outside region | Change region, or move the asset back inside |
 | AR far from site | Walk closer (warn only) or proceed carefully |

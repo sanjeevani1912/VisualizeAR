@@ -68,7 +68,8 @@ data class PlanningHudTools(
     val showEditHint: Boolean,
     val showAssetPicker: Boolean = false,
     val showArAction: Boolean = false,
-    val showSetupContinue: Boolean = false
+    val showSetupContinue: Boolean = false,
+    val showWorkspaceStatus: Boolean = false
 ) {
     /** True when a contextual strip sits above the mode rail and needs vertical room. */
     val hasModeContext: Boolean
@@ -131,27 +132,25 @@ fun planningHudToolsFor(
                 showSetupContinue = hasGeographicFix && mode != MapInteractionMode.SET_ANCHOR
             )
         }
-        PlanningSetupStep.PLACE_ASSETS -> Unit
+        PlanningSetupStep.PLACE_ASSETS -> {
+            // Search and the Region/Anchor rail stay off. Region and origin are status actions.
+            val workspace = NOTHING.copy(
+                showOriginChip = true,
+                showSurfaceSwitcher = true,
+                showAssetPicker = true,
+                showArAction = true,
+                showWorkspaceStatus = true
+            )
+            if (!isMap || isEditorOpen) return workspace
+            if (isOriginExpanded || isSearchExpanded) return workspace.copy(showModeRail = true)
+            return workspace.copy(
+                showModeRail = true,
+                showPlaceHint = mode == MapInteractionMode.PLACE_ASSET,
+                showEditHint = mode == MapInteractionMode.EDIT && !hasSelection
+            )
+        }
     }
-
-    val workspace = NOTHING.copy(showAssetPicker = true, showArAction = true)
-    if (isMap && isSearchExpanded) return workspace.copy(showModeRail = true)
-
-    // The grid keeps the switcher — it is the only way back to the map.
-    val topRow = workspace.copy(
-        showSearch = isMap,
-        showOriginChip = true,
-        showSurfaceSwitcher = true
-    )
-    if (!isMap || isEditorOpen) return topRow
-    if (isOriginExpanded) return topRow.copy(showModeRail = true)
-    return topRow.copy(
-        showModeRail = true,
-        showRegionTools = mode == MapInteractionMode.SELECT_REGION,
-        showAnchorHint = mode == MapInteractionMode.SET_ANCHOR,
-        showPlaceHint = mode == MapInteractionMode.PLACE_ASSET,
-        showEditHint = mode == MapInteractionMode.EDIT && !hasSelection
-    )
+    return NOTHING
 }
 
 /**
@@ -162,7 +161,12 @@ fun planningHudToolsFor(
 fun PlanningModeRail(
     mode: MapInteractionMode,
     onModeChange: (MapInteractionMode) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    modes: List<MapInteractionMode> = listOf(
+        MapInteractionMode.NAVIGATE,
+        MapInteractionMode.PLACE_ASSET,
+        MapInteractionMode.EDIT
+    )
 ) {
     Surface(
         shape = RoundedCornerShape(26.dp),
@@ -176,11 +180,16 @@ fun PlanningModeRail(
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ModeIcon("Navigate", Icons.Default.NearMe, MapInteractionMode.NAVIGATE, mode, onModeChange)
-            ModeIcon("Region", Icons.Default.CropFree, MapInteractionMode.SELECT_REGION, mode, onModeChange)
-            ModeIcon("Anchor", Icons.Default.MyLocation, MapInteractionMode.SET_ANCHOR, mode, onModeChange)
-            ModeIcon("Place", Icons.Default.Place, MapInteractionMode.PLACE_ASSET, mode, onModeChange)
-            ModeIcon("Edit", Icons.Default.Edit, MapInteractionMode.EDIT, mode, onModeChange)
+            modes.forEach { value ->
+                val (label, icon) = when (value) {
+                    MapInteractionMode.NAVIGATE -> "Navigate" to Icons.Default.NearMe
+                    MapInteractionMode.SELECT_REGION -> "Region" to Icons.Default.CropFree
+                    MapInteractionMode.SET_ANCHOR -> "Anchor" to Icons.Default.MyLocation
+                    MapInteractionMode.PLACE_ASSET -> "Place" to Icons.Default.Place
+                    MapInteractionMode.EDIT -> "Edit" to Icons.Default.Edit
+                }
+                ModeIcon(label, icon, value, mode, onModeChange)
+            }
         }
     }
 }
@@ -592,6 +601,40 @@ fun SelectedPlaceChip(
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
         )
+    }
+}
+
+/** Compact region readout on the asset workspace. Change region leaves the planner for the box step. */
+@Composable
+fun WorkspaceRegionStatus(
+    sizeLabel: String,
+    onChangeRegion: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        tonalElevation = 2.dp,
+        shadowElevation = 2.dp,
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Region · $sizeLabel",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onChangeRegion) {
+                Text("Change region", fontWeight = FontWeight.SemiBold)
+            }
+        }
     }
 }
 

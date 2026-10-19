@@ -123,10 +123,12 @@ fun GeoOriginSheet(
     onOpenAppSettings: (() -> Unit)? = null,
     permissionPermanentlyDenied: Boolean = false,
     onRefreshLocation: () -> Unit,
+    onUseRegionCenter: () -> Unit,
     onUseMyLocation: () -> Unit,
     onTapOnMap: () -> Unit,
     onCaptureHeading: () -> Unit,
     onClear: () -> Unit,
+    onChangeOrigin: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val readiness = locationState.readiness
@@ -197,11 +199,39 @@ fun GeoOriginSheet(
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            if (onChangeOrigin != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Button(
+                    onClick = onUseRegionCenter,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Use region center", fontWeight = FontWeight.SemiBold)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onChangeOrigin,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Move origin", fontWeight = FontWeight.SemiBold)
+                }
+            }
 
+            if (onChangeOrigin == null) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "The origin starts at the center of the region. Move it if this site needs a different point.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Button(
-                onClick = onUseMyLocation,
-                enabled = canStamp,
+                onClick = onUseRegionCenter,
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -215,19 +245,8 @@ fun GeoOriginSheet(
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Stamp GPS")
+                Text("Use region center", fontWeight = FontWeight.SemiBold)
             }
-            if (!canStamp && locationState.permissionGranted &&
-                locationState.availability != LocationAvailability.GPS_DISABLED
-            ) {
-                Text(
-                    text = "Waiting for a GPS fix",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Rust,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedButton(
                 onClick = onTapOnMap,
@@ -236,8 +255,17 @@ fun GeoOriginSheet(
             ) {
                 Text("Tap on map")
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onUseMyLocation,
+                enabled = canStamp,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Stamp GPS")
+            }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -264,6 +292,7 @@ fun GeoOriginSheet(
                 ) {
                     Text("Clear")
                 }
+            }
             }
 
             TextButton(onClick = { showDetails = !showDetails }) {

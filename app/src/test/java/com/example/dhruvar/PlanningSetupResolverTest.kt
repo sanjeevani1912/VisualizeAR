@@ -13,6 +13,7 @@ import com.example.dhruvar.domain.model.allowedModes
 import com.example.dhruvar.domain.model.canConfirmSetupRegion
 import com.example.dhruvar.domain.model.canContinueFindLocation
 import com.example.dhruvar.domain.model.canContinueSetOrigin
+import com.example.dhruvar.domain.model.canEnterAr
 import com.example.dhruvar.domain.model.progressSubtitle
 import com.example.dhruvar.domain.model.coerceMapInteractionMode
 import com.example.dhruvar.domain.model.resolvePlanningSetupStep
@@ -113,11 +114,18 @@ class PlanningSetupResolverTest {
     }
 
     @Test
-    fun allowedModes_placeAssetsAllowsEveryMode() {
+    fun allowedModes_placeAssetsIsNavigatePlaceAndEdit() {
+        val allowed = allowedModes(PlanningSetupStep.PLACE_ASSETS)
         assertEquals(
-            MapInteractionMode.entries.toSet(),
-            allowedModes(PlanningSetupStep.PLACE_ASSETS)
+            setOf(
+                MapInteractionMode.NAVIGATE,
+                MapInteractionMode.PLACE_ASSET,
+                MapInteractionMode.EDIT
+            ),
+            allowed
         )
+        assertFalse(MapInteractionMode.SELECT_REGION in allowed)
+        assertFalse(MapInteractionMode.SET_ANCHOR in allowed)
     }
 
     @Test
@@ -138,6 +146,14 @@ class PlanningSetupResolverTest {
             MapInteractionMode.PLACE_ASSET,
             coerceMapInteractionMode(PlanningSetupStep.PLACE_ASSETS, MapInteractionMode.PLACE_ASSET)
         )
+        assertEquals(
+            MapInteractionMode.NAVIGATE,
+            coerceMapInteractionMode(PlanningSetupStep.PLACE_ASSETS, MapInteractionMode.SELECT_REGION)
+        )
+        assertEquals(
+            MapInteractionMode.NAVIGATE,
+            coerceMapInteractionMode(PlanningSetupStep.PLACE_ASSETS, MapInteractionMode.SET_ANCHOR)
+        )
     }
 
     @Test
@@ -151,6 +167,14 @@ class PlanningSetupResolverTest {
     fun continueFromFindLocation_requiresChosenPlace() {
         assertFalse(canContinueFindLocation(PlanningSetupSession()))
         assertTrue(canContinueFindLocation(PlanningSetupSession(chosenLocation = chosen)))
+    }
+
+    @Test
+    fun canEnterAr_requiresRegionAndOrigin() {
+        assertFalse(canEnterAr(Layout()))
+        assertFalse(canEnterAr(Layout(regionBounds = region)))
+        assertFalse(canEnterAr(Layout(anchor = geoAnchor)))
+        assertTrue(canEnterAr(Layout(regionBounds = region, anchor = geoAnchor, objects = emptyList())))
     }
 
     @Test
@@ -184,7 +208,7 @@ class PlanningSetupResolverTest {
     }
 
     @Test
-    fun regionOverlay_onlyOnSetRegionOrWorkspaceRegionMode() {
+    fun regionOverlay_onlyOnSetRegion() {
         assertTrue(
             showsRegionDraftOverlay(
                 PlanningSetupStep.SET_REGION,
@@ -206,7 +230,7 @@ class PlanningSetupResolverTest {
                 PlanningSurface.MAP
             )
         )
-        assertTrue(
+        assertFalse(
             showsRegionDraftOverlay(
                 PlanningSetupStep.PLACE_ASSETS,
                 MapInteractionMode.SELECT_REGION,

@@ -1,13 +1,18 @@
 package com.example.dhruvar.ui.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -22,47 +27,73 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Cabin
+import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SettingsInputAntenna
+import androidx.compose.material.icons.filled.Straighten
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.dhruvar.domain.model.AssetType
+import com.example.dhruvar.domain.model.AssetCatalog
+import com.example.dhruvar.domain.model.AssetCatalogEntry
+import com.example.dhruvar.domain.model.AssetCategory
 
 /**
- * Bottom-right FAB that toggles a translucent floating asset picker over the planning canvas.
+ * Add button that opens a drill-down asset drawer over the planning map.
  *
- * When closed: only the FAB column is composed (aligned BottomEnd) so canvas drag/pan works.
- * When open: a full-screen scrim intercepts outside taps to dismiss.
+ * The first page is category tiles. A tile opens that category's assets, with
+ * a name search. Back returns to the tiles. Choosing an asset reports the entry
+ * and the caller closes the drawer.
  */
 @Composable
 fun BoxScope.FloatingAssetPickerOverlay(
     isOpen: Boolean,
     onToggle: () -> Unit,
-    onAssetChosen: (AssetType) -> Unit,
+    onAssetChosen: (AssetCatalogEntry) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var drilledCategory by remember { mutableStateOf<AssetCategory?>(null) }
+    var query by remember { mutableStateOf("") }
+
+    LaunchedEffect(isOpen) {
+        if (!isOpen) {
+            drilledCategory = null
+            query = ""
+        }
+    }
+
     if (isOpen) {
         Box(
             modifier = Modifier
@@ -79,25 +110,37 @@ fun BoxScope.FloatingAssetPickerOverlay(
 
     Column(
         modifier = modifier
-            .align(Alignment.BottomEnd)
-            .padding(end = 12.dp, bottom = 12.dp),
+            .align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.End,
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         AnimatedVisibility(
             visible = isOpen,
             enter = fadeIn(tween(180)) +
-                scaleIn(initialScale = 0.92f, animationSpec = tween(180)) +
+                scaleIn(initialScale = 0.96f, animationSpec = tween(180)) +
                 slideInVertically(tween(180)) { it / 6 },
             exit = fadeOut(tween(120)) +
-                scaleOut(targetScale = 0.94f, animationSpec = tween(120)) +
+                scaleOut(targetScale = 0.98f, animationSpec = tween(120)) +
                 slideOutVertically(tween(120)) { it / 8 }
         ) {
-            FloatingAssetMenuPanel(
+            AssetDrillDownSheet(
+                category = drilledCategory,
+                query = query,
+                onQueryChange = { query = it },
+                onCategorySelected = {
+                    query = ""
+                    drilledCategory = it
+                },
+                onBack = {
+                    query = ""
+                    drilledCategory = null
+                },
                 onAssetChosen = onAssetChosen,
                 modifier = Modifier
-                    .widthIn(min = 200.dp, max = 280.dp)
-                    .heightIn(max = 360.dp)
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
             )
         }
 
@@ -134,38 +177,59 @@ fun BoxScope.FloatingAssetPickerOverlay(
 }
 
 @Composable
-private fun FloatingAssetMenuPanel(
-    onAssetChosen: (AssetType) -> Unit,
+private fun AssetDrillDownSheet(
+    category: AssetCategory?,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onCategorySelected: (AssetCategory) -> Unit,
+    onBack: () -> Unit,
+    onAssetChosen: (AssetCatalogEntry) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.28f)
+        ),
         tonalElevation = 3.dp,
-        shadowElevation = 4.dp
+        shadowElevation = 6.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 12.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = "Add asset",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 8.dp)
+            DrillHeader(
+                category = category,
+                onBack = onBack
             )
-
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                contentPadding = PaddingValues(bottom = 4.dp)
-            ) {
-                items(AssetType.entries.toList(), key = { it.name }) { type ->
-                    AssetMenuRow(
-                        assetType = type,
-                        onClick = { onAssetChosen(type) }
+            AnimatedContent(
+                targetState = category,
+                transitionSpec = {
+                    if (targetState != null) {
+                        (slideInHorizontally { it / 4 } + fadeIn()).togetherWith(
+                            slideOutHorizontally { -it / 4 } + fadeOut()
+                        )
+                    } else {
+                        (slideInHorizontally { -it / 4 } + fadeIn()).togetherWith(
+                            slideOutHorizontally { it / 4 } + fadeOut()
+                        )
+                    }
+                },
+                label = "asset-drill"
+            ) { drilled ->
+                if (drilled == null) {
+                    CategoryTileGrid(onCategorySelected = onCategorySelected)
+                } else {
+                    CategoryAssetList(
+                        category = drilled,
+                        query = query,
+                        onQueryChange = onQueryChange,
+                        onAssetChosen = onAssetChosen
                     )
                 }
             }
@@ -174,46 +238,233 @@ private fun FloatingAssetMenuPanel(
 }
 
 @Composable
-private fun AssetMenuRow(
-    assetType: AssetType,
-    onClick: () -> Unit
+private fun DrillHeader(
+    category: AssetCategory?,
+    onBack: () -> Unit
 ) {
-    val dims = "${assetType.defaultWidthMeters}×${assetType.defaultLengthMeters} m"
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 10.dp)
-            .semantics { contentDescription = "Add ${assetType.displayName}" },
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (category != null) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.semantics { contentDescription = "Back to categories" }
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+        Text(
+            text = category?.displayName ?: "Assets",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun CategoryTileGrid(
+    onCategorySelected: (AssetCategory) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        AssetCatalog.categories.chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { category ->
+                    CategoryTile(
+                        category = category,
+                        onClick = { onCategorySelected(category) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (row.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryTile(
+    category: AssetCategory,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val count = AssetCatalog.count(category)
+    Column(
+        modifier = modifier
+            .heightIn(min = 88.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp)
+            .semantics { contentDescription = "${category.displayName}, $count assets" },
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
         Box(
             modifier = Modifier
-                .size(36.dp)
+                .size(32.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = assetType.displayName.take(1),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.primary
+            Icon(
+                imageVector = category.icon(),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
             )
         }
-        Spacer(modifier = Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                text = assetType.displayName,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                text = category.displayName,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = dims,
-                style = MaterialTheme.typography.labelSmall,
+                text = if (count == 1) "1 asset" else "$count assets",
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
+}
+
+@Composable
+private fun CategoryAssetList(
+    category: AssetCategory,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onAssetChosen: (AssetCatalogEntry) -> Unit
+) {
+    val matches = AssetCatalog.inCategory(category, query)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        AssetSearchField(
+            query = query,
+            onQueryChange = onQueryChange,
+            categoryName = category.displayName
+        )
+        if (matches.isEmpty()) {
+            Text(
+                text = "No asset matches that name.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                contentPadding = PaddingValues(bottom = 4.dp)
+            ) {
+                items(matches, key = { it.id }) { entry ->
+                    AssetDrillRow(
+                        entry = entry,
+                        onClick = { onAssetChosen(entry) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AssetSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    categoryName: String
+) {
+    val textColor = MaterialTheme.colorScheme.onSurface
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                shape = RoundedCornerShape(10.dp)
+            )
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp)
+        )
+        BasicTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = textColor),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            modifier = Modifier
+                .weight(1f)
+                .semantics { contentDescription = "Search $categoryName" },
+            decorationBox = { inner ->
+                Box {
+                    if (query.isEmpty()) {
+                        Text(
+                            text = categoryName,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    inner()
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun AssetDrillRow(
+    entry: AssetCatalogEntry,
+    onClick: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 4.dp, vertical = 12.dp)
+                .semantics { contentDescription = "Add ${entry.displayName}" },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = entry.displayName,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = entry.footprintLabel(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+    }
+}
+
+private fun AssetCategory.icon(): ImageVector = when (this) {
+    AssetCategory.TRUCKS -> Icons.Default.LocalShipping
+    AssetCategory.TENTS -> Icons.Default.Cabin
+    AssetCategory.MASTS -> Icons.Default.SettingsInputAntenna
+    AssetCategory.WORKS -> Icons.Default.Straighten
 }

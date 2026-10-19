@@ -17,26 +17,21 @@ class PlanningHudToolsTest {
 
         assertTrue(tools.showModeRail)
         assertFalse(tools.hasModeContext)
+        assertFalse(tools.showSearch)
+        assertTrue(tools.showAssetPicker)
+        assertTrue(tools.showArAction)
+        assertTrue(tools.showWorkspaceStatus)
     }
 
     @Test
-    fun `region mode shows the region tools and nothing else`() {
-        val tools = planningHudToolsFor(PlanningSurface.MAP, MapInteractionMode.SELECT_REGION)
+    fun `region and anchor are not workspace rail modes`() {
+        val region = planningHudToolsFor(PlanningSurface.MAP, MapInteractionMode.SELECT_REGION)
+        val anchor = planningHudToolsFor(PlanningSurface.MAP, MapInteractionMode.SET_ANCHOR)
 
-        assertTrue(tools.showRegionTools)
-        assertFalse(tools.showAnchorHint)
-        assertFalse(tools.showPlaceHint)
-        assertFalse(tools.showEditHint)
-    }
-
-    @Test
-    fun `anchor mode shows the anchor hint and nothing else`() {
-        val tools = planningHudToolsFor(PlanningSurface.MAP, MapInteractionMode.SET_ANCHOR)
-
-        assertTrue(tools.showAnchorHint)
-        assertFalse(tools.showRegionTools)
-        assertFalse(tools.showPlaceHint)
-        assertFalse(tools.showEditHint)
+        assertFalse(region.showRegionTools)
+        assertFalse(anchor.showAnchorHint)
+        assertTrue(region.showAssetPicker)
+        assertTrue(anchor.showModeRail)
     }
 
     @Test
@@ -122,18 +117,18 @@ class PlanningHudToolsTest {
     }
 
     @Test
-    fun `expanded search takes the whole top row`() {
+    fun `expanded search is ignored on the asset workspace`() {
         val tools = planningHudToolsFor(
             surface = PlanningSurface.MAP,
-            mode = MapInteractionMode.SELECT_REGION,
+            mode = MapInteractionMode.NAVIGATE,
             isSearchExpanded = true
         )
 
         assertFalse(tools.showSearch)
-        assertFalse(tools.showOriginChip)
-        assertFalse(tools.showSurfaceSwitcher)
-        assertFalse("region tools competed with the results list", tools.hasModeContext)
-        assertTrue("the rail is at the bottom and does not conflict", tools.showModeRail)
+        assertTrue(tools.showOriginChip)
+        assertTrue(tools.showSurfaceSwitcher)
+        assertTrue(tools.showModeRail)
+        assertFalse(tools.hasModeContext)
     }
 
     @Test
@@ -173,7 +168,7 @@ class PlanningHudToolsTest {
 
             assertFalse("$mode kept a rail under the editor", tools.showModeRail)
             assertFalse("$mode kept context under the editor", tools.hasModeContext)
-            assertTrue("$mode hid search needlessly", tools.showSearch)
+            assertFalse("$mode showed search on the workspace", tools.showSearch)
         }
     }
 
@@ -190,10 +185,10 @@ class PlanningHudToolsTest {
     }
 
     @Test
-    fun `search stays reachable in every map mode`() {
+    fun `search stays hidden on the asset workspace`() {
         for (mode in MapInteractionMode.entries) {
-            assertTrue(
-                "$mode hid search",
+            assertFalse(
+                "$mode showed search",
                 planningHudToolsFor(PlanningSurface.MAP, mode).showSearch
             )
         }
@@ -319,7 +314,11 @@ class PlanningHudToolsTest {
 
         assertTrue(tools.showModeRail)
         assertTrue(tools.showOriginChip)
+        assertTrue(tools.showWorkspaceStatus)
         assertTrue(tools.showAssetPicker)
         assertTrue(tools.showArAction)
+        assertFalse(tools.showSearch)
+        assertFalse(tools.showSetupContinue)
+        assertFalse(tools.showRegionTools)
     }
 }

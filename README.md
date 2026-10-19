@@ -62,7 +62,7 @@ Or use **Build → Make Project** in Android Studio.
 
 Recommended flow:
 
-Home → Create New Plan → place assets → Save → Visualize in AR → detect ground → Set Planning Origin → Capture
+Home → Create New Plan → search a place → set a region → set origin inside the region → place assets → Save → Visualize in AR → detect ground → Set Planning Origin → Capture
 
 ## AR requirements
 
@@ -103,7 +103,7 @@ Session ARCore anchors are **not** written into saved layouts. Re-open AR → ca
 
 - Layouts: app files dir `dhruvar_layouts/<id>.json` (atomic temp-file writes).
 - Captures: MediaStore `Pictures/DhruvAR/` with timestamped filenames.
-- No network APIs; no `INTERNET` permission.
+- Map tiles and place search use the configured map server and need network (`INTERNET`). Saved layouts and AR poses stay on the device.
 
 ## Project structure
 

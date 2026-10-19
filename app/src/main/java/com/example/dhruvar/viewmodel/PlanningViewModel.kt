@@ -28,6 +28,7 @@ import com.example.dhruvar.domain.sensors.CompassHeadingController
 import com.example.dhruvar.domain.spatial.CoordinateTransformer
 import com.example.dhruvar.domain.spatial.MapLayoutProjection
 import com.example.dhruvar.domain.spatial.RegionDraftGeometry
+import com.example.dhruvar.domain.spatial.withOriginAtRegionCenter
 import com.example.dhruvar.ui.map.MapCameraBridge
 import java.util.UUID
 import kotlinx.coroutines.Job
@@ -519,7 +520,9 @@ class PlanningViewModel(
 
     /**
      * Sets or replaces [Layout.regionBounds]. Does **not** advance guided setup — use
-     * [confirmRegionAndAdvance] on SET_REGION so Confirm / Use visible area move to SET_ORIGIN.
+     * [confirmRegionAndAdvance] on SET_REGION so Confirm / Use visible area move to planning.
+     * A chosen origin that still sits inside the new box is kept. Otherwise the origin
+     * becomes the region center and assets stay on the same ground.
      */
     fun setRegionBounds(bounds: GeoBounds?): Boolean {
         if (bounds == null) {
@@ -527,20 +530,38 @@ class PlanningViewModel(
             return true
         }
         _uiState.update { state ->
-            state.copy(
-                hasUnsavedChanges = true,
-                currentLayout = state.currentLayout.copy(
+            val layout = state.currentLayout
+            val origin = layout.anchor
+            val keepChosenOrigin = origin.hasGeographicFix &&
+                MapLayoutProjection.isUsableOrigin(bounds, origin.latitude!!, origin.longitude!!)
+            val updatedLayout = if (keepChosenOrigin) {
+                layout.copy(
                     regionBounds = bounds,
                     updatedAtEpochMs = System.currentTimeMillis()
-                ),
-                userFeedbackMessage = "Region bounds set"
+                )
+            } else {
+                layout.withOriginAtRegionCenter(
+                    bounds = bounds,
+                    updatedAtEpochMs = System.currentTimeMillis()
+                )
+            }
+            state.copy(
+                hasUnsavedChanges = true,
+                geoAccuracyWarning = if (keepChosenOrigin) state.geoAccuracyWarning else null,
+                currentLayout = updatedLayout,
+                userFeedbackMessage = if (keepChosenOrigin) {
+                    "Region updated"
+                } else {
+                    "Origin set at the center of the region"
+                }
             )
         }
         return true
     }
 
     /**
-     * Commits [bounds] and, when on [PlanningSetupStep.SET_REGION], advances to SET_ORIGIN.
+     * Commits [bounds] and, when on [PlanningSetupStep.SET_REGION], advances to planning.
+     * The origin is already the region center, or a point the user chose inside the box.
      * Rejected boxes stay on the current step.
      */
     fun confirmRegionAndAdvance(bounds: GeoBounds): Boolean {
@@ -550,34 +571,33 @@ class PlanningViewModel(
             return false
         }
         if (!setRegionBounds(bounds)) return false
-        val origin = _uiState.value.currentLayout.anchor
-        if (origin.hasGeographicFix &&
-            !MapLayoutProjection.isUsableOrigin(bounds, origin.latitude!!, origin.longitude!!)
-        ) {
-            _uiState.update { state ->
-                val cleared = state.currentLayout.anchor.copy(
-                    latitude = null,
-                    longitude = null,
-                    headingDegrees = null,
-                    horizontalAccuracyMeters = null
-                )
-                resyncSetupStep(
-                    state.copy(
-                        hasUnsavedChanges = true,
-                        geoAccuracyWarning = null,
-                        currentLayout = state.currentLayout.copy(
-                            anchor = cleared,
-                            updatedAtEpochMs = System.currentTimeMillis()
-                        ),
-                        userFeedbackMessage = ORIGIN_OUTSIDE_NEW_REGION
-                    )
-                )
-            }
-            return true
-        }
         if (_uiState.value.setupStep == PlanningSetupStep.SET_REGION) {
-            advanceSetupStep()
+            _uiState.update { applySetupStep(it, PlanningSetupStep.PLACE_ASSETS) }
         }
+        return true
+    }
+
+    /**
+     * Puts the origin on the center of the current region and keeps assets on the same ground.
+     * Used when a saved plan has a region but no origin yet.
+     */
+    fun setOriginToRegionCenter(): Boolean {
+        val bounds = _uiState.value.currentLayout.regionBounds ?: run {
+            _uiState.update { it.copy(userFeedbackMessage = "Select a region before setting the origin") }
+            return false
+        }
+        _uiState.update { state ->
+            state.copy(
+                hasUnsavedChanges = true,
+                geoAccuracyWarning = null,
+                currentLayout = state.currentLayout.withOriginAtRegionCenter(
+                    bounds = bounds,
+                    updatedAtEpochMs = System.currentTimeMillis()
+                ),
+                userFeedbackMessage = "Origin set at the center of the region"
+            )
+        }
+        maybeAdvanceAfterOriginStamp()
         return true
     }
 
@@ -603,6 +623,31 @@ class PlanningViewModel(
             confirmRegionAndAdvance(bounds)
         } else {
             setRegionBounds(bounds)
+        }
+    }
+
+    /**
+     * Leaves the asset workspace to redraw the region. Objects and the current origin stay
+     * until the new box is confirmed.
+     */
+    fun requestChangeRegion() {
+        _uiState.update { state ->
+            if (state.setupStep != PlanningSetupStep.PLACE_ASSETS) return@update state
+            applySetupStep(state, PlanningSetupStep.SET_REGION)
+        }
+    }
+
+    /**
+     * Returns to origin stamping inside the current region. Meter offsets on assets are not rewritten.
+     */
+    fun requestChangeOrigin() {
+        _uiState.update { state ->
+            if (state.setupStep != PlanningSetupStep.PLACE_ASSETS) return@update state
+            if (state.currentLayout.regionBounds == null) return@update state
+            applySetupStep(
+                state.copy(isGeoOriginPanelExpanded = true),
+                PlanningSetupStep.SET_ORIGIN
+            )
         }
     }
 
@@ -1429,5 +1474,9 @@ class PlanningViewModel(
             "GPS is outside the selected region — move closer or tap on the map"
         const val ORIGIN_MUST_BE_INSIDE_REGION = "Origin must be inside the selected region"
         const val ORIGIN_OUTSIDE_NEW_REGION = "Origin is outside the new region — set it again"
+        const val CHANGE_REGION_KEEPS_ASSETS =
+            "Changing the region does not delete assets. Placements outside the new box cannot be moved until they are inside."
+        const val CHANGE_ORIGIN_KEEPS_METERS =
+            "Assets stay at the same meter offsets. A new origin moves them on the map."
     }
 }

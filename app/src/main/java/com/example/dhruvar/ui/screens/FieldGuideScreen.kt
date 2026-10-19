@@ -62,37 +62,40 @@ fun FieldGuideScreen(
 
             GuideSection(
                 number = "01",
-                title = "Set geographic origin",
-                body = "Expand GEO ORIGIN → grant location → Use my location + Heading. " +
-                    "ACCURACY POOR (>15 m) is site-level only; relative meter placement stays precise. " +
-                    "If permission is permanently denied, open app settings and re-enable Location."
+                title = "Find a location",
+                body = "New Plan opens on search. Select a result, then Continue. Panning alone does not advance."
             )
             GuideSection(
                 number = "02",
-                title = "Select region on map",
-                body = "Mode Region → pan/zoom → Use visible area. Region is optional: " +
-                    "without bounds, placement is site-wide; with bounds, outside taps are rejected."
+                title = "Set region",
+                body = "Drag a box or use the visible area, then confirm. The origin is placed at the center of that box."
             )
             GuideSection(
                 number = "03",
-                title = "Place assets",
-                body = "Geographic origin required for map Place. Taps store (x, z) meters relative to the anchor. " +
-                    "Use Metric grid for fine relative edits — same layout document."
+                title = "Origin at the center",
+                body = "Confirming the region places the origin at the center of the box. " +
+                    "Change origin to tap a different point or stamp GPS. A point you chose stays put while it is still inside the box. " +
+                    "If a new box leaves that point outside, the origin returns to the new center and assets stay on the same ground."
             )
             GuideSection(
                 number = "04",
-                title = "Save",
-                body = "Toolbar Save writes schema v2 JSON (geo + meters). Legacy v1 files still load."
+                title = "Place assets",
+                body = "Navigate, Place, and Edit. Taps store (x, z) meters from the origin. " +
+                    "Change region or Change origin does not delete assets."
             )
             GuideSection(
                 number = "05",
-                title = "On-site AR",
-                body = "GEO BRIEFING shows distance/bearing. Set Planning Origin on a detected plane " +
-                    "(prefers saved heading). GPS does not drag meshes — AR tracking owns the session. " +
-                    "Layouts without geo use local-only mode."
+                title = "Save",
+                body = "Toolbar Save writes schema v2 JSON (region, origin, meters). An unfinished plan can be saved and reopened at the missing step."
             )
             GuideSection(
                 number = "06",
+                title = "On-site AR",
+                body = "AR opens only after region and origin are set. GEO BRIEFING shows distance and bearing. " +
+                    "Set Planning Origin on a detected plane. GPS does not drag meshes."
+            )
+            GuideSection(
+                number = "07",
                 title = "GPS accuracy vs relative precision",
                 body = "Horizontal accuracy is uncertainty of the stamped WGS84 origin. " +
                     "Distances between assets are planning meters and remain precise relative to that origin.",

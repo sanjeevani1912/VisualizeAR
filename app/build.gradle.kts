@@ -32,7 +32,7 @@ android {
         // Self-hosted India map server (tiles + glyphs + /search). Empty = fall back to
         // MAP_STYLE_URL above and disable place search. See docs/Map-Server-Configuration.md.
         // No trailing slash. Cleartext hosts must also be listed in res/xml/network_security_config.xml.
-        buildConfigField("String", "MAP_SERVER_BASE", "\"http://192.168.1.205:8080\"")
+        buildConfigField("String", "MAP_SERVER_BASE", "\"http://192.168.1.205:8088\"")
     }
 
     buildTypes {

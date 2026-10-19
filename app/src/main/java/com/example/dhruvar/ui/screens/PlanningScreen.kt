@@ -70,7 +70,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dhruvar.domain.model.MapInteractionMode
 import com.example.dhruvar.domain.model.PlanningSetupStep
 import com.example.dhruvar.domain.model.PlanningSurface
+import com.example.dhruvar.domain.model.AR_REQUIRES_REGION_AND_ORIGIN
 import com.example.dhruvar.domain.model.canContinueFindLocation
+import com.example.dhruvar.domain.model.canEnterAr
 import com.example.dhruvar.domain.model.canContinueSetOrigin
 import com.example.dhruvar.domain.model.handlesSystemBackInternally
 import com.example.dhruvar.domain.model.planningScreenTitle
@@ -92,6 +94,7 @@ import com.example.dhruvar.ui.components.PlanningSurfaceSwitcher
 import com.example.dhruvar.ui.components.SelectedPlaceChip
 import com.example.dhruvar.ui.components.planningHudToolsFor
 import com.example.dhruvar.ui.components.SelectedObjectEditorOverlay
+import com.example.dhruvar.ui.components.WorkspaceRegionStatus
 import com.example.dhruvar.ui.components.rememberCompassState
 import com.example.dhruvar.ui.map.MapViewportBoundsBridge
 import com.example.dhruvar.ui.map.PlanningMapView
@@ -118,6 +121,8 @@ fun PlanningScreen(
     var isPropertyEditorMinimized by remember { mutableStateOf(true) }
     // Transient: a dragged box is not part of the layout until Confirm.
     var regionDraft by remember { mutableStateOf<RegionDraft?>(null) }
+    var confirmChangeRegion by remember { mutableStateOf(false) }
+    var confirmChangeOrigin by remember { mutableStateOf(false) }
     val compassState by rememberCompassState()
     val context = LocalContext.current
     var locationPermissionPermanentlyDenied by remember { mutableStateOf(false) }
@@ -247,6 +252,57 @@ fun PlanningScreen(
         }
     }
 
+    fun openArIfReady() {
+        if (!canEnterAr(uiState.currentLayout)) {
+            scope.launch { snackbarHostState.showSnackbar(AR_REQUIRES_REGION_AND_ORIGIN) }
+            return
+        }
+        onNavigateToVisualization()
+    }
+
+    if (confirmChangeRegion) {
+        AlertDialog(
+            onDismissRequest = { confirmChangeRegion = false },
+            title = { Text("Change region", fontWeight = FontWeight.Bold) },
+            text = { Text(PlanningViewModel.CHANGE_REGION_KEEPS_ASSETS) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmChangeRegion = false
+                    regionDraft = null
+                    viewModel.requestChangeRegion()
+                }) {
+                    Text("Change region", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmChangeRegion = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (confirmChangeOrigin) {
+        AlertDialog(
+            onDismissRequest = { confirmChangeOrigin = false },
+            title = { Text("Change origin", fontWeight = FontWeight.Bold) },
+            text = { Text(PlanningViewModel.CHANGE_ORIGIN_KEEPS_METERS) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmChangeOrigin = false
+                    viewModel.requestChangeOrigin()
+                }) {
+                    Text("Change origin", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmChangeOrigin = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     // Save Dialog
     if (showSaveDialog) {
         AlertDialog(
@@ -316,7 +372,7 @@ fun PlanningScreen(
                         val finalName = uiState.currentLayout.name.ifBlank { "Tactical Plan" }
                         viewModel.saveCurrentLayout(finalName)
                         showSaveBeforeVisualizeDialog = false
-                        onNavigateToVisualization()
+                        openArIfReady()
                     }
                 ) {
                     Text("Save & Visualize", fontWeight = FontWeight.Bold)
@@ -372,12 +428,12 @@ fun PlanningScreen(
                                     scope.launch {
                                         snackbarHostState.showSnackbar("Layout '${uiState.currentLayout.name}' saved automatically")
                                     }
-                                    onNavigateToVisualization()
+                                    openArIfReady()
                                 } else {
                                     showSaveBeforeVisualizeDialog = true
                                 }
                             } else {
-                                onNavigateToVisualization()
+                                openArIfReady()
                             }
                         }) {
                             Icon(
@@ -609,12 +665,7 @@ fun PlanningScreen(
                     .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 val isFindLocation = uiState.setupStep == PlanningSetupStep.FIND_LOCATION
-                val showExpandedSearch = isFindLocation ||
-                    (
-                        uiState.placeSearch.isExpanded &&
-                            uiState.setupStep != PlanningSetupStep.SET_REGION &&
-                            uiState.setupStep != PlanningSetupStep.SET_ORIGIN
-                        )
+                val showExpandedSearch = isFindLocation && uiState.placeSearch.isExpanded
                 if (showExpandedSearch) {
                     PlanningSearchField(
                         state = uiState.placeSearch,
@@ -684,6 +735,12 @@ fun PlanningScreen(
                                 requestLocationPermission()
                             }
                         },
+                        onUseRegionCenter = {
+                            val stamped = viewModel.setOriginToRegionCenter()
+                            if (stamped) {
+                                viewModel.setGeoOriginPanelExpanded(false)
+                            }
+                        },
                         onUseMyLocation = {
                             if (!hasLocationPermission()) {
                                 requestLocationPermission()
@@ -704,8 +761,39 @@ fun PlanningScreen(
                             viewModel.updateGeographicHeading(compassState.magneticHeadingDegrees)
                         },
                         onClear = { viewModel.clearGeographicAnchor() },
+                        onChangeOrigin = if (uiState.setupStep == PlanningSetupStep.PLACE_ASSETS) {
+                            {
+                                viewModel.setGeoOriginPanelExpanded(false)
+                                if (uiState.currentLayout.objects.isNotEmpty()) {
+                                    confirmChangeOrigin = true
+                                } else {
+                                    viewModel.requestChangeOrigin()
+                                }
+                            }
+                        } else {
+                            null
+                        },
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+
+                if (hudTools.showWorkspaceStatus) {
+                    val region = uiState.currentLayout.regionBounds
+                    if (region != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        WorkspaceRegionStatus(
+                            sizeLabel = RegionDraftGeometry.sizeLabel(region),
+                            onChangeRegion = {
+                                if (uiState.currentLayout.objects.isNotEmpty()) {
+                                    confirmChangeRegion = true
+                                } else {
+                                    regionDraft = null
+                                    viewModel.requestChangeRegion()
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
                 uiState.mapStyleError?.let { err ->
@@ -788,6 +876,11 @@ fun PlanningScreen(
                 if (hudTools.showModeRail) {
                     PlanningModeRail(
                         mode = uiState.mapInteractionMode,
+                        modes = listOf(
+                            MapInteractionMode.NAVIGATE,
+                            MapInteractionMode.PLACE_ASSET,
+                            MapInteractionMode.EDIT
+                        ),
                         onModeChange = { viewModel.setMapInteractionMode(it) }
                     )
                 }
@@ -820,8 +913,8 @@ fun PlanningScreen(
                     onToggle = { isAssetMenuOpen = !isAssetMenuOpen },
                     onDismiss = { isAssetMenuOpen = false },
                     modifier = Modifier.padding(bottom = bottomHudInset - 12.dp),
-                    onAssetChosen = { assetType ->
-                        viewModel.selectAssetType(assetType)
+                    onAssetChosen = { entry ->
+                        viewModel.selectAssetType(entry.assetType)
                         if (uiState.planningSurface == PlanningSurface.METRIC_GRID) {
                             val transformer = CoordinateTransformer(
                                 viewportWidth = viewportWidthPx,
@@ -835,12 +928,12 @@ fun PlanningScreen(
                             )
                             val snappedX = (worldX * 2f).roundToInt() / 2f
                             val snappedZ = (worldZ * 2f).roundToInt() / 2f
-                            viewModel.addAssetOfType(assetType, snappedX, snappedZ)
+                            viewModel.addAssetOfType(entry.assetType, snappedX, snappedZ)
                         } else {
                             viewModel.setMapInteractionMode(MapInteractionMode.PLACE_ASSET)
                             scope.launch {
                                 snackbarHostState.showSnackbar(
-                                    "Place mode: tap the map to drop ${assetType.displayName}"
+                                    "Place mode: tap the map to drop ${entry.displayName}"
                                 )
                             }
                         }

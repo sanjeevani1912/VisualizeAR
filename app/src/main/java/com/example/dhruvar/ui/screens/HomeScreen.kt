@@ -393,6 +393,9 @@ private fun PlanCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     StatusChip(label = "Origin", done = layout.anchor.hasGeographicFix)
                     StatusChip(label = "Region", done = layout.regionBounds != null)
+                    if (layout.regionBounds == null || !layout.anchor.hasGeographicFix) {
+                        StatusChip(label = "Incomplete", done = false)
+                    }
                 }
             }
             PlanActionsMenu(onRename = onRename, onDelete = onDelete)

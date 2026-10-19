@@ -4,6 +4,8 @@ import com.example.dhruvar.data.repository.InMemoryLayoutRepository
 import com.example.dhruvar.domain.location.DeviceLocationFix
 import com.example.dhruvar.domain.location.FakeDeviceLocationController
 import com.example.dhruvar.domain.model.Anchor
+import com.example.dhruvar.domain.model.AssetType
+import com.example.dhruvar.domain.model.LayoutObject
 import com.example.dhruvar.domain.model.ChosenMapLocation
 import com.example.dhruvar.domain.model.GeoBounds
 import com.example.dhruvar.domain.model.Layout
@@ -11,6 +13,7 @@ import com.example.dhruvar.domain.model.MapInteractionMode
 import com.example.dhruvar.domain.model.PlaceSearchHit
 import com.example.dhruvar.domain.model.PlanningSetupStep
 import com.example.dhruvar.domain.spatial.RegionDraftGeometry
+import com.example.dhruvar.domain.spatial.RegionWorkspaceGeometry
 import com.example.dhruvar.ui.map.MapCameraBridge
 import com.example.dhruvar.viewmodel.PlanningViewModel
 import org.junit.Assert.assertEquals
@@ -74,6 +77,13 @@ class PlanningSetupViewModelTest {
         viewModel.loadLayout(Layout(name = "Region", regionBounds = region))
         assertEquals(PlanningSetupStep.SET_ORIGIN, viewModel.uiState.value.setupStep)
         assertEquals(MapInteractionMode.NAVIGATE, viewModel.uiState.value.mapInteractionMode)
+    }
+
+    @Test
+    fun loadLayout_empty_opensFindLocation() {
+        viewModel.loadLayout(Layout(name = "Blank"))
+        assertEquals(PlanningSetupStep.FIND_LOCATION, viewModel.uiState.value.setupStep)
+        assertNull(viewModel.uiState.value.setupSession.chosenLocation)
     }
 
     @Test
@@ -195,11 +205,8 @@ class PlanningSetupViewModelTest {
 
     @Test
     fun advance_fromOrigin_blockedWithoutFix() {
-        viewModel.createNewLayout()
-        viewModel.setChosenLocation(chosen)
-        viewModel.advanceSetupStep()
-        viewModel.setRegionBounds(region)
-        viewModel.advanceSetupStep()
+        viewModel.loadLayout(Layout(name = "Region", regionBounds = region))
+        assertEquals(PlanningSetupStep.SET_ORIGIN, viewModel.uiState.value.setupStep)
         viewModel.advanceSetupStep()
         assertEquals(PlanningSetupStep.SET_ORIGIN, viewModel.uiState.value.setupStep)
         assertEquals(
@@ -234,12 +241,17 @@ class PlanningSetupViewModelTest {
     }
 
     @Test
-    fun confirmRegionAndAdvance_validBounds_movesToSetOrigin() {
+    fun confirmRegionAndAdvance_validBounds_setsOriginAtCenterAndOpensWorkspace() {
         enterSetRegion()
         assertTrue(viewModel.confirmRegionAndAdvance(region))
-        assertEquals(region, viewModel.uiState.value.currentLayout.regionBounds)
-        assertEquals(PlanningSetupStep.SET_ORIGIN, viewModel.uiState.value.setupStep)
-        assertEquals(MapInteractionMode.NAVIGATE, viewModel.uiState.value.mapInteractionMode)
+        val state = viewModel.uiState.value
+        val center = RegionWorkspaceGeometry.centroid(region)
+        assertEquals(region, state.currentLayout.regionBounds)
+        assertEquals(PlanningSetupStep.PLACE_ASSETS, state.setupStep)
+        assertEquals(MapInteractionMode.NAVIGATE, state.mapInteractionMode)
+        assertEquals(center.latitude, state.currentLayout.anchor.latitude!!, 1e-9)
+        assertEquals(center.longitude, state.currentLayout.anchor.longitude!!, 1e-9)
+        assertEquals(0f, state.currentLayout.anchor.headingDegrees!!, 0.001f)
     }
 
     @Test
@@ -268,8 +280,11 @@ class PlanningSetupViewModelTest {
                 westLongitude = 77.19
             )
         )
-        assertEquals(PlanningSetupStep.SET_ORIGIN, viewModel.uiState.value.setupStep)
+        assertEquals(PlanningSetupStep.PLACE_ASSETS, viewModel.uiState.value.setupStep)
         assertEquals(region, viewModel.uiState.value.currentLayout.regionBounds)
+        val center = RegionWorkspaceGeometry.centroid(region)
+        assertEquals(center.latitude, viewModel.uiState.value.currentLayout.anchor.latitude!!, 1e-9)
+        assertEquals(center.longitude, viewModel.uiState.value.currentLayout.anchor.longitude!!, 1e-9)
     }
 
     @Test
@@ -362,27 +377,124 @@ class PlanningSetupViewModelTest {
     }
 
     @Test
-    fun continueUsesExistingOriginAfterReturningToRegion() {
+    fun confirmingARegionThatStillContainsOrigin_returnsToPlaceAssets() {
         viewModel.loadLayout(Layout(name = "Legacy", anchor = geoAnchor))
         assertEquals(PlanningSetupStep.SET_REGION, viewModel.uiState.value.setupStep)
         assertTrue(viewModel.confirmRegionAndAdvance(region))
-        assertEquals(PlanningSetupStep.SET_ORIGIN, viewModel.uiState.value.setupStep)
-        assertTrue(viewModel.uiState.value.currentLayout.anchor.hasGeographicFix)
-
-        viewModel.advanceSetupStep()
-        assertEquals(PlanningSetupStep.PLACE_ASSETS, viewModel.uiState.value.setupStep)
+        val state = viewModel.uiState.value
+        assertEquals(PlanningSetupStep.PLACE_ASSETS, state.setupStep)
+        assertEquals(28.6139, state.currentLayout.anchor.latitude!!, 1e-9)
+        assertEquals(77.2090, state.currentLayout.anchor.longitude!!, 1e-9)
+        assertEquals(0f, state.currentLayout.anchor.headingDegrees!!, 0.001f)
+        assertEquals(region, state.currentLayout.regionBounds)
     }
 
     @Test
-    fun confirmingARegionThatExcludesOrigin_clearsOriginAndStaysOnSetOrigin() {
+    fun confirmingARegionMovesOriginToTheNewCenter() {
         viewModel.loadLayout(Layout(name = "Legacy", anchor = geoAnchor))
         val elsewhere = GeoBounds(19.10, 19.05, 72.90, 72.85)
         assertTrue(viewModel.confirmRegionAndAdvance(elsewhere))
         val state = viewModel.uiState.value
-        assertEquals(PlanningSetupStep.SET_ORIGIN, state.setupStep)
-        assertFalse(state.currentLayout.anchor.hasGeographicFix)
+        val center = RegionWorkspaceGeometry.centroid(elsewhere)
+        assertEquals(PlanningSetupStep.PLACE_ASSETS, state.setupStep)
+        assertEquals(center.latitude, state.currentLayout.anchor.latitude!!, 1e-9)
+        assertEquals(center.longitude, state.currentLayout.anchor.longitude!!, 1e-9)
+        assertEquals(0f, state.currentLayout.anchor.headingDegrees!!, 0.001f)
         assertEquals(elsewhere, state.currentLayout.regionBounds)
-        assertEquals(PlanningViewModel.ORIGIN_OUTSIDE_NEW_REGION, state.userFeedbackMessage)
+    }
+
+    @Test
+    fun requestChangeRegion_keepsObjectsAndReturnsToSetRegion() {
+        val tent = LayoutObject(assetType = AssetType.TENT, x = 4f, z = 6f)
+        viewModel.loadLayout(
+            Layout(name = "Done", anchor = geoAnchor, regionBounds = region, objects = listOf(tent))
+        )
+        viewModel.requestChangeRegion()
+        val state = viewModel.uiState.value
+        assertEquals(PlanningSetupStep.SET_REGION, state.setupStep)
+        assertEquals(1, state.currentLayout.objects.size)
+        assertEquals(4f, state.currentLayout.objects.first().x, 0.001f)
+        assertTrue(state.currentLayout.anchor.hasGeographicFix)
+        assertEquals(MapInteractionMode.SELECT_REGION, state.mapInteractionMode)
+
+        assertTrue(viewModel.confirmRegionAndAdvance(region))
+        val done = viewModel.uiState.value
+        assertEquals(PlanningSetupStep.PLACE_ASSETS, done.setupStep)
+        assertEquals(28.6139, done.currentLayout.anchor.latitude!!, 1e-9)
+        assertEquals(77.2090, done.currentLayout.anchor.longitude!!, 1e-9)
+        assertEquals(1, done.currentLayout.objects.size)
+        assertEquals(4f, done.currentLayout.objects.first().x, 0.001f)
+        assertEquals(6f, done.currentLayout.objects.first().z, 0.001f)
+    }
+
+    @Test
+    fun useRegionCenter_overridesAChosenOrigin() {
+        viewModel.loadLayout(Layout(name = "Done", anchor = geoAnchor, regionBounds = region))
+        assertTrue(viewModel.setOriginToRegionCenter())
+        val center = RegionWorkspaceGeometry.centroid(region)
+        val anchor = viewModel.uiState.value.currentLayout.anchor
+        assertEquals(center.latitude, anchor.latitude!!, 1e-9)
+        assertEquals(center.longitude, anchor.longitude!!, 1e-9)
+        assertEquals(PlanningSetupStep.PLACE_ASSETS, viewModel.uiState.value.setupStep)
+    }
+
+    @Test
+    fun requestChangeOrigin_keepsMeterOffsetsAndReturnsToSetOrigin() {
+        val tent = LayoutObject(assetType = AssetType.TENT, x = 4f, z = 6f)
+        viewModel.loadLayout(
+            Layout(name = "Done", anchor = geoAnchor, regionBounds = region, objects = listOf(tent))
+        )
+        viewModel.requestChangeOrigin()
+        val during = viewModel.uiState.value
+        assertEquals(PlanningSetupStep.SET_ORIGIN, during.setupStep)
+        assertEquals(4f, during.currentLayout.objects.first().x, 0.001f)
+        assertEquals(6f, during.currentLayout.objects.first().z, 0.001f)
+        assertTrue(during.currentLayout.anchor.hasGeographicFix)
+
+        assertTrue(viewModel.setGeographicAnchorFromMap(28.615, 77.20, headingDegrees = 0f))
+        val after = viewModel.uiState.value
+        assertEquals(PlanningSetupStep.PLACE_ASSETS, after.setupStep)
+        assertEquals(4f, after.currentLayout.objects.first().x, 0.001f)
+        assertEquals(6f, after.currentLayout.objects.first().z, 0.001f)
+    }
+
+    @Test
+    fun clearLayout_keepsRegionOriginAndWorkspaceStep() {
+        val tent = LayoutObject(assetType = AssetType.TENT, x = 4f, z = 6f)
+        viewModel.loadLayout(
+            Layout(name = "Done", anchor = geoAnchor, regionBounds = region, objects = listOf(tent))
+        )
+        viewModel.clearLayout()
+        val state = viewModel.uiState.value
+        assertEquals(PlanningSetupStep.PLACE_ASSETS, state.setupStep)
+        assertTrue(state.currentLayout.objects.isEmpty())
+        assertEquals(region, state.currentLayout.regionBounds)
+        assertTrue(state.currentLayout.anchor.hasGeographicFix)
+    }
+
+    @Test
+    fun deletingTheLastAsset_staysOnPlaceAssets() {
+        val tent = LayoutObject(assetType = AssetType.TENT)
+        viewModel.loadLayout(
+            Layout(name = "Done", anchor = geoAnchor, regionBounds = region, objects = listOf(tent))
+        )
+        viewModel.deleteObject(tent.id)
+        val state = viewModel.uiState.value
+        assertTrue(state.currentLayout.objects.isEmpty())
+        assertEquals(PlanningSetupStep.PLACE_ASSETS, state.setupStep)
+    }
+
+    @Test
+    fun advanceSetupStep_isIdempotentOnceThePrerequisiteIsMissing() {
+        viewModel.createNewLayout()
+        viewModel.setChosenLocation(chosen)
+        viewModel.advanceSetupStep()
+        viewModel.advanceSetupStep()
+        assertEquals(PlanningSetupStep.SET_REGION, viewModel.uiState.value.setupStep)
+
+        viewModel.loadLayout(Layout(name = "Done", anchor = geoAnchor, regionBounds = region))
+        viewModel.advanceSetupStep()
+        assertEquals(PlanningSetupStep.PLACE_ASSETS, viewModel.uiState.value.setupStep)
     }
 
     @Test
@@ -402,8 +514,7 @@ class PlanningSetupViewModelTest {
     }
 
     private fun enterSetOrigin() {
-        enterSetRegion()
-        assertTrue(viewModel.confirmRegionAndAdvance(region))
+        viewModel.loadLayout(Layout(name = "Region", regionBounds = region))
         assertEquals(PlanningSetupStep.SET_ORIGIN, viewModel.uiState.value.setupStep)
     }
 }

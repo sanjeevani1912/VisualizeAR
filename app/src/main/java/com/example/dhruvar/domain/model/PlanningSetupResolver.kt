@@ -47,6 +47,12 @@ fun canContinueFindLocation(session: PlanningSetupSession): Boolean =
 /** Continue on SET_ORIGIN is for an origin that already exists (legacy / stepped back). */
 fun canContinueSetOrigin(hasGeographicFix: Boolean): Boolean = hasGeographicFix
 
+const val AR_REQUIRES_REGION_AND_ORIGIN = "Set region and origin before AR"
+
+/** AR needs a confirmed box and a geographic origin. Zero assets is still allowed. */
+fun canEnterAr(layout: Layout): Boolean =
+    layout.regionBounds != null && layout.anchor.hasGeographicFix
+
 /**
  * Confirm on SET_REGION is enabled for a valid live draft, or for an already committed box
  * ("Continue with current region").
@@ -83,7 +89,11 @@ fun allowedModes(step: PlanningSetupStep): Set<MapInteractionMode> = when (step)
         MapInteractionMode.NAVIGATE,
         MapInteractionMode.SET_ANCHOR
     )
-    PlanningSetupStep.PLACE_ASSETS -> MapInteractionMode.entries.toSet()
+    PlanningSetupStep.PLACE_ASSETS -> setOf(
+        MapInteractionMode.NAVIGATE,
+        MapInteractionMode.PLACE_ASSET,
+        MapInteractionMode.EDIT
+    )
 }
 
 fun defaultModeFor(step: PlanningSetupStep): MapInteractionMode = when (step) {
@@ -101,18 +111,14 @@ fun coerceMapInteractionMode(
     return if (requested in allowed) requested else defaultModeFor(step)
 }
 
-/**
- * Region drag overlay is a SET_REGION tool. PLACE_ASSETS still uses it when Region mode is
- * selected, because Phase 01 keeps today's workspace HUD.
- */
+/** Region drag overlay is a SET_REGION tool. Change region leaves the workspace to use it. */
 fun showsRegionDraftOverlay(
     step: PlanningSetupStep,
     mode: MapInteractionMode,
     surface: PlanningSurface
 ): Boolean {
     if (surface != PlanningSurface.MAP) return false
-    return step == PlanningSetupStep.SET_REGION ||
-        (step == PlanningSetupStep.PLACE_ASSETS && mode == MapInteractionMode.SELECT_REGION)
+    return step == PlanningSetupStep.SET_REGION
 }
 
 /**
