@@ -1,28 +1,32 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useStore } from '../store'
-import { displayName, userById } from '../data/mock'
+import { useStore } from '../storeContext'
 import { MapView } from '../components/MapView'
 import { DecisionPanel } from '../components/DecisionPanel'
+import { FieldImages } from '../components/FieldImages'
+import { OwnerActions } from '../components/OwnerActions'
 import { StatusBadge } from '../components/StatusBadge'
+import { canComment, canStartReview } from '../rules'
 import { ASSET_DEFAULTS, distanceFromOrigin, formatLatLng, formatRegion, summarizeAssets } from '../geo'
 import { fullDate, latestVersion, relTime, shortDate, waitingLabel, OPEN_STATUSES } from '../util'
 
-type Tab = 'assets' | 'versions' | 'comments' | 'audit'
+type Tab = 'assets' | 'images' | 'versions' | 'comments' | 'audit'
 
 export function PlanDetail() {
   const { id } = useParams()
-  const { plans, audit, user, comment, markReviewing } = useStore()
+  const { plans, audit, user, comment, markReviewing, nameOf, base, ready } = useStore()
   const plan = plans.find((p) => p.id === id)
   const [tab, setTab] = useState<Tab>('assets')
   const [versionNo, setVersionNo] = useState<number | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [text, setText] = useState('')
+  const [commentError, setCommentError] = useState<string | null>(null)
 
   // Opening a submitted plan as a reviewer moves it to "under review".
   useEffect(() => {
-    if (plan && plan.status === 'SUBMITTED' && user?.role === 'reviewer' && plan.ownerId !== user.id) markReviewing(plan.id)
-  }, [plan?.id, plan?.status, user?.id, user?.role, plan?.ownerId, markReviewing])
+    if (plan && user && canStartReview(user, { ownerId: plan.ownerId, status: plan.status })) markReviewing(plan.id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan?.id, plan?.status, user?.id])
 
   const version = useMemo(() => {
     if (!plan) return undefined
@@ -32,30 +36,40 @@ export function PlanDetail() {
   if (!plan || !version) {
     return (
       <div className="page">
-        <p className="empty">Plan not found. <Link to="/plans" className="link">Back to plans</Link></p>
+        <p className="empty">
+          {ready ? 'Plan not found, or you do not have access to it.' : 'Loading…'} <Link to={`${base}/plans`} className="link">Back to plans</Link>
+        </p>
       </div>
     )
   }
 
   const layout = version.layout
-  const owner = userById(plan.ownerId)
   const isLatest = version.version === latestVersion(plan).version
   const events = audit.filter((e) => e.planId === plan.id)
   const accuracy = layout.anchor.horizontalAccuracyMeters
   const poorAccuracy = accuracy !== null && accuracy > 15
   const now = Date.now()
   const selectedObj = layout.objects.find((o) => o.id === selected)
+  const mayComment = !!user && canComment(user)
+
+  const tabs: [Tab, string][] = [
+    ['assets', `Assets (${layout.objects.length})`],
+    ['images', `Field images (${plan.attachments.length})`],
+    ['versions', `Versions (${plan.versions.length})`],
+    ['comments', `Comments (${plan.comments.length})`],
+    ['audit', 'Audit trail'],
+  ]
 
   return (
     <div className="page">
       <nav className="crumbs" aria-label="Breadcrumb">
-        <Link to="/plans" className="link">Plans</Link> <span aria-hidden="true">/</span> <span>{plan.code}</span>
+        <Link to={`${base}/plans`} className="link">Plans</Link> <span aria-hidden="true">/</span> <span>{plan.code}</span>
       </nav>
       <header className="page-head">
         <div>
           <h1>{plan.name}</h1>
           <p className="muted">
-            {plan.code} · planner {displayName(owner)} · submitted {fullDate(latestVersion(plan).submittedAt)}
+            {plan.code} · planner {nameOf(plan.ownerId)} · submitted {fullDate(latestVersion(plan).submittedAt)}
             {OPEN_STATUSES.includes(plan.status) && ` · waiting ${waitingLabel(plan, now)}`}
           </p>
         </div>
@@ -88,7 +102,7 @@ export function PlanDetail() {
 
           <section className="card flush">
             <div className="tabs" role="tablist">
-              {([['assets', `Assets (${layout.objects.length})`], ['versions', `Versions (${plan.versions.length})`], ['comments', `Comments (${plan.comments.length})`], ['audit', 'Audit trail']] as [Tab, string][]).map(([k, label]) => (
+              {tabs.map(([k, label]) => (
                 <button key={k} role="tab" aria-selected={tab === k} className={`tab ${tab === k ? 'on' : ''}`} onClick={() => setTab(k)}>
                   {label}
                 </button>
@@ -109,14 +123,16 @@ export function PlanDetail() {
                           <td>{o.x.toFixed(1)}</td>
                           <td>{o.z.toFixed(1)}</td>
                           <td>{distanceFromOrigin(o).toFixed(1)} m</td>
-                          <td>{o.rotationDegrees}°</td>
+                          <td>{Math.round(o.rotationDegrees)}°</td>
                           <td>{o.widthMeters} × {o.lengthMeters} × {o.heightMeters}</td>
                         </tr>
                       ))}
+                      {layout.objects.length === 0 && <tr><td colSpan={7} className="empty">No assets placed in this version.</td></tr>}
                     </tbody>
                   </table>
                 </div>
               )}
+              {tab === 'images' && <FieldImages plan={plan} />}
               {tab === 'versions' && (
                 <ul className="timeline">
                   {[...plan.versions].reverse().map((v) => {
@@ -127,10 +143,10 @@ export function PlanDetail() {
                           <strong>Version {v.version}</strong>
                           <button className="link-btn" onClick={() => { setVersionNo(v.version); setSelected(null); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>View on map</button>
                         </div>
-                        <div className="small muted">{displayName(userById(v.submittedBy))} · {fullDate(v.submittedAt)} · {v.layout.objects.length} assets · hash <code>{v.contentHash}</code></div>
-                        <p>{v.note}</p>
+                        <div className="small muted">{nameOf(v.submittedBy)} · {fullDate(v.submittedAt)} · {v.layout.objects.length} assets · hash <code>{v.contentHash}</code></div>
+                        {v.note && <p>{v.note}</p>}
                         {decisions.map((d) => (
-                          <p key={d.id} className="quote"><strong>{d.decision === 'approve' ? 'Approved' : d.decision === 'reject' ? 'Rejected' : 'Changes requested'}</strong> by {displayName(userById(d.reviewerId))} ({shortDate(d.decidedAt)}){d.reason ? `: ${d.reason}` : ''}</p>
+                          <p key={d.id} className="quote"><strong>{d.decision === 'approve' ? 'Approved' : d.decision === 'reject' ? 'Rejected' : 'Changes requested'}</strong> by {nameOf(d.reviewerId)} ({shortDate(d.decidedAt)}){d.reason ? `: ${d.reason}` : ''}</p>
                         ))}
                       </li>
                     )
@@ -143,17 +159,26 @@ export function PlanDetail() {
                   <ul className="comments">
                     {plan.comments.map((c) => (
                       <li key={c.id}>
-                        <div className="small muted">{displayName(userById(c.authorId))} · {relTime(c.createdAt, now)} · v{c.version}</div>
+                        <div className="small muted">{nameOf(c.authorId)} · {relTime(c.createdAt, now)} · v{c.version}</div>
                         <p>{c.text}</p>
                       </li>
                     ))}
                   </ul>
-                  {user && user.role !== 'auditor' ? (
-                    <form className="comment-form" onSubmit={(e) => { e.preventDefault(); comment(plan.id, text); setText('') }}>
+                  {mayComment ? (
+                    <form
+                      className="comment-form"
+                      onSubmit={async (e) => {
+                        e.preventDefault()
+                        const err = await comment(plan.id, text)
+                        setCommentError(err)
+                        if (!err) setText('')
+                      }}
+                    >
                       <label className="field grow">
                         <span>Add a comment</span>
-                        <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} />
+                        <textarea rows={3} maxLength={2000} value={text} onChange={(e) => setText(e.target.value)} />
                       </label>
+                      {commentError && <p className="form-error" role="alert">{commentError}</p>}
                       <button className="btn btn-primary" disabled={!text.trim()}>Post comment</button>
                     </form>
                   ) : (
@@ -166,7 +191,7 @@ export function PlanDetail() {
                   {events.map((e) => (
                     <li key={e.id}>
                       <div className="row between"><strong>{e.action}</strong><span className="small muted">{fullDate(e.at)}</span></div>
-                      <div className="small muted">{displayName(userById(e.actorId))}</div>
+                      <div className="small muted">{nameOf(e.actorId)}</div>
                       <p>{e.detail}</p>
                     </li>
                   ))}
@@ -178,6 +203,7 @@ export function PlanDetail() {
 
         <aside className="detail-side">
           <DecisionPanel plan={plan} />
+          <OwnerActions plan={plan} />
 
           <section className="card">
             <h3>Site summary</h3>
@@ -189,6 +215,7 @@ export function PlanDetail() {
               <dd className={poorAccuracy ? 'text-bad' : ''}>{accuracy === null ? 'Unknown' : `± ${accuracy.toFixed(1)} m`}{poorAccuracy && ' — poor'}</dd>
               <dt>Assets</dt>
               <dd>{summarizeAssets(layout).map((s) => `${s.count} ${ASSET_DEFAULTS[s.type].label.toLowerCase()}${s.count > 1 ? 's' : ''}`).join(', ') || 'None'}</dd>
+              <dt>Field images</dt><dd>{plan.attachments.length}</dd>
               <dt>Version</dt><dd>v{version.version} of {plan.versions.length}</dd>
               <dt>Content hash</dt><dd><code>{version.contentHash}</code></dd>
             </dl>

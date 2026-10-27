@@ -1,10 +1,8 @@
 import { useState } from 'react'
-import { useStore, DECIDABLE } from '../store'
-import { displayName, userById } from '../data/mock'
+import { useStore } from '../storeContext'
+import { canDecide, MIN_REASON } from '../rules'
 import { latestVersion, fullDate, STATUS_META } from '../util'
 import type { DecisionKind, Plan } from '../types'
-
-const MIN_REASON = 10
 
 const COPY: Record<DecisionKind, { title: string; button: string; cls: string; hint: string }> = {
   approve: { title: 'Approve', button: 'Approve plan', cls: 'btn-ok', hint: 'Optional remark' },
@@ -13,13 +11,16 @@ const COPY: Record<DecisionKind, { title: string; button: string; cls: string; h
 }
 
 export function DecisionPanel({ plan }: { plan: Plan }) {
-  const { user, decide } = useStore()
+  const { user, decide, nameOf } = useStore()
   const [kind, setKind] = useState<DecisionKind | null>(null)
   const [reason, setReason] = useState('')
   const [confirming, setConfirming] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
   const v = latestVersion(plan)
-  const open = DECIDABLE.includes(plan.status)
   const lastDecision = plan.decisions[plan.decisions.length - 1]
+  const ref = { ownerId: plan.ownerId, status: plan.status }
+  const open = plan.status === 'SUBMITTED' || plan.status === 'UNDER_REVIEW'
 
   if (!open) {
     return (
@@ -28,10 +29,10 @@ export function DecisionPanel({ plan }: { plan: Plan }) {
         <p className="muted">
           This plan is <strong>{STATUS_META[plan.status].label.toLowerCase()}</strong>.
         </p>
-        {lastDecision && (
+        {lastDecision && plan.status !== 'WITHDRAWN' && (
           <div className="decision-record">
             <div className="small muted">
-              {displayName(userById(lastDecision.reviewerId))} · {fullDate(lastDecision.decidedAt)} · version {lastDecision.version}
+              {nameOf(lastDecision.reviewerId)} · {fullDate(lastDecision.decidedAt)} · version {lastDecision.version}
             </div>
             {lastDecision.reason && <p className="quote">{lastDecision.reason}</p>}
           </div>
@@ -40,20 +41,15 @@ export function DecisionPanel({ plan }: { plan: Plan }) {
     )
   }
 
-  if (!user || user.role !== 'reviewer') {
+  if (!user || !canDecide(user, ref)) {
+    const why =
+      user?.role === 'reviewer' && plan.ownerId === user.id
+        ? 'You submitted this plan, so you cannot decide it (separation of duties).'
+        : `Awaiting a reviewer’s decision. Your role (${user?.role ?? 'unknown'}) can view${user?.role === 'planner' ? '' : ' but not decide'}.`
     return (
       <section className="card decision">
         <h3>Decision</h3>
-        <p className="muted">Awaiting a reviewer’s decision. Your role ({user?.role ?? 'unknown'}) can view but not decide.</p>
-      </section>
-    )
-  }
-
-  if (plan.ownerId === user.id) {
-    return (
-      <section className="card decision">
-        <h3>Decision</h3>
-        <p className="muted">You submitted this plan, so you cannot decide it (separation of duties).</p>
+        <p className="muted">{why}</p>
       </section>
     )
   }
@@ -77,6 +73,7 @@ export function DecisionPanel({ plan }: { plan: Plan }) {
             onClick={() => {
               setKind(k)
               setConfirming(false)
+              setError(null)
             }}
           >
             {COPY[k].title}
@@ -90,8 +87,9 @@ export function DecisionPanel({ plan }: { plan: Plan }) {
               {COPY[kind].hint}
               {needsReason && <em> (required, min {MIN_REASON} characters)</em>}
             </span>
-            <textarea rows={4} value={reason} onChange={(e) => setReason(e.target.value)} />
+            <textarea rows={4} value={reason} maxLength={2000} onChange={(e) => setReason(e.target.value)} />
           </label>
+          {error && <p className="form-error" role="alert">{error}</p>}
           {!confirming ? (
             <button className={`btn ${COPY[kind].cls}`} disabled={!valid} onClick={() => setConfirming(true)}>
               {COPY[kind].button}
@@ -99,22 +97,29 @@ export function DecisionPanel({ plan }: { plan: Plan }) {
           ) : (
             <div className="confirm">
               <p>
-                Confirm <strong>{COPY[kind].title.toLowerCase()}</strong> for {plan.code} version {v.version}? This is recorded in the audit log and
-                cannot be edited.
+                Confirm <strong>{COPY[kind].title.toLowerCase()}</strong> for {plan.code} version {v.version}? This is recorded in the audit log and cannot be edited.
               </p>
               <div className="row">
                 <button
                   className={`btn ${COPY[kind].cls}`}
-                  onClick={() => {
-                    decide(plan.id, kind, reason)
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true)
+                    const err = await decide(plan.id, kind, reason)
+                    setBusy(false)
+                    if (err) {
+                      setError(err)
+                      setConfirming(false)
+                      return
+                    }
                     setKind(null)
                     setReason('')
                     setConfirming(false)
                   }}
                 >
-                  Confirm
+                  {busy ? 'Saving…' : 'Confirm'}
                 </button>
-                <button className="btn btn-ghost" onClick={() => setConfirming(false)}>
+                <button className="btn btn-ghost" disabled={busy} onClick={() => setConfirming(false)}>
                   Back
                 </button>
               </div>

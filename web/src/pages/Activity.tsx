@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useStore } from '../store'
-import { displayName, userById } from '../data/mock'
+import { useStore } from '../storeContext'
 import { fullDate } from '../util'
+import { AuditVerify } from '../components/AuditVerify'
 
 export function Activity() {
-  const { audit, plans } = useStore()
+  const { audit, plans, nameOf, base, mode, user } = useStore()
   const [action, setAction] = useState('all')
   const [q, setQ] = useState('')
   const actions = useMemo(() => [...new Set(audit.map((e) => e.action))], [audit])
@@ -14,7 +14,7 @@ export function Activity() {
     const needle = q.trim().toLowerCase()
     if (!needle) return true
     const plan = plans.find((p) => p.id === e.planId)
-    return `${e.detail} ${displayName(userById(e.actorId))} ${plan?.name ?? ''} ${plan?.code ?? ''}`.toLowerCase().includes(needle)
+    return `${e.detail} ${nameOf(e.actorId)} ${plan?.name ?? ''} ${plan?.code ?? ''}`.toLowerCase().includes(needle)
   })
   return (
     <div className="page">
@@ -24,6 +24,7 @@ export function Activity() {
           <p className="muted">Append-only record of submissions, decisions and comments. Entries cannot be edited.</p>
         </div>
       </header>
+      {mode === 'live' && (user?.role === 'admin' || user?.role === 'auditor') && <AuditVerify />}
       <section className="card filters">
         <label className="field grow">
           <span>Search</span>
@@ -54,9 +55,9 @@ export function Activity() {
                   return (
                     <tr key={e.id}>
                       <td className="nowrap">{fullDate(e.at)}</td>
-                      <td>{displayName(userById(e.actorId))}</td>
+                      <td>{nameOf(e.actorId)}</td>
                       <td><span className={`chip chip-${e.action.toLowerCase().replace(/\s/g, '-')}`}>{e.action}</span></td>
-                      <td>{plan ? <Link to={`/plans/${plan.id}`} className="link">{plan.code}</Link> : '–'}</td>
+                      <td>{plan ? <Link to={`${base}/plans/${plan.id}`} className="link">{plan.code}</Link> : '–'}</td>
                       <td className="detail-cell">{e.detail}</td>
                     </tr>
                   )

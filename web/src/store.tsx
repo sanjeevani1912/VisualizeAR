@@ -1,9 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react'
-import { buildInitialData, userById } from './data/mock'
-import type { AuditEvent, Comment, Decision, DecisionKind, Plan, PlanStatus, User } from './types'
+// Presentation demo: fictional data held in the browser. Nothing here talks to a server.
+import { useCallback, useEffect, useMemo, useReducer, type ReactNode } from 'react'
+import { buildInitialData, USERS } from './data/mock'
+import { canComment, canDecide, canStartReview, reasonError } from './rules'
+import { StoreContext, fullName, type Ctx } from './storeContext'
+import type { Attachment, AuditEvent, Comment, Decision, DecisionKind, Plan, PlanStatus } from './types'
 
-const DATA_KEY = 'dhruvar-dashboard-v1'
-const USER_KEY = 'dhruvar-dashboard-user'
+const DATA_KEY = 'dhruvar-dashboard-demo-v2'
+const USER_KEY = 'dhruvar-dashboard-demo-user'
 
 interface State {
   plans: Plan[]
@@ -17,24 +20,14 @@ type Action =
   | { type: 'decide'; planId: string; kind: DecisionKind; reason: string }
   | { type: 'comment'; planId: string; text: string }
   | { type: 'markReviewing'; planId: string }
+  | { type: 'attach'; planId: string; attachment: Attachment }
+  | { type: 'detach'; planId: string; attachmentId: string }
   | { type: 'reset' }
 
-function uid(p: string): string {
-  return `${p}-${Math.random().toString(36).slice(2, 9)}`
-}
+const uid = (p: string) => `${p}-${Math.random().toString(36).slice(2, 9)}`
 
-const STATUS_FOR: Record<DecisionKind, PlanStatus> = {
-  approve: 'APPROVED',
-  reject: 'REJECTED',
-  changes: 'CHANGES_REQUESTED',
-}
-const ACTION_FOR: Record<DecisionKind, string> = {
-  approve: 'Approved',
-  reject: 'Rejected',
-  changes: 'Changes requested',
-}
-
-export const DECIDABLE: PlanStatus[] = ['SUBMITTED', 'UNDER_REVIEW']
+const STATUS_FOR: Record<DecisionKind, PlanStatus> = { approve: 'APPROVED', reject: 'REJECTED', changes: 'CHANGES_REQUESTED' }
+const ACTION_FOR: Record<DecisionKind, string> = { approve: 'Approved', reject: 'Rejected', changes: 'Changes requested' }
 
 function load(): { plans: Plan[]; audit: AuditEvent[] } {
   try {
@@ -56,105 +49,73 @@ function initState(): State {
   return { ...load(), userId }
 }
 
+const me = (s: State) => USERS.find((u) => u.id === s.userId)
+
 function reducer(state: State, a: Action): State {
   switch (a.type) {
     case 'login':
       return { ...state, userId: a.userId }
     case 'logout':
       return { ...state, userId: null }
-    case 'reset': {
-      const fresh = buildInitialData(Date.now())
-      return { ...state, ...fresh }
-    }
+    case 'reset':
+      return { ...state, ...buildInitialData(Date.now()) }
     case 'markReviewing': {
-      const user = state.userId ? userById(state.userId) : undefined
-      if (!user || user.role !== 'reviewer') return state
-      return {
-        ...state,
-        plans: state.plans.map((p) => (p.id === a.planId && p.status === 'SUBMITTED' ? { ...p, status: 'UNDER_REVIEW' } : p)),
-      }
+      const user = me(state)
+      const plan = state.plans.find((p) => p.id === a.planId)
+      if (!user || !plan || !canStartReview(user, { ownerId: plan.ownerId, status: plan.status })) return state
+      return { ...state, plans: state.plans.map((p) => (p.id === plan.id ? { ...p, status: 'UNDER_REVIEW' } : p)) }
     }
     case 'decide': {
-      const user = state.userId ? userById(state.userId) : undefined
+      const user = me(state)
       const plan = state.plans.find((p) => p.id === a.planId)
-      // Server-side rules, mirrored here: reviewers only, never the owner, only open plans.
-      if (!user || user.role !== 'reviewer' || !plan || plan.ownerId === user.id) return state
-      if (!DECIDABLE.includes(plan.status)) return state
+      if (!user || !plan || !canDecide(user, { ownerId: plan.ownerId, status: plan.status })) return state
       const reason = a.reason.trim()
-      if (a.kind !== 'approve' && reason.length < 10) return state
+      if (reasonError(a.kind, reason)) return state
       const version = plan.versions[plan.versions.length - 1].version
       const now = Date.now()
-      const decision: Decision = {
-        id: uid('d'),
-        planId: plan.id,
-        version,
-        reviewerId: user.id,
-        decision: a.kind,
-        reason,
-        decidedAt: now,
-      }
-      const event: AuditEvent = {
-        id: uid('a'),
-        at: now,
-        actorId: user.id,
-        action: ACTION_FOR[a.kind],
-        planId: plan.id,
-        detail: `${plan.code} version ${version}${reason ? `: ${reason}` : ''}`,
-      }
+      const decision: Decision = { id: uid('d'), planId: plan.id, version, reviewerId: user.id, decision: a.kind, reason, decidedAt: now }
+      const event: AuditEvent = { id: uid('a'), at: now, actorId: user.id, action: ACTION_FOR[a.kind], planId: plan.id, detail: `${plan.code} version ${version}${reason ? `: ${reason}` : ''}` }
       return {
         ...state,
         audit: [event, ...state.audit],
-        plans: state.plans.map((p) =>
-          p.id === plan.id
-            ? { ...p, status: STATUS_FOR[a.kind], updatedAt: now, decisions: [...p.decisions, decision] }
-            : p,
-        ),
+        plans: state.plans.map((p) => (p.id === plan.id ? { ...p, status: STATUS_FOR[a.kind], updatedAt: now, decisions: [...p.decisions, decision] } : p)),
       }
     }
     case 'comment': {
-      const user = state.userId ? userById(state.userId) : undefined
+      const user = me(state)
       const plan = state.plans.find((p) => p.id === a.planId)
       const text = a.text.trim()
-      if (!user || user.role === 'auditor' || !plan || !text) return state
+      if (!user || !canComment(user) || !plan || !text) return state
       const now = Date.now()
-      const c: Comment = {
-        id: uid('c'),
-        planId: plan.id,
-        version: plan.versions[plan.versions.length - 1].version,
-        authorId: user.id,
-        text,
-        createdAt: now,
-      }
+      const c: Comment = { id: uid('c'), planId: plan.id, version: plan.versions[plan.versions.length - 1].version, authorId: user.id, text, createdAt: now }
       const event: AuditEvent = { id: uid('a'), at: now, actorId: user.id, action: 'Commented', planId: plan.id, detail: text }
-      return {
-        ...state,
-        audit: [event, ...state.audit],
-        plans: state.plans.map((p) => (p.id === plan.id ? { ...p, comments: [...p.comments, c] } : p)),
-      }
+      return { ...state, audit: [event, ...state.audit], plans: state.plans.map((p) => (p.id === plan.id ? { ...p, comments: [...p.comments, c] } : p)) }
+    }
+    case 'attach': {
+      const user = me(state)
+      if (!user) return state
+      const event: AuditEvent = { id: uid('a'), at: Date.now(), actorId: user.id, action: 'Image added', planId: a.planId, detail: a.attachment.fileName }
+      return { ...state, audit: [event, ...state.audit], plans: state.plans.map((p) => (p.id === a.planId ? { ...p, attachments: [...p.attachments, a.attachment] } : p)) }
+    }
+    case 'detach': {
+      const user = me(state)
+      if (!user) return state
+      const event: AuditEvent = { id: uid('a'), at: Date.now(), actorId: user.id, action: 'Image removed', planId: a.planId, detail: a.attachmentId }
+      return { ...state, audit: [event, ...state.audit], plans: state.plans.map((p) => (p.id === a.planId ? { ...p, attachments: p.attachments.filter((x) => x.id !== a.attachmentId) } : p)) }
     }
   }
 }
 
-interface Ctx {
-  plans: Plan[]
-  audit: AuditEvent[]
-  user: User | null
-  login: (userId: string) => void
-  logout: () => void
-  decide: (planId: string, kind: DecisionKind, reason: string) => void
-  comment: (planId: string, text: string) => void
-  markReviewing: (planId: string) => void
-  reset: () => void
-}
+const DEMO_ONLY = 'Not available in the presentation demo'
 
-const StoreContext = createContext<Ctx | null>(null)
-
-export function StoreProvider({ children }: { children: ReactNode }) {
+export function DemoProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, initState)
 
   useEffect(() => {
     try {
-      localStorage.setItem(DATA_KEY, JSON.stringify({ plans: state.plans, audit: state.audit }))
+      // Images added during a demo are session-only (blob URLs do not survive a reload).
+      const plans = state.plans.map((p) => ({ ...p, attachments: p.attachments.filter((a) => !a.url.startsWith('blob:')) }))
+      localStorage.setItem(DATA_KEY, JSON.stringify({ plans, audit: state.audit }))
     } catch {
       /* storage may be unavailable */
     }
@@ -169,32 +130,62 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [state.userId])
 
-  const login = useCallback((userId: string) => dispatch({ type: 'login', userId }), [])
-  const logout = useCallback(() => dispatch({ type: 'logout' }), [])
-  const decide = useCallback((planId: string, kind: DecisionKind, reason: string) => dispatch({ type: 'decide', planId, kind, reason }), [])
-  const comment = useCallback((planId: string, text: string) => dispatch({ type: 'comment', planId, text }), [])
-  const markReviewing = useCallback((planId: string) => dispatch({ type: 'markReviewing', planId }), [])
-  const reset = useCallback(() => dispatch({ type: 'reset' }), [])
+  const nameOf = useCallback((id: string) => fullName(USERS.find((u) => u.id === id)), [])
 
   const value = useMemo<Ctx>(
     () => ({
+      mode: 'demo',
+      base: '/demo',
+      ready: true,
+      user: USERS.find((u) => u.id === state.userId) ?? null,
+      users: USERS,
       plans: state.plans,
       audit: state.audit,
-      user: state.userId ? (userById(state.userId) ?? null) : null,
-      login,
-      logout,
-      decide,
-      comment,
-      markReviewing,
-      reset,
+      nameOf,
+      login: async (userId) => {
+        dispatch({ type: 'login', userId })
+        return null
+      },
+      logout: async () => dispatch({ type: 'logout' }),
+      refresh: async () => {},
+      decide: async (planId, kind, reason) => {
+        dispatch({ type: 'decide', planId, kind, reason })
+        return null
+      },
+      comment: async (planId, text) => {
+        dispatch({ type: 'comment', planId, text })
+        return null
+      },
+      markReviewing: (planId) => dispatch({ type: 'markReviewing', planId }),
+      addAttachment: async (planId, file, caption) => {
+        const user = USERS.find((u) => u.id === state.userId)
+        const plan = state.plans.find((p) => p.id === planId)
+        if (!user || !plan) return 'Not signed in'
+        const attachment: Attachment = {
+          id: uid('img'),
+          planId,
+          version: plan.versions[plan.versions.length - 1].version,
+          fileName: file.name,
+          mime: file.type,
+          size: file.size,
+          caption,
+          uploadedBy: user.id,
+          uploadedAt: Date.now(),
+          url: URL.createObjectURL(file),
+        }
+        dispatch({ type: 'attach', planId, attachment })
+        return null
+      },
+      removeAttachment: async (planId, attachmentId) => {
+        dispatch({ type: 'detach', planId, attachmentId })
+        return null
+      },
+      createPlan: async () => ({ error: DEMO_ONLY }),
+      resubmit: async () => DEMO_ONLY,
+      withdraw: async () => DEMO_ONLY,
+      reset: () => dispatch({ type: 'reset' }),
     }),
-    [state, login, logout, decide, comment, markReviewing, reset],
+    [state, nameOf],
   )
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
-}
-
-export function useStore(): Ctx {
-  const c = useContext(StoreContext)
-  if (!c) throw new Error('useStore outside StoreProvider')
-  return c
 }

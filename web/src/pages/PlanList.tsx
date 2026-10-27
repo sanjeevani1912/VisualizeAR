@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { useStore } from '../store'
-import { USERS, displayName, userById } from '../data/mock'
+import { useStore } from '../storeContext'
 import { StatusBadge } from '../components/StatusBadge'
 import { ASSET_DEFAULTS, formatRegion } from '../geo'
 import { isOverdue, latestVersion, OPEN_STATUSES, shortDate, STATUS_META, waitingLabel } from '../util'
@@ -17,7 +16,7 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
 ]
 
 export function PlanList() {
-  const { plans } = useStore()
+  const { plans, users, nameOf, base, user } = useStore()
   const [params, setParams] = useSearchParams()
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'submitted', dir: -1 })
   const now = Date.now()
@@ -54,7 +53,7 @@ export function PlanList() {
     const val = (p: Plan): string | number => {
       switch (sort.key) {
         case 'name': return p.name.toLowerCase()
-        case 'planner': return displayName(userById(p.ownerId)).toLowerCase()
+        case 'planner': return nameOf(p.ownerId).toLowerCase()
         case 'assets': return latestVersion(p).layout.objects.length
         case 'status': return STATUS_META[p.status].label
         default: return latestVersion(p).submittedAt
@@ -76,14 +75,14 @@ export function PlanList() {
     </th>
   )
 
-  const planners = USERS.filter((u) => u.role === 'planner')
+  const planners = users.filter((u) => u.role === 'planner')
   const filtered = status !== 'all' || planner !== 'all' || asset !== 'all' || q || from || to
 
   return (
     <div className="page">
       <header className="page-head">
         <div>
-          <h1>Plans</h1>
+          <h1>{user?.role === 'planner' ? 'My plans' : 'Plans'}</h1>
           <p className="muted">
             {rows.length} of {plans.length} plans
           </p>
@@ -103,15 +102,15 @@ export function PlanList() {
             ))}
           </select>
         </label>
-        <label className="field">
+        {user?.role !== 'planner' && <label className="field">
           <span>Planner</span>
           <select value={planner} onChange={(e) => set('planner', e.target.value)}>
             <option value="all">All planners</option>
             {planners.map((u) => (
-              <option key={u.id} value={u.id}>{displayName(u)}</option>
+              <option key={u.id} value={u.id}>{nameOf(u.id)}</option>
             ))}
           </select>
-        </label>
+        </label>}
         <label className="field">
           <span>Contains asset</span>
           <select value={asset} onChange={(e) => set('asset', e.target.value)}>
@@ -160,12 +159,12 @@ export function PlanList() {
                   return (
                     <tr key={p.id} className={isOverdue(p, now) ? 'row-overdue' : ''}>
                       <td>
-                        <Link to={`/plans/${p.id}`} className="plan-link">
+                        <Link to={`${base}/plans/${p.id}`} className="plan-link">
                           <strong>{p.name}</strong>
                           <span className="small muted">{p.code} · v{v.version}</span>
                         </Link>
                       </td>
-                      <td>{displayName(userById(p.ownerId))}</td>
+                      <td>{nameOf(p.ownerId)}</td>
                       <td>{formatRegion(v.layout.regionBounds)}</td>
                       <td>{v.layout.objects.length}</td>
                       <td>{shortDate(v.submittedAt)}</td>

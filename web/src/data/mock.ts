@@ -1,6 +1,7 @@
 import { ASSET_DEFAULTS, boundsFromCenter } from '../geo'
 import type {
   AssetType,
+  Attachment,
   AuditEvent,
   Comment,
   Decision,
@@ -25,6 +26,11 @@ export const USERS: User[] = [
 ]
 
 export const DEMO_LOGINS = USERS.filter((u) => u.role !== 'planner')
+
+function photo(title: string, hue: number): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="hsl(${hue},35%,78%)"/><stop offset="1" stop-color="hsl(${hue},30%,52%)"/></linearGradient></defs><rect width="640" height="420" fill="url(#g)"/><path d="M0 300 L120 230 L230 285 L360 200 L500 280 L640 220 L640 420 L0 420Z" fill="hsl(${hue},28%,38%)" opacity=".8"/><text x="24" y="44" font-family="Segoe UI,Arial" font-size="22" fill="#231F20">${title}</text><text x="24" y="72" font-family="Segoe UI,Arial" font-size="14" fill="#231F20" opacity=".7">Placeholder field photo (demo)</text></svg>`
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+}
 
 export function userById(id: string): User | undefined {
   return USERS.find((u) => u.id === id)
@@ -197,6 +203,11 @@ export function buildInitialData(now: number): { plans: Plan[]; audit: AuditEven
   const ev = (at: number, actorId: string, action: string, planId: string | undefined, detail: string) =>
     audit.push({ id: `a${++aid}`, at, actorId, action, planId, detail })
 
+  const DEMO_PHOTOS: Record<number, { title: string; by: string; hue: number }[]> = {
+    142: [{ title: 'North approach road', by: 'u-p1', hue: 90 }, { title: 'Open ground, east side', by: 'u-p1', hue: 70 }],
+    140: [{ title: 'Existing trench line', by: 'u-p3', hue: 35 }],
+    138: [{ title: 'Site entrance', by: 'u-p4', hue: 110 }],
+  }
   for (const s of SPECS) {
     const code = `TP-2026-${String(s.n).padStart(4, '0')}`
     const planId = `plan-${s.n}`
@@ -250,6 +261,18 @@ export function buildInitialData(now: number): { plans: Plan[]; audit: AuditEven
       versions,
       decisions,
       comments,
+      attachments: (DEMO_PHOTOS[s.n] ?? []).map((ph, i): Attachment => ({
+        id: `img-${s.n}-${i}`,
+        planId,
+        version: s.versions,
+        fileName: `${ph.title.toLowerCase().replace(/\W+/g, '-')}.svg`,
+        mime: 'image/svg+xml',
+        size: 2400,
+        caption: ph.title,
+        uploadedBy: ph.by,
+        uploadedAt: lastSubmit + H,
+        url: photo(ph.title, ph.hue),
+      })),
     })
   }
   audit.sort((a, b) => b.at - a.at)

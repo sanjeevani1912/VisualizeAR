@@ -45,6 +45,8 @@ export interface User {
   name: string
   rank: string
   role: Role
+  username?: string
+  active?: boolean
 }
 
 export type PlanStatus =
@@ -85,6 +87,19 @@ export interface Comment {
   createdAt: number
 }
 
+export interface Attachment {
+  id: string
+  planId: string
+  version: number
+  fileName: string
+  mime: string
+  size: number
+  caption: string
+  uploadedBy: string
+  uploadedAt: number
+  url: string
+}
+
 export interface Plan {
   id: string
   code: string
@@ -96,6 +111,7 @@ export interface Plan {
   versions: PlanVersion[]
   decisions: Decision[]
   comments: Comment[]
+  attachments: Attachment[]
 }
 
 export interface AuditEvent {
