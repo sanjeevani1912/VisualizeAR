@@ -74,7 +74,7 @@ class GeoRegressionTest {
             objects = listOf(
                 LayoutObject(
                     id = "t1",
-                    assetType = AssetType.TENT,
+                    assetType = AssetType.MILITARY_VEHICLE,
                     name = "Tent",
                     x = 8f,
                     z = -3f,
@@ -155,7 +155,7 @@ class GeoRegressionTest {
         assertEquals(0f, loaded.anchor.z, 0.001f)
         assertNull(loaded.anchor.latitude)
         assertFalse(loaded.anchor.hasGeographicFix)
-        assertEquals(AssetType.TENT, loaded.objects[0].assetType)
+        assertEquals(AssetType.MILITARY_VEHICLE, loaded.objects[0].assetType)
         assertEquals(1.5f, loaded.objects[0].x, 0.001f)
     }
 

@@ -3,6 +3,7 @@ package com.example.dhruvar.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,9 +14,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -24,12 +27,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dhruvar.domain.ar.ArGeoGuidance
 import com.example.dhruvar.domain.ar.ArGeoProximityStatus
+import com.example.dhruvar.domain.ar.ArAssetSize
 import com.example.dhruvar.domain.ar.ArVisualizationScale
 import com.example.dhruvar.ui.theme.Rust
 import com.example.dhruvar.ui.theme.Moss
@@ -221,6 +229,80 @@ fun ArScaleModeRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun ArAssetSizeRow(
+    factor: Float,
+    onFactorChange: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Asset size",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            AssetSizeStepButton(
+                icon = Icons.Default.Remove,
+                description = "Decrease asset size",
+                enabled = factor > ArAssetSize.MIN,
+                onClick = { onFactorChange(ArAssetSize.step(factor, increase = false)) }
+            )
+            Text(
+                text = ArAssetSize.label(factor),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.width(44.dp),
+                textAlign = TextAlign.Center
+            )
+            AssetSizeStepButton(
+                icon = Icons.Default.Add,
+                description = "Increase asset size",
+                enabled = factor < ArAssetSize.MAX,
+                onClick = { onFactorChange(ArAssetSize.step(factor, increase = true)) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AssetSizeStepButton(
+    icon: ImageVector,
+    description: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(36.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(
+                MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 0.16f else 0.06f)
+            )
+            .clickable(enabled = enabled, onClick = onClick)
+            .semantics { contentDescription = description }
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 1f else 0.4f),
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
 

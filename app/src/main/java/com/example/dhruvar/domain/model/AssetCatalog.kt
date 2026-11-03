@@ -8,10 +8,9 @@ package com.example.dhruvar.domain.model
  * that variant has its own model file.
  */
 enum class AssetCategory(val displayName: String) {
-    TRUCKS("Trucks"),
-    TENTS("Tents"),
-    MASTS("Masts"),
-    WORKS("Works")
+    AIRCRAFT("Aircraft"),
+    VEHICLES("Vehicles"),
+    SYSTEMS("Systems")
 }
 
 data class AssetCatalogEntry(
@@ -33,11 +32,12 @@ data class AssetCatalogEntry(
 
 object AssetCatalog {
     val entries: List<AssetCatalogEntry> = listOf(
-        AssetCatalogEntry("truck", "Truck", AssetCategory.TRUCKS, AssetType.TRUCK),
-        AssetCatalogEntry("car", "Car", AssetCategory.TRUCKS, AssetType.CAR),
-        AssetCatalogEntry("tent", "Tent", AssetCategory.TENTS, AssetType.TENT),
-        AssetCatalogEntry("antenna", "Antenna", AssetCategory.MASTS, AssetType.ANTENNA),
-        AssetCatalogEntry("trench", "Trench", AssetCategory.WORKS, AssetType.TRENCH)
+        AssetCatalogEntry("gunship", "Gunship", AssetCategory.AIRCRAFT, AssetType.GUNSHIP),
+        AssetCatalogEntry("military_vehicle", "Military Vehicle", AssetCategory.VEHICLES, AssetType.MILITARY_VEHICLE),
+        AssetCatalogEntry("offroad_vehicle", "Off-road Vehicle", AssetCategory.VEHICLES, AssetType.OFFROAD_VEHICLE),
+        AssetCatalogEntry("k131", "K-131", AssetCategory.SYSTEMS, AssetType.K131),
+        AssetCatalogEntry("k131_takeoff", "K-131 Take-Off", AssetCategory.SYSTEMS, AssetType.K131_TAKEOFF),
+        AssetCatalogEntry("str_mgs", "STR-MGS", AssetCategory.SYSTEMS, AssetType.STR_MGS)
     )
 
     val categories: List<AssetCategory> =

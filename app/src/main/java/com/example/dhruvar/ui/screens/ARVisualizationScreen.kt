@@ -19,11 +19,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.example.dhruvar.ui.ar.render.PanoramaStitcher
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,7 +46,10 @@ import androidx.compose.material.icons.filled.Adjust
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.PanoramaHorizontal
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Sensors
@@ -79,6 +89,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -92,6 +103,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dhruvar.data.location.DefaultDeviceLocationControllerProvider
 import com.example.dhruvar.domain.ar.ArGeoGuidance
+import com.example.dhruvar.domain.ar.ArGeoProximityStatus
+import com.example.dhruvar.domain.ar.ArAssetSize
 import com.example.dhruvar.domain.ar.ArVisualizationScale
 import com.example.dhruvar.domain.spatial.GeographicCoordinateConverter
 import com.example.dhruvar.domain.spatial.SpatialDistanceCalculator
@@ -103,6 +116,7 @@ import com.example.dhruvar.ui.ar.render.AROriginLabelProjection
 import com.example.dhruvar.ui.ar.render.ARRenderer
 import com.example.dhruvar.ui.components.AppTopBar
 import com.example.dhruvar.ui.components.ArGeoBriefingPanel
+import com.example.dhruvar.ui.components.ArAssetSizeRow
 import com.example.dhruvar.ui.components.ArScaleModeRow
 import com.example.dhruvar.ui.components.DeviceCompassWidget
 import com.example.dhruvar.ui.components.PrimaryButton
@@ -170,17 +184,17 @@ fun ARVisualizationScreen(
     var isOriginCalibrated by remember { mutableStateOf(false) }
     // Expanded while the operator still needs the prep briefing; collapses once the origin is set.
     var briefingExpanded by rememberSaveable { mutableStateOf(true) }
+    var activePanel by rememberSaveable { mutableIntStateOf(AR_PANEL_NONE) }
     var calibrationFeedback by remember { mutableStateOf<String?>(null) }
     var visualizationScaleMode by remember { mutableStateOf(ArVisualizationScale.FULL) }
+    var assetSize by remember { mutableStateOf(ArAssetSize.DEFAULT) }
 
-    // Phase 5: geo briefing via fused location (GPS guides to site; AR tracking owns local stability)
+    // Phase 5: geo briefing via satellite GNSS (GPS guides to site; AR tracking owns local stability)
     val locationController = remember { DefaultDeviceLocationControllerProvider.getController() }
     val locationState by locationController.state.collectAsState()
     var hasLocationPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
-                PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
                 PackageManager.PERMISSION_GRANTED
         )
     }
@@ -204,6 +218,15 @@ fun ARVisualizationScreen(
     var isSavingImage by remember { mutableStateOf(false) }
     var captureFeedbackMessage by remember { mutableStateOf<String?>(null) }
 
+    // Panorama: hold the button and sweep the phone; shots are stitched on release.
+    val panoramaScope = rememberCoroutineScope()
+    var isPanoramaRecording by remember { mutableStateOf(false) }
+    var isPanoramaStitching by remember { mutableStateOf(false) }
+    var panoramaShotCount by remember { mutableIntStateOf(0) }
+    var panoramaSweptDegrees by remember { mutableStateOf(0f) }
+    var panoramaTooFast by remember { mutableStateOf(false) }
+    var capturedIsPanorama by remember { mutableStateOf(false) }
+
     LaunchedEffect(captureFeedbackMessage) {
         if (captureFeedbackMessage != null) {
             kotlinx.coroutines.delay(4000)
@@ -221,8 +244,7 @@ fun ARVisualizationScreen(
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
-        val granted = results[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-            results[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        val granted = results[Manifest.permission.ACCESS_FINE_LOCATION] == true
         hasLocationPermission = granted
         locationController.onPermissionResult(granted)
         if (granted) {
@@ -237,12 +259,7 @@ fun ARVisualizationScreen(
             locationController.startHighAccuracyUpdates()
             locationController.refreshLocation()
         } else {
-            locationPermissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                )
-            )
+            locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
         }
     }
 
@@ -307,6 +324,11 @@ fun ARVisualizationScreen(
                 }
             }
         ).apply {
+            onPanoramaProgress = { shots, swept, tooFast ->
+                panoramaShotCount = shots
+                panoramaSweptDegrees = swept
+                panoramaTooFast = tooFast
+            }
             displayRotationProvider = {
                 val wm = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
                 @Suppress("DEPRECATION")
@@ -323,6 +345,10 @@ fun ARVisualizationScreen(
 
     LaunchedEffect(visualizationScaleMode) {
         arRenderer.visualizationScale = visualizationScaleMode.scaleFactor
+    }
+
+    LaunchedEffect(assetSize) {
+        arRenderer.assetSizeFactor = assetSize
     }
 
     LaunchedEffect(isOriginCalibrated) {
@@ -344,6 +370,9 @@ fun ARVisualizationScreen(
                     planeFindingMode = Config.PlaneFindingMode.HORIZONTAL
                     updateMode = Config.UpdateMode.BLOCKING
                     focusMode = Config.FocusMode.AUTO
+                    if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
+                        depthMode = Config.DepthMode.AUTOMATIC
+                    }
                 }
                 session.configure(config)
                 arSession = session
@@ -525,13 +554,6 @@ fun ARVisualizationScreen(
                             }
                     )
 
-                    DeviceCompassWidget(
-                        compassState = compassState,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(10.dp)
-                    )
-
                     // 4.1 Screen-Space Floating Object Labels (Billboarded above each 3D asset)
                     if (isOriginCalibrated) {
                         projectedObjectLabels.forEach { label ->
@@ -699,7 +721,11 @@ fun ARVisualizationScreen(
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
-                                        text = if (canSetOrigin) "Target Acquired • Press Button or Tap Ground" else "Point at floor or tap detected ground",
+                                        text = when {
+                                            canSetOrigin -> "2/3 · Target acquired, tap Set Origin"
+                                            detectedPlaneCount > 0 -> "Aim the ring at the detected ground"
+                                            else -> "1/3 · Move slowly to scan the floor"
+                                        },
                                         style = TextStyle(
                                             fontFamily = FontFamily.Monospace,
                                             fontSize = 9.5.sp,
@@ -741,120 +767,93 @@ fun ARVisualizationScreen(
                             }
                         }
                     } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Top: one slim status row, tools open on demand, so the camera stays clear.
                         Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.SpaceBetween
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            // Top HUD Section: Tracking Status, Counter Pill & 3-Step AR Preparation Progress
-                            Column(
+                            Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    // Status Pill
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(OverlayFill)
-                                            .border(
-                                                1.dp,
-                                                if (isOriginCalibrated) FieldAnchor else Moss.copy(alpha = 0.6f),
-                                                RoundedCornerShape(8.dp)
-                                            )
-                                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(8.dp)
-                                                    .clip(CircleShape)
-                                                    .background(
-                                                        when {
-                                                            isOriginCalibrated -> FieldAnchor
-                                                            canSetOrigin -> Moss
-                                                            // Rust is the origin's colour here, so
-                                                            // "still tracking" gets neutral Cacao.
-                                                            else -> Cacao
-                                                        }
-                                                    )
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                text = if (isOriginCalibrated) "Tracking normal" else trackingStatus,
-                                                style = TextStyle(
-                                                    fontFamily = FontFamily.Monospace,
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = Coal
-                                                )
-                                            )
-                                        }
-                                    }
-
-                                    // Counter Pill. Three states that must stay distinct on cream:
-                                    // calibrated, planes found but not calibrated, nothing yet.
-                                    val counterAccent = when {
-                                        isOriginCalibrated -> Moss
-                                        detectedPlaneCount > 0 -> Cacao
-                                        else -> Rust
-                                    }
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(OverlayFill)
-                                            .border(1.dp, counterAccent, RoundedCornerShape(8.dp))
-                                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = if (isOriginCalibrated) Icons.Default.CheckCircle else Icons.Default.Sensors,
-                                                contentDescription = null,
-                                                tint = counterAccent,
-                                                modifier = Modifier.size(12.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text(
-                                                text = if (isOriginCalibrated) "${uiState.currentLayout.objects.size} ASSETS" else "$detectedPlaneCount PLANES",
-                                                style = TextStyle(
-                                                    fontFamily = FontFamily.Monospace,
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = counterAccent
-                                                )
-                                            )
-                                        }
-                                    }
+                                val counterAccent = when {
+                                    isOriginCalibrated -> Moss
+                                    detectedPlaneCount > 0 -> Cacao
+                                    else -> Rust
                                 }
-
-                                ArGeoBriefingPanel(
-                                    guidance = geoGuidance,
-                                    expanded = briefingExpanded,
-                                    onExpandedChange = { briefingExpanded = it },
-                                    modifier = Modifier.fillMaxWidth()
+                                HudStatusPill(
+                                    dotColor = when {
+                                        isOriginCalibrated -> FieldAnchor
+                                        canSetOrigin -> Moss
+                                        else -> Cacao
+                                    },
+                                    text = if (isOriginCalibrated) "Tracking normal" else trackingStatus,
+                                    countText = if (isOriginCalibrated) {
+                                        "${uiState.currentLayout.objects.size} assets"
+                                    } else {
+                                        "$detectedPlaneCount planes"
+                                    },
+                                    countColor = counterAccent,
+                                    modifier = Modifier.weight(1f)
                                 )
+                                HudRoundButton(
+                                    icon = Icons.Default.Explore,
+                                    description = "Location and compass",
+                                    active = activePanel == AR_PANEL_GEO,
+                                    tint = when (geoGuidance.status) {
+                                        ArGeoProximityStatus.NEAR_ORIGIN -> Moss
+                                        ArGeoProximityStatus.NO_GEO -> Coal
+                                        else -> Rust
+                                    },
+                                    onClick = { activePanel = if (activePanel == AR_PANEL_GEO) AR_PANEL_NONE else AR_PANEL_GEO }
+                                )
+                                HudRoundButton(
+                                    icon = Icons.Default.Tune,
+                                    description = "Scale and asset size",
+                                    active = activePanel == AR_PANEL_TUNE,
+                                    tint = Coal,
+                                    onClick = { activePanel = if (activePanel == AR_PANEL_TUNE) AR_PANEL_NONE else AR_PANEL_TUNE }
+                                )
+                            }
 
-                                if (!isOriginCalibrated || !briefingExpanded) {
+                            when (activePanel) {
+                                AR_PANEL_GEO -> Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    ArGeoBriefingPanel(
+                                        guidance = geoGuidance,
+                                        expanded = true,
+                                        onExpandedChange = { activePanel = AR_PANEL_NONE },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    DeviceCompassWidget(compassState = compassState)
+                                }
+                                AR_PANEL_TUNE -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     ArScaleModeRow(
                                         selected = visualizationScaleMode,
                                         onSelected = { visualizationScaleMode = it },
                                         modifier = Modifier.fillMaxWidth()
                                     )
-                                }
-
-                                calibrationFeedback?.let { msg ->
+                                    ArAssetSizeRow(
+                                        factor = assetSize,
+                                        onFactorChange = { assetSize = it },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
                                     Text(
-                                        text = msg,
+                                        text = "AR placement is an approximate visualization and depends on device tracking and surface detection.",
                                         style = TextStyle(
-                                            fontFamily = FontFamily.Monospace,
+                                            fontFamily = FontFamily.Default,
                                             fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Moss
+                                            color = Coal
                                         ),
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -863,232 +862,174 @@ fun ARVisualizationScreen(
                                             .padding(horizontal = 10.dp, vertical = 6.dp)
                                     )
                                 }
-
-                                // 3-step prep stays up until the origin is calibrated, then the camera gets the space back.
-                                if (!isOriginCalibrated) Card(
-                                    colors = CardDefaults.cardColors(containerColor = OverlayFill),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, OverlayHairline),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        StepIndicator(
-                                            stepNumber = "1",
-                                            label = "Detect Ground",
-                                            isCompleted = detectedPlaneCount > 0,
-                                            isActive = detectedPlaneCount == 0
-                                        )
-                                        Text("›", color = OverlayFaint, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
-                                        StepIndicator(
-                                            stepNumber = "2",
-                                            label = "Set Origin",
-                                            isCompleted = isOriginCalibrated,
-                                            isActive = detectedPlaneCount > 0 && !isOriginCalibrated
-                                        )
-                                        Text("›", color = OverlayFaint, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
-                                        StepIndicator(
-                                            stepNumber = "3",
-                                            label = "Visualize Layout",
-                                            isCompleted = isOriginCalibrated && uiState.currentLayout.objects.isNotEmpty(),
-                                            isActive = isOriginCalibrated
-                                        )
-                                    }
-                                }
-
-                                if (isOriginCalibrated && uiState.currentLayout.objects.isEmpty()) {
-                                    Card(
-                                        colors = CardDefaults.cardColors(containerColor = OverlayFill),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, FieldAnchor),
-                                        shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Warning,
-                                                contentDescription = null,
-                                                tint = FieldAnchor,
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                text = "No objects placed. Go back to the 2D planner to add assets.",
-                                                style = TextStyle(
-                                                    fontFamily = FontFamily.Monospace,
-                                                    fontSize = 9.5.sp,
-                                                    color = Coal
-                                                )
-                                            )
-                                        }
-                                    }
-                                }
                             }
 
-                        // Bottom Section: Selected Object Card + Action Buttons + Disclaimer
+                            calibrationFeedback?.let { msg ->
+                                HudNote(text = msg, color = Moss)
+                            }
+
+                            if (isOriginCalibrated && uiState.currentLayout.objects.isEmpty()) {
+                                HudNote(
+                                    text = "No objects placed. Go back to the 2D planner to add assets.",
+                                    color = FieldAnchor
+                                )
+                            }
+                        }
+
+                        // Bottom: selected-asset card + one rounded action bar.
                         Column(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            // 4.6 Compact Selected Object Information Card (when an AR object is tapped)
                             uiState.selectedObject?.let { selectedObj ->
                                 val distMeters = SpatialDistanceCalculator.calculateDistanceToAnchor(selectedObj)
 
-                                Card(
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = OverlayFillStrong
-                                    ),
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .border(1.5.dp, FieldAnchor, RoundedCornerShape(10.dp))
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(OverlayFillStrong)
+                                        .border(1.5.dp, FieldAnchor, RoundedCornerShape(14.dp))
+                                        .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
                                 ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        // Header: Name, Type, and Close Action
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(FieldAnchor.copy(alpha = 0.2f)),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(24.dp)
-                                                        .clip(RoundedCornerShape(4.dp))
-                                                        .background(FieldAnchor.copy(alpha = 0.2f)),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Icon(
-                                                        imageVector = selectedObj.assetType.toIcon(),
-                                                        contentDescription = null,
-                                                        tint = FieldAnchor,
-                                                        modifier = Modifier.size(14.dp)
-                                                    )
-                                                }
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Text(
-                                                    text = selectedObj.name,
-                                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                                    color = Coal
-                                                )
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Text(
-                                                    text = "• ${selectedObj.assetType.displayName.uppercase()}",
-                                                    style = TextStyle(
-                                                        fontFamily = FontFamily.Monospace,
-                                                        fontSize = 8.5.sp,
-                                                        color = Moss
-                                                    )
-                                                )
-                                            }
-
-                                            IconButton(
-                                                onClick = { viewModel.deselectObject() },
-                                                modifier = Modifier.size(24.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Close,
-                                                    contentDescription = "Deselect",
-                                                    tint = OverlayMuted,
-                                                    modifier = Modifier.size(14.dp)
-                                                )
-                                            }
+                                            Icon(
+                                                imageVector = selectedObj.assetType.toIcon(),
+                                                contentDescription = null,
+                                                tint = FieldAnchor,
+                                                modifier = Modifier.size(16.dp)
+                                            )
                                         }
-
-                                        Spacer(modifier = Modifier.height(6.dp))
-
-                                        // Coordinates & Distance Row
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = "POS: X: ${String.format(Locale.US, "%.1f", selectedObj.x)}m  Z: ${String.format(Locale.US, "%.1f", selectedObj.z)}m",
-                                                style = TextStyle(
-                                                    fontFamily = FontFamily.Monospace,
-                                                    fontSize = 9.5.sp,
-                                                    color = Coal
-                                                )
+                                                text = selectedObj.name,
+                                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                                color = Coal,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                             Text(
-                                                text = "ROT: ${selectedObj.rotationDegrees.toInt()}°",
+                                                text = selectedObj.assetType.displayName.uppercase(),
                                                 style = TextStyle(
                                                     fontFamily = FontFamily.Monospace,
-                                                    fontSize = 9.5.sp,
-                                                    color = Coal
+                                                    fontSize = 9.sp,
+                                                    color = Moss
                                                 )
                                             )
                                         }
-
-                                        Spacer(modifier = Modifier.height(2.dp))
-
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = "DISTANCE FROM ORIGIN: ${String.format(Locale.US, "%.1f", distMeters)} m",
-                                                style = TextStyle(
-                                                    fontFamily = FontFamily.Monospace,
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = FieldAnchor
-                                                )
+                                        Text(
+                                            text = "${String.format(Locale.US, "%.1f", distMeters)} m",
+                                            style = TextStyle(
+                                                fontFamily = FontFamily.Monospace,
+                                                fontSize = 16.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = FieldAnchor
                                             )
-                                            Text(
-                                                text = "DIM: ${selectedObj.widthMeters}×${selectedObj.lengthMeters}m",
-                                                style = TextStyle(
-                                                    fontFamily = FontFamily.Monospace,
-                                                    fontSize = 8.5.sp,
-                                                    color = OverlayMuted
-                                                )
+                                        )
+                                        IconButton(
+                                            onClick = { viewModel.deselectObject() },
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "Deselect",
+                                                tint = OverlayMuted,
+                                                modifier = Modifier.size(18.dp)
                                             )
                                         }
+                                    }
+                                    Text(
+                                        text = "X ${String.format(Locale.US, "%.1f", selectedObj.x)}m · Z ${String.format(Locale.US, "%.1f", selectedObj.z)}m · ROT ${selectedObj.rotationDegrees.toInt()}° · ${selectedObj.widthMeters}×${selectedObj.lengthMeters}m",
+                                        style = TextStyle(
+                                            fontFamily = FontFamily.Monospace,
+                                            fontSize = 9.5.sp,
+                                            color = Coal
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
 
-                                        // Optional field-verify: derived WGS84 from meter offsets (not live GPS drag)
-                                        val layoutAnchor = uiState.currentLayout.anchor
-                                        if (layoutAnchor.hasGeographicFix) {
-                                            val derived = runCatching {
-                                                GeographicCoordinateConverter.metersOffsetToLatLng(
-                                                    layoutAnchor,
-                                                    selectedObj.x,
-                                                    selectedObj.z
+                                    // Optional field-verify: derived WGS84 from meter offsets (not live GPS drag)
+                                    val layoutAnchor = uiState.currentLayout.anchor
+                                    if (layoutAnchor.hasGeographicFix) {
+                                        val derived = runCatching {
+                                            GeographicCoordinateConverter.metersOffsetToLatLng(
+                                                layoutAnchor,
+                                                selectedObj.x,
+                                                selectedObj.z
+                                            )
+                                        }.getOrNull()
+                                        if (derived != null) {
+                                            Text(
+                                                text = String.format(
+                                                    Locale.US,
+                                                    "GEO ≈ %.6f, %.6f",
+                                                    derived.latitude,
+                                                    derived.longitude
+                                                ),
+                                                style = TextStyle(
+                                                    fontFamily = FontFamily.Monospace,
+                                                    fontSize = 9.sp,
+                                                    color = Moss
                                                 )
-                                            }.getOrNull()
-                                            if (derived != null) {
-                                                Spacer(modifier = Modifier.height(4.dp))
-                                                Text(
-                                                    text = String.format(
-                                                        Locale.US,
-                                                        "GEO ≈ Lat %.6f  Lng %.6f",
-                                                        derived.latitude,
-                                                        derived.longitude
-                                                    ),
-                                                    style = TextStyle(
-                                                        fontFamily = FontFamily.Monospace,
-                                                        fontSize = 8.5.sp,
-                                                        color = Moss
-                                                    )
-                                                )
-                                            }
+                                            )
                                         }
                                     }
                                 }
                             }
 
-                            // 4.7 Action Buttons Row
+                            // Panorama progress sits above the bar only while it is in use.
+                            if (isOriginCalibrated && (isPanoramaRecording || isPanoramaStitching)) {
+                                val panoLabel = when {
+                                    isPanoramaStitching -> "Stitching panorama..."
+                                    panoramaTooFast -> "Slow down!"
+                                    else -> "Sweeping · $panoramaShotCount shots · ${panoramaSweptDegrees.toInt()}° · release to finish"
+                                }
+                                HudNote(
+                                    text = panoLabel,
+                                    color = if (isPanoramaRecording && panoramaTooFast) FieldAnchor else Moss
+                                )
+                            }
+
+                            // 4.7 Action bar
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(32.dp))
+                                    .background(OverlayFill)
+                                    .border(1.dp, OverlayHairline, RoundedCornerShape(32.dp))
+                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                horizontalArrangement = if (isOriginCalibrated) Arrangement.SpaceEvenly else Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
+                                val backAction = {
+                                    arRenderer.resetOrigin()
+                                    viewModel.deselectObject()
+                                    try {
+                                        arSession?.pause()
+                                        arSession?.close()
+                                    } catch (_: Exception) {}
+                                    arSession = null
+                                    onNavigateBack()
+                                }
+
                                 if (!isOriginCalibrated) {
+                                    HudAction(
+                                        icon = Icons.AutoMirrored.Filled.ArrowBack,
+                                        label = "Back",
+                                        onClick = backAction
+                                    )
                                     // Set Planning Origin Action — prefer saved layout heading, else live compass
                                     Button(
                                         onClick = {
@@ -1102,7 +1043,7 @@ fun ARVisualizationScreen(
                                             }
                                         },
                                         enabled = canSetOrigin,
-                                        shape = RoundedCornerShape(8.dp),
+                                        shape = RoundedCornerShape(26.dp),
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = Moss,
                                             contentColor = Mist,
@@ -1111,24 +1052,38 @@ fun ARVisualizationScreen(
                                         ),
                                         modifier = Modifier
                                             .weight(1f)
-                                            .height(48.dp)
+                                            .height(52.dp)
                                     ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Default.Place,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text(
-                                                text = if (canSetOrigin) "Set Planning Origin" else "Scanning ground...",
-                                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                                            )
-                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.Place,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = if (canSetOrigin) "Set Planning Origin" else "Scanning ground...",
+                                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                                        )
                                     }
                                 } else {
+                                    HudAction(
+                                        icon = Icons.AutoMirrored.Filled.ArrowBack,
+                                        label = "Back",
+                                        onClick = backAction
+                                    )
+                                    HudAction(
+                                        icon = Icons.Default.Refresh,
+                                        label = "Reset",
+                                        onClick = {
+                                            arRenderer.resetOrigin()
+                                            viewModel.deselectObject()
+                                        }
+                                    )
                                     // Capture Visualization Action
-                                    Button(
+                                    HudAction(
+                                        icon = Icons.Default.CameraAlt,
+                                        label = "Capture",
+                                        primary = true,
                                         onClick = {
                                             val surfaceView = glSurfaceViewRef
                                             if (surfaceView != null) {
@@ -1149,100 +1104,59 @@ fun ARVisualizationScreen(
                                                             metadata = metadata
                                                         )
                                                         capturedBitmap = composite
+                                                        capturedIsPanorama = false
                                                         showPreviewDialog = true
                                                     }.onFailure { err ->
                                                         captureFeedbackMessage = "Capture failed: ${err.localizedMessage ?: "Unknown error"}"
                                                     }
                                                 }
                                             }
-                                        },
-                                        shape = RoundedCornerShape(8.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = Moss,
-                                            contentColor = Mist
-                                        ),
-                                        modifier = Modifier
-                                            .weight(1.1f)
-                                            .height(48.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.CameraAlt,
-                                            contentDescription = "Capture AR View",
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Capture", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
-                                    }
-
-                                    // Reset Origin Action
-                                    OutlinedButton(
-                                        onClick = {
-                                            arRenderer.resetOrigin()
-                                            viewModel.deselectObject()
-                                        },
-                                        shape = RoundedCornerShape(8.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            containerColor = OverlayFill,
-                                            contentColor = Coal
-                                        ),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, FieldAnchor),
-                                        modifier = Modifier
-                                            .weight(0.85f)
-                                            .height(48.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Refresh,
-                                            contentDescription = "Reset Origin",
-                                            tint = FieldAnchor,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Reset", color = FieldAnchor, style = MaterialTheme.typography.labelMedium)
-                                    }
-                                }
-
-                                // Back to Planner Action
-                                OutlinedButton(
-                                    onClick = {
-                                        arRenderer.resetOrigin()
-                                        viewModel.deselectObject()
-                                        try {
-                                            arSession?.pause()
-                                            arSession?.close()
-                                        } catch (_: Exception) {}
-                                        arSession = null
-                                        onNavigateBack()
-                                    },
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        containerColor = OverlayFill,
-                                        contentColor = Coal
-                                    ),
-                                    modifier = Modifier
-                                        .weight(0.65f)
-                                        .height(48.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Back",
-                                        modifier = Modifier.size(16.dp)
+                                        }
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Back", style = MaterialTheme.typography.labelMedium)
+                                    // 4.7b Hold-to-record panorama (camera feed + assets in one wide photo)
+                                    HudAction(
+                                        icon = Icons.Default.PanoramaHorizontal,
+                                        label = if (isPanoramaRecording) "Release" else "Panorama",
+                                        highlighted = isPanoramaRecording || isPanoramaStitching,
+                                        circleModifier = Modifier.pointerInput(isPanoramaStitching) {
+                                            if (isPanoramaStitching) return@pointerInput
+                                            detectTapGestures(
+                                                onPress = {
+                                                    isPanoramaRecording = true
+                                                    arRenderer.startPanorama()
+                                                    tryAwaitRelease()
+                                                    isPanoramaRecording = false
+                                                    val shots = arRenderer.stopPanorama()
+                                                    if (shots.size < 2) {
+                                                        shots.forEach { s -> s.bitmap.recycle() }
+                                                        captureFeedbackMessage = "Panorama too short - hold and sweep slowly"
+                                                    } else {
+                                                        isPanoramaStitching = true
+                                                        panoramaScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+                                                            val result = try {
+                                                                PanoramaStitcher.stitch(shots)
+                                                            } catch (_: Throwable) {
+                                                                null
+                                                            }
+                                                            shots.forEach { s -> s.bitmap.recycle() }
+                                                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                                                isPanoramaStitching = false
+                                                                if (result != null) {
+                                                                    capturedBitmap = result
+                                                                    capturedIsPanorama = true
+                                                                    showPreviewDialog = true
+                                                                } else {
+                                                                    captureFeedbackMessage = "Panorama failed - try again"
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    )
                                 }
                             }
-
-                            // 4.8 Safety & Accuracy Disclaimer
-                            Text(
-                                text = "AR placement is an approximate visualization and depends on device tracking and surface detection.",
-                                style = TextStyle(
-                                    fontFamily = FontFamily.Default,
-                                    fontSize = 9.5.sp,
-                                    color = OverlayFaint,
-                                    textAlign = TextAlign.Center
-                                ),
-                                modifier = Modifier.fillMaxWidth()
-                            )
                         }
                     }
                 }
@@ -1352,12 +1266,25 @@ fun ARVisualizationScreen(
                                         .background(Coal),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Image(
-                                        bitmap = capturedBitmap!!.asImageBitmap(),
-                                        contentDescription = "Captured AR View",
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Fit
-                                    )
+                                    if (capturedIsPanorama) {
+                                        val pano = capturedBitmap!!
+                                        Image(
+                                            bitmap = pano.asImageBitmap(),
+                                            contentDescription = "Panorama",
+                                            modifier = Modifier
+                                                .fillMaxHeight()
+                                                .horizontalScroll(rememberScrollState())
+                                                .aspectRatio(pano.width.toFloat() / pano.height.toFloat()),
+                                            contentScale = ContentScale.FillBounds
+                                        )
+                                    } else {
+                                        Image(
+                                            bitmap = capturedBitmap!!.asImageBitmap(),
+                                            contentDescription = "Captured AR View",
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
                                 }
 
                                 Spacer(modifier = Modifier.height(16.dp))
@@ -1720,4 +1647,147 @@ private fun Context.findActivity(): Activity? {
         ctx = ctx.baseContext
     }
     return null
+}
+
+private const val AR_PANEL_NONE = 0
+private const val AR_PANEL_GEO = 1
+private const val AR_PANEL_TUNE = 2
+
+@Composable
+private fun HudStatusPill(
+    dotColor: Color,
+    text: String,
+    countText: String,
+    countColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .height(40.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(OverlayFill)
+            .border(1.dp, dotColor.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(dotColor)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = text,
+            style = TextStyle(
+                fontFamily = FontFamily.Monospace,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = Coal
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = countText.uppercase(),
+            style = TextStyle(
+                fontFamily = FontFamily.Monospace,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = countColor
+            ),
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun HudRoundButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    description: String,
+    active: Boolean,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(if (active) tint.copy(alpha = 0.25f) else OverlayFill)
+            .border(1.dp, if (active) tint else OverlayHairline, CircleShape)
+            .clickable(onClick = onClick)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = description,
+            tint = tint,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun HudNote(text: String, color: Color) {
+    Text(
+        text = text,
+        style = TextStyle(
+            fontFamily = FontFamily.Monospace,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            color = color
+        ),
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(OverlayFill)
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+    )
+}
+
+/** Circular action with a caption underneath; `primary` is the larger Capture button. */
+@Composable
+private fun HudAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    modifier: Modifier = Modifier,
+    primary: Boolean = false,
+    highlighted: Boolean = false,
+    circleModifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
+    val diameter = if (primary) 64.dp else 46.dp
+    val filled = primary || highlighted
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(diameter)
+                .clip(CircleShape)
+                .background(if (filled) Moss else OverlayHairline)
+                .then(circleModifier)
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = if (filled) Mist else Coal,
+                modifier = Modifier.size(if (primary) 30.dp else 22.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = TextStyle(
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Coal
+            ),
+            maxLines = 1
+        )
+    }
 }

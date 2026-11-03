@@ -11,13 +11,13 @@ class MapAssetHitTest {
     @Test
     fun `a long asset can be grabbed out at its corner, not only within eight meters`() {
         val truck = LayoutObject(
-            assetType = AssetType.TRUCK,
+            assetType = AssetType.STR_MGS,
             name = "Truck 1",
             x = 0f,
             z = 0f,
-            widthMeters = AssetType.TRUCK.defaultWidthMeters,
-            lengthMeters = AssetType.TRUCK.defaultLengthMeters,
-            heightMeters = AssetType.TRUCK.defaultHeightMeters
+            widthMeters = AssetType.STR_MGS.defaultWidthMeters,
+            lengthMeters = AssetType.STR_MGS.defaultLengthMeters,
+            heightMeters = AssetType.STR_MGS.defaultHeightMeters
         )
 
         val reach = MapLayoutProjection.selectionRadiusMeters(truck)

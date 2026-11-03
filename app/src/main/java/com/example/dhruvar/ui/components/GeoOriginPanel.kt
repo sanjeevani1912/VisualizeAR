@@ -180,7 +180,7 @@ fun GeoOriginSheet(
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = locationState.statusMessage
-                        ?: "Location provider error — retry or check Play Services.",
+                        ?: "GNSS receiver error — retry or check device location settings.",
                     style = MaterialTheme.typography.bodySmall,
                     color = Rust
                 )

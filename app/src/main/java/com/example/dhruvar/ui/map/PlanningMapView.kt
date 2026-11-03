@@ -37,6 +37,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.dhruvar.data.map.MapBasemapConfig
 import com.example.dhruvar.data.map.MapStyleLoader
+import com.example.dhruvar.domain.location.DeviceLocationFix
 import com.example.dhruvar.domain.model.AssetType
 import com.example.dhruvar.domain.model.GeoBounds
 import com.example.dhruvar.domain.model.Layout
@@ -106,6 +107,7 @@ fun PlanningMapView(
     onAssetGrabbed: (objectId: String) -> Unit = {},
     onAssetMoved: (objectId: String, latitude: Double, longitude: Double) -> Unit = { _, _, _ -> },
     setupStep: PlanningSetupStep = PlanningSetupStep.PLACE_ASSETS,
+    deviceFix: DeviceLocationFix? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -312,6 +314,14 @@ fun PlanningMapView(
             }
         }
 
+        if (mapForSymbols != null && styleReady && deviceFix != null) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                @Suppress("UNUSED_EXPRESSION")
+                cameraGeneration
+                drawDeviceLocation(mapForSymbols, deviceFix)
+            }
+        }
+
         // Licence notice, so it must stay legible in full rather than ellipsize. It owns the
         // bottom edge of the map; PlanningScreen's HUD is inset above it.
         Text(
@@ -385,6 +395,24 @@ data class VisibleMapBounds(
     val east: Double,
     val west: Double
 )
+
+/** Blue "you are here" dot with a ring showing how far off the fix could be. */
+private fun DrawScope.drawDeviceLocation(map: MapLibreMap, fix: DeviceLocationFix) {
+    val point = map.projection.toScreenLocation(MapLatLng(fix.latitude, fix.longitude))
+    val center = Offset(point.x, point.y)
+    val blue = androidx.compose.ui.graphics.Color(0xFF1E88E5)
+    val accuracyMeters = fix.horizontalAccuracyMeters
+    if (accuracyMeters != null) {
+        val metersPerPixel = map.projection.getMetersPerPixelAtLatitude(fix.latitude)
+        if (metersPerPixel > 0.0) {
+            val radius = (accuracyMeters / metersPerPixel).toFloat().coerceIn(12.dp.toPx(), size.maxDimension)
+            drawCircle(color = blue.copy(alpha = 0.16f), radius = radius, center = center)
+            drawCircle(color = blue.copy(alpha = 0.5f), radius = radius, center = center, style = Stroke(width = 1.5.dp.toPx()))
+        }
+    }
+    drawCircle(color = androidx.compose.ui.graphics.Color.White, radius = 9.dp.toPx(), center = center)
+    drawCircle(color = blue, radius = 6.5.dp.toPx(), center = center)
+}
 
 private fun cameraKey(layout: Layout): String =
     "${layout.anchor.id}:${layout.anchor.latitude}:${layout.anchor.longitude}:${layout.regionBounds}"
@@ -815,11 +843,12 @@ private fun DrawScope.drawPlacedAssets(
 }
 
 private fun assetBodyColor(type: AssetType) = when (type) {
-    AssetType.TENT -> Meadow
-    AssetType.TRUCK -> Cacao
-    AssetType.CAR -> Rust
-    AssetType.ANTENNA -> Moss
-    AssetType.TRENCH -> Coal
+    AssetType.GUNSHIP -> Rust
+    AssetType.K131 -> Moss
+    AssetType.K131_TAKEOFF -> Meadow
+    AssetType.MILITARY_VEHICLE -> Cacao
+    AssetType.OFFROAD_VEHICLE -> Coal
+    AssetType.STR_MGS -> Moss
 }
 
 /** Top-down marks inside the ground rectangle, so a tent does not read as a truck. */
@@ -837,16 +866,18 @@ private fun DrawScope.drawAssetMark(type: AssetType, pts: List<Offset>, color: a
         ((pts[1].y + pts[2].y) - (pts[0].y + pts[3].y)) / 4f
     )
     when (type) {
-        AssetType.TENT -> {
+        AssetType.GUNSHIP -> {
+            // Rotor disc with the fuselage line through it
             drawLine(color, center - along, center + along, strokeWidth = 2.5f)
-            drawLine(color, center - along - across, center - along * 0.55f, strokeWidth = 2f)
-            drawLine(color, center - along + across, center - along * 0.55f, strokeWidth = 2f)
+            drawLine(color, center - across, center + across, strokeWidth = 2f)
+            drawCircle(color, radius = 4f, center = center)
         }
-        AssetType.TRUCK -> {
-            drawLine(color, center - along * 0.35f - across, center - along * 0.35f + across, strokeWidth = 2.5f)
-            drawLine(color, center, center + along, strokeWidth = 2f)
+        AssetType.K131, AssetType.K131_TAKEOFF -> {
+            // Centre line with a bar at the nose
+            drawLine(color, center - along, center + along, strokeWidth = 2.5f)
+            drawLine(color, center + along * 0.6f - across * 0.6f, center + along * 0.6f + across * 0.6f, strokeWidth = 2f)
         }
-        AssetType.CAR -> {
+        AssetType.MILITARY_VEHICLE, AssetType.OFFROAD_VEHICLE -> {
             val cabin = Path().apply {
                 moveTo((center - along * 0.15f - across * 0.55f).x, (center - along * 0.15f - across * 0.55f).y)
                 lineTo((center - along * 0.15f + across * 0.55f).x, (center - along * 0.15f + across * 0.55f).y)
@@ -856,14 +887,10 @@ private fun DrawScope.drawAssetMark(type: AssetType, pts: List<Offset>, color: a
             }
             drawPath(cabin, color.copy(alpha = 0.85f))
         }
-        AssetType.ANTENNA -> {
-            drawCircle(color, radius = 4f, center = center)
-            drawLine(color, center - across, center + across, strokeWidth = 2f)
-            drawLine(color, center - along, center + along, strokeWidth = 2f)
-        }
-        AssetType.TRENCH -> {
-            drawLine(color, center - along - across * 0.35f, center + along - across * 0.35f, strokeWidth = 2f)
-            drawLine(color, center - along + across * 0.35f, center + along + across * 0.35f, strokeWidth = 2f)
+        AssetType.STR_MGS -> {
+            // Turret ring with the gun barrel pointing forward
+            drawCircle(color, radius = 5f, center = center)
+            drawLine(color, center, center + along, strokeWidth = 3f)
         }
     }
 }

@@ -63,7 +63,7 @@ fun FieldGuideScreen(
             GuideSection(
                 number = "01",
                 title = "Find a location",
-                body = "New Plan opens on search. Select a result, then Continue. Panning alone does not advance."
+                body = "New Plan finds your position from GNSS satellites and centers the map on it. Tap Detect to retry, or search for another place. Continue is always available."
             )
             GuideSection(
                 number = "02",

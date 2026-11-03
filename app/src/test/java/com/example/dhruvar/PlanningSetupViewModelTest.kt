@@ -94,14 +94,109 @@ class PlanningSetupViewModelTest {
     }
 
     @Test
-    fun advanceSetupStep_blockedWithoutLocation() {
+    fun advanceSetupStep_notBlockedWithoutLocation() {
         viewModel.createNewLayout()
         viewModel.advanceSetupStep()
-        assertEquals(PlanningSetupStep.FIND_LOCATION, viewModel.uiState.value.setupStep)
-        assertEquals(
-            PlanningViewModel.ADVANCE_NEEDS_LOCATION,
-            viewModel.uiState.value.userFeedbackMessage
+        assertEquals(PlanningSetupStep.SET_REGION, viewModel.uiState.value.setupStep)
+        assertNull(viewModel.uiState.value.setupSession.chosenLocation)
+    }
+
+    @Test
+    fun beginAutoLocate_centersOnFirstGnssFix() {
+        viewModel.createNewLayout()
+        viewModel.beginAutoLocate()
+        assertNull(viewModel.uiState.value.setupSession.chosenLocation)
+
+        fakeLocation.emitFix(DeviceLocationFix(latitude = 12.9716, longitude = 77.5946, horizontalAccuracyMeters = 4f))
+        viewModel.refreshLocation()
+
+        val location = viewModel.uiState.value.setupSession.chosenLocation
+        assertEquals(12.9716, location!!.latitude, 1e-9)
+        assertEquals(77.5946, location.longitude, 1e-9)
+        assertEquals(PlanningViewModel.CURRENT_LOCATION_NAME, location.displayName)
+        // Receiver is switched off once the map has been centered
+        assertFalse(fakeLocation.state.value.isUpdating)
+    }
+
+    @Test
+    fun beginAutoLocate_roughFixIsRefinedUntilAccurate() {
+        viewModel.createNewLayout()
+        viewModel.beginAutoLocate()
+
+        // Network-grade fix: shown, but the search keeps going
+        fakeLocation.emitFix(
+            DeviceLocationFix(latitude = 12.97, longitude = 77.59, horizontalAccuracyMeters = 400f, satelliteDerived = false)
         )
+        viewModel.refreshLocation()
+        assertEquals(12.97, viewModel.uiState.value.setupSession.chosenLocation!!.latitude, 1e-9)
+        assertTrue(fakeLocation.state.value.isUpdating)
+
+        // A worse fix never moves the map back
+        fakeLocation.emitFix(
+            DeviceLocationFix(latitude = 13.50, longitude = 78.00, horizontalAccuracyMeters = 900f, satelliteDerived = false)
+        )
+        viewModel.refreshLocation()
+        assertEquals(12.97, viewModel.uiState.value.setupSession.chosenLocation!!.latitude, 1e-9)
+
+        // A satellite fix that is still converging replaces it and the search continues
+        fakeLocation.emitFix(DeviceLocationFix(latitude = 12.9710, longitude = 77.5940, horizontalAccuracyMeters = 40f))
+        viewModel.refreshLocation()
+        assertEquals(12.9710, viewModel.uiState.value.setupSession.chosenLocation!!.latitude, 1e-9)
+        assertTrue(fakeLocation.state.value.isUpdating)
+
+        // An accurate satellite fix ends the search
+        fakeLocation.emitFix(DeviceLocationFix(latitude = 12.97162, longitude = 77.59458, horizontalAccuracyMeters = 5f))
+        viewModel.refreshLocation()
+        assertEquals(12.97162, viewModel.uiState.value.setupSession.chosenLocation!!.latitude, 1e-9)
+        assertFalse(fakeLocation.state.value.isUpdating)
+    }
+
+    @Test
+    fun beginAutoLocate_onNewPlanKeepsAPlaceTheUserAlreadyChose() {
+        viewModel.createNewLayout()
+        viewModel.setChosenLocation(chosen)
+        viewModel.beginAutoLocate(replaceChosenLocation = false)
+        fakeLocation.emitFix(DeviceLocationFix(latitude = 12.9716, longitude = 77.5946))
+        viewModel.refreshLocation()
+        assertEquals("Delhi", viewModel.uiState.value.setupSession.chosenLocation!!.displayName)
+    }
+
+    @Test
+    fun detectButton_replacesTheChosenPlace() {
+        viewModel.createNewLayout()
+        viewModel.setChosenLocation(chosen)
+        viewModel.beginAutoLocate(replaceChosenLocation = true)
+        fakeLocation.emitFix(DeviceLocationFix(latitude = 12.9716, longitude = 77.5946))
+        viewModel.refreshLocation()
+        assertEquals(
+            PlanningViewModel.CURRENT_LOCATION_NAME,
+            viewModel.uiState.value.setupSession.chosenLocation!!.displayName
+        )
+    }
+
+    @Test
+    fun beginAutoLocate_withoutPermission_waitsThenCentersAfterGrant() {
+        val denied = FakeDeviceLocationController(initialPermissionGranted = false)
+        val vm = PlanningViewModel(repository = InMemoryLayoutRepository(), locationController = denied)
+        vm.createNewLayout()
+        vm.beginAutoLocate()
+        assertNull(vm.uiState.value.setupSession.chosenLocation)
+
+        vm.onLocationPermissionResult(true)
+        assertTrue(denied.state.value.isUpdating)
+        denied.emitFix(DeviceLocationFix(latitude = 19.076, longitude = 72.8777))
+        vm.refreshLocation()
+        assertEquals(19.076, vm.uiState.value.setupSession.chosenLocation!!.latitude, 1e-9)
+    }
+
+    @Test
+    fun autoLocate_ignoredOutsideFindLocationStep() {
+        viewModel.createNewLayout()
+        viewModel.advanceSetupStep()
+        viewModel.beginAutoLocate()
+        fakeLocation.emitFix(DeviceLocationFix(latitude = 12.9716, longitude = 77.5946))
+        viewModel.refreshLocation()
+        assertNull(viewModel.uiState.value.setupSession.chosenLocation)
     }
 
     @Test
@@ -405,7 +500,7 @@ class PlanningSetupViewModelTest {
 
     @Test
     fun requestChangeRegion_keepsObjectsAndReturnsToSetRegion() {
-        val tent = LayoutObject(assetType = AssetType.TENT, x = 4f, z = 6f)
+        val tent = LayoutObject(assetType = AssetType.MILITARY_VEHICLE, x = 4f, z = 6f)
         viewModel.loadLayout(
             Layout(name = "Done", anchor = geoAnchor, regionBounds = region, objects = listOf(tent))
         )
@@ -440,7 +535,7 @@ class PlanningSetupViewModelTest {
 
     @Test
     fun requestChangeOrigin_keepsMeterOffsetsAndReturnsToSetOrigin() {
-        val tent = LayoutObject(assetType = AssetType.TENT, x = 4f, z = 6f)
+        val tent = LayoutObject(assetType = AssetType.MILITARY_VEHICLE, x = 4f, z = 6f)
         viewModel.loadLayout(
             Layout(name = "Done", anchor = geoAnchor, regionBounds = region, objects = listOf(tent))
         )
@@ -460,7 +555,7 @@ class PlanningSetupViewModelTest {
 
     @Test
     fun clearLayout_keepsRegionOriginAndWorkspaceStep() {
-        val tent = LayoutObject(assetType = AssetType.TENT, x = 4f, z = 6f)
+        val tent = LayoutObject(assetType = AssetType.MILITARY_VEHICLE, x = 4f, z = 6f)
         viewModel.loadLayout(
             Layout(name = "Done", anchor = geoAnchor, regionBounds = region, objects = listOf(tent))
         )
@@ -474,7 +569,7 @@ class PlanningSetupViewModelTest {
 
     @Test
     fun deletingTheLastAsset_staysOnPlaceAssets() {
-        val tent = LayoutObject(assetType = AssetType.TENT)
+        val tent = LayoutObject(assetType = AssetType.MILITARY_VEHICLE)
         viewModel.loadLayout(
             Layout(name = "Done", anchor = geoAnchor, regionBounds = region, objects = listOf(tent))
         )

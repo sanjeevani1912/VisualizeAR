@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import com.example.dhruvar.domain.ar.ArAssetSize
 import com.example.dhruvar.domain.model.AssetType
 import com.example.dhruvar.domain.model.Layout
 import com.example.dhruvar.domain.spatial.ARCoordinateTransformer
@@ -24,6 +25,10 @@ import com.google.ar.core.exceptions.NotYetAvailableException
 import com.google.ar.core.exceptions.SessionPausedException
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
+import kotlin.math.abs
+import kotlin.math.acos
+import kotlin.math.asin
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -109,6 +114,10 @@ class ARRenderer(
     @Volatile
     var visualizationScale: Float = 1.0f
 
+    /** Display-only enlargement of the models about their own pivots; positions are unchanged. */
+    @Volatile
+    var assetSizeFactor: Float = ArAssetSize.DEFAULT
+
     var originAnchor: Anchor? = null
         private set
 
@@ -147,10 +156,35 @@ class ARRenderer(
     @Volatile
     private var pendingCaptureCallback: ((Bitmap?) -> Unit)? = null
 
+    private val snappedGroundY = HashMap<String, Float>()
+
+    private val panoramaLock = Any()
+    private val panoramaShots = ArrayList<PanoramaShot>()
+
+    @Volatile
+    private var panoramaActive = false
+    private var lastShotForward: FloatArray? = null
+    private var prevForward: FloatArray? = null
+    private var prevFrameNs = 0L
+    private var unwrappedYaw = 0f
+    private var lastRawYaw = Float.NaN
+    private var lastReportedShots = -1
+    private var lastTooFast = false
+    private var readBuffer: ByteBuffer? = null
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private var lastReportedPlaneCount = -1
     private var lastReportedStatus = ""
     private var lastReportedCanSetOrigin = false
+
+    private companion object {
+        const val MIN_GROUND_AREA_M2 = 0.8f
+        const val GROUND_SNAP_RANGE_M = 1.5f
+        const val PANORAMA_STEP_DEG = 9f
+        const val PANORAMA_MAX_SHOTS = 48
+        const val PANORAMA_SHOT_WIDTH_PX = 400
+        const val MAX_SWEEP_DEG_PER_SEC = 70f
+    }
 
     fun notifySessionResumed() {
         viewportChanged = true
@@ -213,14 +247,13 @@ class ARRenderer(
                 Matrix.multiplyMM(viewProjMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
 
                 val allPlanes = currentSession.getAllTrackables(Plane::class.java)
-                val horizontalPlanes = allPlanes.filter {
-                    it.trackingState == TrackingState.TRACKING &&
-                        (it.type == Plane.Type.HORIZONTAL_UPWARD_FACING || it.type == Plane.Type.HORIZONTAL_DOWNWARD_FACING)
-                }
+                val horizontalPlanes = allPlanes.filter { isGroundCandidate(it) }
                 latestHorizontalPlanes = horizontalPlanes
 
                 // Render detected horizontal ground planes
-                planeRenderer.draw(horizontalPlanes, viewMatrix, projectionMatrix)
+                if (!panoramaActive) {
+                    planeRenderer.draw(horizontalPlanes, viewMatrix, projectionMatrix)
+                }
 
                 val planeCount = horizontalPlanes.size
                 if (planeCount != lastReportedPlaneCount) {
@@ -231,15 +264,10 @@ class ARRenderer(
                 // If not yet calibrated, raycast center of screen
                 if (originAnchor == null) {
                     val hitResults = frame.hitTest(viewportWidth / 2.0f, viewportHeight / 2.0f)
-                    val validHit = hitResults.firstOrNull { hit ->
-                        val trackable = hit.trackable
-                        trackable is Plane &&
-                            (trackable.isPoseInPolygon(hit.hitPose) || trackable.isPoseInExtents(hit.hitPose)) &&
-                            (trackable.type == Plane.Type.HORIZONTAL_UPWARD_FACING || trackable.type == Plane.Type.HORIZONTAL_DOWNWARD_FACING)
-                    }
+                    val validHit = hitResults.firstOrNull { isUsableGroundHit(it) }
 
                     currentCenterHit = validHit
-                    val canSet = validHit != null || horizontalPlanes.isNotEmpty()
+                    val canSet = validHit != null || bestGroundPlane(horizontalPlanes) != null
                     if (canSet != lastReportedCanSetOrigin) {
                         lastReportedCanSetOrigin = canSet
                         mainHandler.post { onCenterHitChanged(canSet) }
@@ -247,8 +275,8 @@ class ARRenderer(
 
                     val status = when {
                         validHit != null -> "Ground target acquired"
-                        horizontalPlanes.isNotEmpty() -> "Ground detected • Tap surface or press Set Origin"
-                        else -> "Scanning for ground..."
+                        horizontalPlanes.isNotEmpty() -> "Ground detected • Aim at the floor and press Set Origin"
+                        else -> "Scanning for ground • Tilt phone down, move slowly"
                     }
 
                     if (status != lastReportedStatus) {
@@ -266,13 +294,19 @@ class ARRenderer(
                         val layout = currentLayout
                         val vizScale = visualizationScale
                         if (layout != null && layout.objects.isNotEmpty()) {
+                            val groundedPoses = HashMap<String, Pose>(layout.objects.size)
+                            for (obj in layout.objects) {
+                                groundedPoses[obj.id] = groundedObjectPose(obj, anchor.pose, vizScale)
+                            }
                             arObjectRenderer.draw(
                                 objects = layout.objects,
                                 originPose = anchor.pose,
                                 selectedObjectId = selectedObjectId,
                                 viewMatrix = viewMatrix,
                                 projectionMatrix = projectionMatrix,
-                                visualizationScale = vizScale
+                                visualizationScale = vizScale,
+                                assetSizeFactor = assetSizeFactor,
+                                poseOverride = { groundedPoses[it.id] }
                             )
 
                             // 5. Draw 3D distance line if an object is selected
@@ -280,13 +314,14 @@ class ARRenderer(
                             var lineMidpointBadge: ARDistanceLineLabelProjection? = null
 
                             if (selectedObj != null) {
-                                val selectedPose = ARCoordinateTransformer.transformPlanningToWorldPose(
-                                    originPose = anchor.pose,
-                                    planXMeters = selectedObj.x,
-                                    planZMeters = selectedObj.z,
-                                    planRotationDegrees = selectedObj.rotationDegrees,
-                                    visualizationScale = vizScale
-                                )
+                                val selectedPose = groundedPoses[selectedObj.id]
+                                    ?: ARCoordinateTransformer.transformPlanningToWorldPose(
+                                        originPose = anchor.pose,
+                                        planXMeters = selectedObj.x,
+                                        planZMeters = selectedObj.z,
+                                        planRotationDegrees = selectedObj.rotationDegrees,
+                                        visualizationScale = vizScale
+                                    )
                                 arDistanceLineRenderer.draw(anchor.pose, selectedPose, viewMatrix, projectionMatrix)
 
                                 // Compute midpoint for 3D distance badge
@@ -313,15 +348,9 @@ class ARRenderer(
                             val objectLabels = mutableListOf<ARObjectLabelProjection>()
 
                             for (obj in layout.objects) {
-                                val objPose = ARCoordinateTransformer.transformPlanningToWorldPose(
-                                    originPose = anchor.pose,
-                                    planXMeters = obj.x,
-                                    planZMeters = obj.z,
-                                    planRotationDegrees = obj.rotationDegrees,
-                                    visualizationScale = vizScale
-                                )
+                                val objPose = groundedPoses[obj.id] ?: continue
                                 val oTrans = objPose.translation
-                                val topY = oTrans[1] + (obj.heightMeters * vizScale) + 0.25f
+                                val topY = oTrans[1] + (obj.heightMeters * vizScale * assetSizeFactor) + 0.25f
 
                                 val screenCoord = projectWorldToScreen(oTrans[0], topY, oTrans[2])
                                 val dx = oTrans[0] - cameraPos[0]
@@ -383,6 +412,10 @@ class ARRenderer(
                 }
             }
 
+            if (panoramaActive && trackingState == TrackingState.TRACKING) {
+                capturePanoramaShotIfNeeded(frame, camera)
+            }
+
             // 7. Check if a frame capture has been requested
             val captureCb = pendingCaptureCallback
             if (captureCb != null && viewportWidth > 0 && viewportHeight > 0) {
@@ -417,6 +450,205 @@ class ARRenderer(
             return
         } catch (e: Exception) {
             android.util.Log.e("ARRenderer", "Exception in onDrawFrame: ${e.message}", e)
+        }
+    }
+
+    // ---- Ground detection & snapping --------------------------------------------------------
+
+    /** Only tracked, upward-facing planes that are not merged into a larger plane count as ground. */
+    private fun isGroundCandidate(plane: Plane): Boolean =
+        plane.trackingState == TrackingState.TRACKING &&
+            plane.subsumedBy == null &&
+            plane.type == Plane.Type.HORIZONTAL_UPWARD_FACING
+
+    private fun planeArea(plane: Plane): Float = plane.extentX * plane.extentZ
+
+    private fun isUsableGroundHit(hit: HitResult): Boolean {
+        val plane = hit.trackable as? Plane ?: return false
+        return isGroundCandidate(plane) &&
+            planeArea(plane) >= MIN_GROUND_AREA_M2 &&
+            (plane.isPoseInPolygon(hit.hitPose) || plane.isPoseInExtents(hit.hitPose))
+    }
+
+    /** Lowest of the large planes (the floor), else the largest plane seen so far. */
+    private fun bestGroundPlane(planes: List<Plane>): Plane? {
+        val large = planes.filter { planeArea(it) >= MIN_GROUND_AREA_M2 }
+        return large.minByOrNull { it.centerPose.ty() } ?: planes.maxByOrNull { planeArea(it) }
+    }
+
+    /**
+     * Height of the detected ground under world position ([worldX], [worldZ]).
+     *
+     * Among planes that cover that spot and sit near [referenceY], the LOWEST wins, so a table or
+     * ledge above the floor never lifts an asset. Where no plane reaches (far from the origin) the
+     * floor plane's height is used instead of the origin's, so assets do not hang in the air.
+     */
+    private fun groundHeightAt(worldX: Float, worldZ: Float, referenceY: Float): Float {
+        var coveredY = Float.MAX_VALUE
+        var floorY = Float.MAX_VALUE
+        for (plane in latestHorizontalPlanes) {
+            val planeY = plane.centerPose.ty()
+            if (abs(planeY - referenceY) > GROUND_SNAP_RANGE_M) continue
+            if (planeArea(plane) >= MIN_GROUND_AREA_M2) floorY = minOf(floorY, planeY)
+            val probe = Pose.makeTranslation(worldX, planeY, worldZ)
+            if (plane.isPoseInPolygon(probe) || plane.isPoseInExtents(probe)) {
+                coveredY = minOf(coveredY, planeY)
+            }
+        }
+        return when {
+            coveredY != Float.MAX_VALUE -> coveredY
+            floorY != Float.MAX_VALUE -> floorY
+            else -> referenceY
+        }
+    }
+
+    /** Planning pose for [obj] with its height snapped to the ground plane beneath it. */
+    private fun groundedObjectPose(
+        obj: com.example.dhruvar.domain.model.LayoutObject,
+        originPose: Pose,
+        vizScale: Float
+    ): Pose {
+        val base = ARCoordinateTransformer.transformPlanningToWorldPose(
+            originPose = originPose,
+            planXMeters = obj.x,
+            planZMeters = obj.z,
+            planRotationDegrees = obj.rotationDegrees,
+            visualizationScale = vizScale
+        )
+        val t = base.translation
+        val target = groundHeightAt(t[0], t[2], t[1])
+        val previous = snappedGroundY[obj.id]
+        val y = if (previous == null || abs(target - previous) > 0.4f) target
+        else previous + (target - previous) * 0.15f
+        snappedGroundY[obj.id] = y
+        return Pose(floatArrayOf(t[0], y, t[2]), base.rotationQuaternion)
+    }
+
+    // ---- Panorama capture -------------------------------------------------------------------
+
+    /** Progress callback: shots taken, degrees swept so far, and whether the phone is moving too fast. */
+    var onPanoramaProgress: (shots: Int, sweptDegrees: Float, tooFast: Boolean) -> Unit = { _, _, _ -> }
+
+    /** Starts recording shots of the live AR view (camera feed + assets) while the user sweeps. */
+    fun startPanorama() {
+        synchronized(panoramaLock) {
+            panoramaShots.forEach { it.bitmap.recycle() }
+            panoramaShots.clear()
+            lastShotForward = null
+            prevForward = null
+            prevFrameNs = 0L
+            unwrappedYaw = 0f
+            lastRawYaw = Float.NaN
+            lastTooFast = false
+            lastReportedShots = -1
+            panoramaActive = true
+        }
+        mainHandler.post { onPanoramaProgress(0, 0f, false) }
+    }
+
+    /** Stops recording and returns the shots taken; the caller owns the bitmaps. */
+    fun stopPanorama(): List<PanoramaShot> {
+        synchronized(panoramaLock) {
+            panoramaActive = false
+            val result = panoramaShots.toList()
+            panoramaShots.clear()
+            return result
+        }
+    }
+
+    private fun capturePanoramaShotIfNeeded(frame: com.google.ar.core.Frame, camera: com.google.ar.core.Camera) {
+        val pose = camera.displayOrientedPose
+        val xAxis = pose.xAxis
+        val yAxis = pose.yAxis
+        val zAxis = pose.zAxis
+        val fwd = floatArrayOf(-zAxis[0], -zAxis[1], -zAxis[2])
+        val rawYaw = Math.toDegrees(atan2(fwd[0].toDouble(), (-fwd[2]).toDouble())).toFloat()
+        val pitch = Math.toDegrees(asin(fwd[1].coerceIn(-1f, 1f).toDouble())).toFloat()
+
+        // Unwrap yaw so a full turn accumulates past +-180.
+        if (!lastRawYaw.isNaN()) {
+            var d = rawYaw - lastRawYaw
+            while (d > 180f) d -= 360f
+            while (d < -180f) d += 360f
+            unwrappedYaw += d
+        } else {
+            unwrappedYaw = rawYaw
+        }
+        lastRawYaw = rawYaw
+
+        val nowNs = frame.timestamp
+        val prev = prevForward
+        var tooFast = false
+        if (prev != null && prevFrameNs > 0L) {
+            val dtSec = (nowNs - prevFrameNs) / 1e9f
+            if (dtSec > 0f) tooFast = angleBetween(prev, fwd) / dtSec > MAX_SWEEP_DEG_PER_SEC
+        }
+        prevForward = fwd
+        prevFrameNs = nowNs
+
+        val last = lastShotForward
+        val due = last == null || angleBetween(last, fwd) >= PANORAMA_STEP_DEG
+        val count: Int
+        val swept: Float
+        synchronized(panoramaLock) {
+            if (!panoramaActive) return
+            if (due && !tooFast && panoramaShots.size < PANORAMA_MAX_SHOTS) {
+                val bmp = readFramebufferScaled()
+                if (bmp != null) {
+                    panoramaShots.add(
+                        PanoramaShot(
+                            bitmap = bmp,
+                            xAxis = xAxis,
+                            yAxis = yAxis,
+                            zAxis = zAxis,
+                            yawDegrees = unwrappedYaw,
+                            pitchDegrees = pitch,
+                            projX = projectionMatrix[0],
+                            projY = projectionMatrix[5]
+                        )
+                    )
+                    lastShotForward = fwd
+                }
+            }
+            count = panoramaShots.size
+            swept = PanoramaStitcher.sweptDegrees(panoramaShots)
+        }
+        if (count != lastReportedShots || tooFast != lastTooFast) {
+            lastReportedShots = count
+            lastTooFast = tooFast
+            mainHandler.post { onPanoramaProgress(count, swept, tooFast) }
+        }
+    }
+
+    private fun angleBetween(a: FloatArray, b: FloatArray): Float {
+        val dot = (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).coerceIn(-1f, 1f)
+        return Math.toDegrees(acos(dot.toDouble())).toFloat()
+    }
+
+    /** Reads the current framebuffer (camera + assets) and returns it upright at panorama shot size. */
+    private fun readFramebufferScaled(): Bitmap? {
+        val w = viewportWidth
+        val h = viewportHeight
+        if (w <= 0 || h <= 0) return null
+        return try {
+            val needed = w * h * 4
+            var buffer = readBuffer
+            if (buffer == null || buffer.capacity() != needed) {
+                buffer = ByteBuffer.allocateDirect(needed).order(ByteOrder.nativeOrder())
+                readBuffer = buffer
+            }
+            buffer!!.clear()
+            GLES20.glReadPixels(0, 0, w, h, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, buffer)
+            val raw = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            buffer.rewind()
+            raw.copyPixelsFromBuffer(buffer)
+            val s = PANORAMA_SHOT_WIDTH_PX.toFloat() / w
+            val m = android.graphics.Matrix().apply { preScale(s, -s) }
+            val out = Bitmap.createBitmap(raw, 0, 0, w, h, m, true)
+            raw.recycle()
+            out
+        } catch (_: Exception) {
+            null
         }
     }
 
@@ -456,12 +688,7 @@ class ARRenderer(
         if (originAnchor == null) {
             val frame = latestFrame ?: return false
             val hitResults = frame.hitTest(tapX, tapY)
-            val groundHit = hitResults.firstOrNull { hit ->
-                val trackable = hit.trackable
-                trackable is Plane &&
-                    (trackable.isPoseInPolygon(hit.hitPose) || trackable.isPoseInExtents(hit.hitPose)) &&
-                    (trackable.type == Plane.Type.HORIZONTAL_UPWARD_FACING || trackable.type == Plane.Type.HORIZONTAL_DOWNWARD_FACING)
-            }
+            val groundHit = hitResults.firstOrNull { isUsableGroundHit(it) }
 
             if (groundHit != null) {
                 val plane = groundHit.trackable as? Plane
@@ -520,7 +747,7 @@ class ARRenderer(
         }
 
         // Fallback: If center hit wasn't strictly acquired but ground planes exist, anchor to nearest plane center
-        val fallbackPlane = latestHorizontalPlanes.firstOrNull()
+        val fallbackPlane = bestGroundPlane(latestHorizontalPlanes)
         if (fallbackPlane != null) {
             val newAnchor = fallbackPlane.createAnchor(
                 northAlignedPose(fallbackPlane.centerPose, magneticHeadingDegrees)
@@ -550,6 +777,7 @@ class ARRenderer(
         originAnchor?.detach()
         originAnchor = null
         currentCenterHit = null
+        snappedGroundY.clear()
         lastReportedCanSetOrigin = false
         lastProjectedLabels = emptyList()
         mainHandler.post {

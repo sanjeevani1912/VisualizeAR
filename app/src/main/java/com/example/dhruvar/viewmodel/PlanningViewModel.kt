@@ -13,6 +13,7 @@ import com.example.dhruvar.domain.location.DeviceLocationController
 import com.example.dhruvar.domain.location.DeviceLocationState
 import com.example.dhruvar.domain.model.AssetType
 import com.example.dhruvar.domain.model.ChosenMapLocation
+import com.example.dhruvar.domain.model.AssetSizeConfig
 import com.example.dhruvar.domain.model.GeoBounds
 import com.example.dhruvar.domain.model.Layout
 import com.example.dhruvar.domain.model.LayoutObject
@@ -62,7 +63,7 @@ data class PlaceSearchUiState(
  */
 data class PlanningUiState(
     val currentLayout: Layout = Layout(),
-    val selectedAssetType: AssetType = AssetType.TENT,
+    val selectedAssetType: AssetType = AssetType.MILITARY_VEHICLE,
     val selectedObjectId: String? = null,
     val gridScaleMeters: Float = 1.0f,
     // Part 2: Canvas Viewport Interactive State
@@ -93,7 +94,9 @@ data class PlanningUiState(
     // Guided setup (GS-01). Default matches a blank in-memory layout: New Plan, not a workspace.
     val setupStep: PlanningSetupStep = PlanningSetupStep.FIND_LOCATION,
     val setupSession: PlanningSetupSession = PlanningSetupSession(),
-    val isBrandNewLayout: Boolean = true
+    val isBrandNewLayout: Boolean = true,
+    /** Side of the square region built around the operator; picked in the area chips. */
+    val regionSideMeters: Double = AssetSizeConfig.DEFAULT_REGION_SIDE_METERS
 ) {
     /**
      * Currently selected [LayoutObject], or null if no object is selected.
@@ -116,6 +119,12 @@ class PlanningViewModel(
 ) : ViewModel() {
 
     private var searchJob: Job? = null
+    private var awaitingAutoLocate = false
+    private var autoLocateReplacesChoice = false
+    private var autoRegionApplied = false
+
+    /** Accuracy of the rough position already shown while still waiting for a good fix. */
+    private var autoLocateShownAccuracy: Float? = null
 
     private val _uiState = MutableStateFlow(
         PlanningUiState(locationState = locationController.state.value)
@@ -127,6 +136,7 @@ class PlanningViewModel(
             viewModelScope.launch {
                 locationController.state.collect { loc ->
                     _uiState.update { it.copy(locationState = loc) }
+                    applyAutoLocateIfReady()
                 }
             }
         } catch (_: Throwable) {
@@ -160,6 +170,9 @@ class PlanningViewModel(
 
     fun onLocationPermissionResult(granted: Boolean) {
         locationController.onPermissionResult(granted)
+        if (granted && awaitingAutoLocate) {
+            locationController.startHighAccuracyUpdates()
+        }
         syncLocationState()
         if (granted && _uiState.value.isGeoOriginPanelExpanded) {
             locationController.startHighAccuracyUpdates()
@@ -368,6 +381,118 @@ class PlanningViewModel(
 
     private fun syncLocationState() {
         _uiState.update { it.copy(locationState = locationController.state.value) }
+        applyAutoLocateIfReady()
+    }
+
+    // ==========================================
+    // AUTO-LOCATE ON NEW PLAN (platform GNSS)
+    // ==========================================
+
+    /**
+     * Starts satellite positioning for the Find location step and, on the first fix, centers the
+     * map on it. Called when a new plan opens (never replaces a place the user already chose) and
+     * by the Detect location button (which does replace it).
+     */
+    fun beginAutoLocate(replaceChosenLocation: Boolean = false) {
+        if (_uiState.value.setupStep != PlanningSetupStep.FIND_LOCATION) return
+        autoLocateReplacesChoice = replaceChosenLocation
+        autoLocateShownAccuracy = null
+        if (_uiState.value.currentLayout.regionBounds == null) autoRegionApplied = false
+        awaitingAutoLocate = true
+        val permitted = locationController.state.value.permissionGranted
+        if (permitted) {
+            locationController.startHighAccuracyUpdates()
+        }
+        syncLocationState()
+    }
+
+    private fun applyAutoLocateIfReady() {
+        if (!awaitingAutoLocate) return
+        val state = _uiState.value
+        // After the first fix the region already exists; keep refining it until the plan has assets.
+        val refining = autoRegionApplied &&
+            state.setupStep == PlanningSetupStep.PLACE_ASSETS &&
+            state.currentLayout.objects.isEmpty()
+        if (state.setupStep != PlanningSetupStep.FIND_LOCATION && !refining) {
+            awaitingAutoLocate = false
+            return
+        }
+        val fix = state.locationState.lastFix?.takeIf { it.isFinite } ?: return
+        val shownAccuracy = autoLocateShownAccuracy
+        if (shownAccuracy == null && state.setupSession.chosenLocation != null && !autoLocateReplacesChoice) {
+            awaitingAutoLocate = false
+            locationController.stopUpdates()
+            return
+        }
+        val accuracy = fix.horizontalAccuracyMeters
+        val accurate = fix.satelliteDerived &&
+            accuracy != null &&
+            accuracy <= AUTO_LOCATE_GOOD_ACCURACY_METERS
+        // A rough first fix (network, or a satellite fix still converging) is used straight
+        // away, but the search keeps going and re-centers only when a fix is genuinely better.
+        if (!accurate && shownAccuracy != null && (accuracy == null || accuracy >= shownAccuracy)) return
+        if (accurate) {
+            awaitingAutoLocate = false
+            autoLocateShownAccuracy = null
+            locationController.stopUpdates()
+        } else {
+            autoLocateShownAccuracy = accuracy ?: Float.MAX_VALUE
+        }
+        // Frame the 250 m region instead of a city-wide view.
+        val zoom = AUTO_REGION_ZOOM
+        MapCameraBridge.moveTo(
+            latitude = fix.latitude,
+            longitude = fix.longitude,
+            zoom = zoom
+        )
+        _uiState.update {
+            val located = it.copy(
+                planningSurface = PlanningSurface.MAP,
+                setupSession = it.setupSession.copy(
+                    chosenLocation = ChosenMapLocation(
+                        latitude = fix.latitude,
+                        longitude = fix.longitude,
+                        displayName = CURRENT_LOCATION_NAME,
+                        zoom = zoom
+                    )
+                ),
+                locationState = locationController.state.value
+            )
+            val feedback = when {
+                accurate -> "Region set around your GNSS position (±${"%.0f".format(accuracy)} m)"
+                accuracy != null ->
+                    "Region set around you (±${"%.0f".format(accuracy)} m) — refining with satellites…"
+                else -> "Region set around you — refining with satellites…"
+            }
+            // The operator is the center of a 250 m region and the origin, accurate fix or not.
+            withAutoRegionAround(located, fix.latitude, fix.longitude)
+                .copy(userFeedbackMessage = feedback)
+        }
+    }
+
+    /**
+     * Drops a [RegionDraftGeometry.AUTO_REGION_SIDE_METERS] square on [latitude]/[longitude] and
+     * jumps to asset placement. A region the operator drew, or one that already holds assets,
+     * is never replaced; only the auto-created one is re-centered as the fix improves.
+     */
+    private fun withAutoRegionAround(
+        state: PlanningUiState,
+        latitude: Double,
+        longitude: Double
+    ): PlanningUiState {
+        val layout = state.currentLayout
+        val replaceable = layout.regionBounds == null || (autoRegionApplied && layout.objects.isEmpty())
+        if (!replaceable) return state
+        val bounds = RegionDraftGeometry.squareAround(latitude, longitude, state.regionSideMeters)
+            ?: return state
+        autoRegionApplied = true
+        val withRegion = state.copy(
+            isBrandNewLayout = false,
+            hasUnsavedChanges = true,
+            placeSearch = PlaceSearchUiState(),
+            currentLayout = layout.withOriginAtRegionCenter(bounds, System.currentTimeMillis())
+        )
+        return applySetupStep(withRegion, PlanningSetupStep.PLACE_ASSETS)
     }
 
     // ==========================================
@@ -683,17 +808,17 @@ class PlanningViewModel(
         _uiState.update { state ->
             when (state.setupStep) {
                 PlanningSetupStep.FIND_LOCATION -> {
-                    if (state.setupSession.chosenLocation == null) {
-                        state.copy(userFeedbackMessage = ADVANCE_NEEDS_LOCATION)
-                    } else {
-                        applySetupStep(
-                            state = state.copy(
-                                isBrandNewLayout = false,
-                                placeSearch = PlaceSearchUiState()
-                            ),
-                            step = PlanningSetupStep.SET_REGION
-                        )
-                    }
+                    // No place is required: without a search hit or GNSS fix the region step
+                    // simply starts from wherever the map already is.
+                    awaitingAutoLocate = false
+                    locationController.stopUpdates()
+                    applySetupStep(
+                        state = state.copy(
+                            isBrandNewLayout = false,
+                            placeSearch = PlaceSearchUiState()
+                        ),
+                        step = PlanningSetupStep.SET_REGION
+                    )
                 }
                 PlanningSetupStep.SET_REGION -> {
                     if (state.currentLayout.regionBounds == null) {
@@ -903,6 +1028,7 @@ class PlanningViewModel(
      * Creates a brand-new blank layout with an empty canvas and reset status.
      */
     fun createNewLayout(name: String = "Tactical Field Alpha") {
+        awaitingAutoLocate = false
         val freshLayout = Layout(
             id = UUID.randomUUID().toString(),
             name = name,
@@ -1357,14 +1483,12 @@ class PlanningViewModel(
     fun addAssetOfType(assetType: AssetType, xMeters: Float, zMeters: Float) {
         _uiState.update { state ->
             val count = state.currentLayout.objects.count { it.assetType == assetType } + 1
-            val newObj = LayoutObject(
+            val newObj = newSizedObject(
+                state = state,
                 assetType = assetType,
                 name = "${assetType.displayName} $count",
                 x = xMeters,
-                z = zMeters,
-                rotationDegrees = 0.0f,
-                scale = 1.0f,
-                isSelected = true
+                z = zMeters
             )
             val updatedList = state.currentLayout.objects.map { it.copy(isSelected = false) } + newObj
             state.copy(
@@ -1379,19 +1503,99 @@ class PlanningViewModel(
         }
     }
 
-    fun addAssetAt(xMeters: Float, zMeters: Float) {
-        val assetType = _uiState.value.selectedAssetType
-        val count = _uiState.value.currentLayout.objects.count { it.assetType == assetType } + 1
-        val newObj = LayoutObject(
+    /** Side (m) of the current region, or the picked side when no region exists yet. */
+    private fun effectiveRegionSide(state: PlanningUiState): Double =
+        state.currentLayout.regionBounds
+            ?.let { RegionDraftGeometry.sideLengthsMeters(it).let { (w, h) -> maxOf(w, h) } }
+            ?: state.regionSideMeters
+
+    /** New object at its real-world size times the factor for the current region. */
+    private fun newSizedObject(
+        state: PlanningUiState,
+        assetType: AssetType,
+        name: String,
+        x: Float,
+        z: Float
+    ): LayoutObject {
+        val k = AssetSizeConfig.regionSizeFactor(effectiveRegionSide(state))
+        return LayoutObject(
             assetType = assetType,
-            name = "${assetType.displayName} $count",
-            x = xMeters,
-            z = zMeters,
+            name = name,
+            x = x,
+            z = z,
             rotationDegrees = 0.0f,
+            widthMeters = assetType.defaultWidthMeters * k,
+            lengthMeters = assetType.defaultLengthMeters * k,
+            heightMeters = assetType.defaultHeightMeters * k,
             scale = 1.0f,
             isSelected = true
         )
+    }
+
+    /**
+     * Picks how much area to visualize (side of the square around the operator). When a region
+     * already exists it is resized about its own center; shrinking is refused if that would leave
+     * a placed asset outside.
+     */
+    fun setRegionSideMeters(sideMeters: Double) {
+        val side = sideMeters.coerceIn(RegionDraftGeometry.MIN_SIDE_METERS, 300.0)
+        val state = _uiState.value
+        val current = state.currentLayout.regionBounds
+        if (current == null) {
+            _uiState.update { it.copy(regionSideMeters = side) }
+            return
+        }
+        val center = com.example.dhruvar.domain.spatial.RegionWorkspaceGeometry.centroid(current)
+        val bounds = RegionDraftGeometry.squareAround(center.latitude, center.longitude, side)
+            ?: return
+        val anchor = state.currentLayout.anchor
+        val strandsAsset = anchor.hasGeographicFix && state.currentLayout.objects.any { obj ->
+            val at = com.example.dhruvar.domain.spatial.GeographicCoordinateConverter
+                .metersOffsetToLatLng(anchor, obj.x, obj.z)
+            !bounds.contains(at.latitude, at.longitude)
+        }
+        if (strandsAsset) {
+            _uiState.update {
+                it.copy(userFeedbackMessage = "Move or remove assets near the edge before shrinking the area")
+            }
+            return
+        }
+        // Placed assets follow the region: rescale them by the change in size factor.
+        val ratio = AssetSizeConfig.regionSizeFactor(side) /
+            AssetSizeConfig.regionSizeFactor(effectiveRegionSide(state))
+        _uiState.update { s ->
+            s.copy(
+                regionSideMeters = side,
+                currentLayout = s.currentLayout.copy(
+                    objects = s.currentLayout.objects.map {
+                        it.copy(
+                            widthMeters = it.widthMeters * ratio,
+                            lengthMeters = it.lengthMeters * ratio,
+                            heightMeters = it.heightMeters * ratio
+                        )
+                    }
+                )
+            )
+        }
+        setRegionBounds(bounds)
+        MapCameraBridge.moveTo(
+            latitude = center.latitude,
+            longitude = center.longitude,
+            zoom = AUTO_REGION_ZOOM
+        )
+    }
+
+    fun addAssetAt(xMeters: Float, zMeters: Float) {
+        val assetType = _uiState.value.selectedAssetType
+        val count = _uiState.value.currentLayout.objects.count { it.assetType == assetType } + 1
         _uiState.update { state ->
+            val newObj = newSizedObject(
+                state = state,
+                assetType = assetType,
+                name = "${assetType.displayName} $count",
+                x = xMeters,
+                z = zMeters
+            )
             val updatedList = state.currentLayout.objects.map { it.copy(isSelected = false) } + newObj
             state.copy(
                 hasUnsavedChanges = true,
@@ -1467,7 +1671,13 @@ class PlanningViewModel(
         const val SEARCH_DEBOUNCE_MILLIS = 250L
         const val SEARCH_NOT_CONFIGURED = "Map search server not configured"
         const val SEARCH_UNAVAILABLE = "Search unavailable — check the map server"
-        const val ADVANCE_NEEDS_LOCATION = "Search and select a place to continue"
+        const val CURRENT_LOCATION_NAME = "Current location (GNSS)"
+
+        /** A satellite fix this tight ends the search; anything looser keeps refining. */
+        const val AUTO_LOCATE_GOOD_ACCURACY_METERS = 15f
+
+        /** Zoom at which a 250 m region fills a phone-width map. */
+        const val AUTO_REGION_ZOOM = 17.5
         const val ADVANCE_NEEDS_REGION = "Set a region to continue"
         const val ADVANCE_NEEDS_ORIGIN = "Set geographic origin to continue"
         const val GPS_OUTSIDE_REGION =

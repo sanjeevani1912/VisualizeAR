@@ -36,11 +36,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Cabin
+import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SettingsInputAntenna
-import androidx.compose.material.icons.filled.Straighten
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.filled.Close
@@ -463,8 +462,7 @@ private fun AssetDrillRow(
 }
 
 private fun AssetCategory.icon(): ImageVector = when (this) {
-    AssetCategory.TRUCKS -> Icons.Default.LocalShipping
-    AssetCategory.TENTS -> Icons.Default.Cabin
-    AssetCategory.MASTS -> Icons.Default.SettingsInputAntenna
-    AssetCategory.WORKS -> Icons.Default.Straighten
+    AssetCategory.AIRCRAFT -> Icons.Default.Flight
+    AssetCategory.VEHICLES -> Icons.Default.LocalShipping
+    AssetCategory.SYSTEMS -> Icons.Default.Shield
 }

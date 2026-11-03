@@ -36,19 +36,28 @@ data class AssetSpecification(
     val volumeCuMeters: Float
         get() = widthMeters * lengthMeters * heightMeters
 
-    companion object {
-        val DEFAULT_TENT = AssetSpecification(widthMeters = 4.0f, lengthMeters = 6.0f, heightMeters = 2.5f)
-        val DEFAULT_TRUCK = AssetSpecification(widthMeters = 2.5f, lengthMeters = 8.0f, heightMeters = 3.2f)
-        val DEFAULT_CAR = AssetSpecification(widthMeters = 1.8f, lengthMeters = 4.5f, heightMeters = 1.5f)
-        val DEFAULT_ANTENNA = AssetSpecification(widthMeters = 1.5f, lengthMeters = 1.5f, heightMeters = 8.0f)
-        val DEFAULT_TRENCH = AssetSpecification(widthMeters = 1.2f, lengthMeters = 10.0f, heightMeters = 1.8f)
+    /** Same shape, scaled uniformly so the longest horizontal side becomes [targetLengthMeters]. */
+    fun scaledToLength(targetLengthMeters: Float): AssetSpecification {
+        val k = targetLengthMeters / maxOf(widthMeters, lengthMeters)
+        return AssetSpecification(widthMeters * k, lengthMeters * k, heightMeters * k)
+    }
 
-        fun forType(assetType: AssetType): AssetSpecification = when (assetType) {
-            AssetType.TENT -> DEFAULT_TENT
-            AssetType.TRUCK -> DEFAULT_TRUCK
-            AssetType.CAR -> DEFAULT_CAR
-            AssetType.ANTENNA -> DEFAULT_ANTENNA
-            AssetType.TRENCH -> DEFAULT_TRENCH
-        }
+    companion object {
+        // Proportions come from the supplied 3D models (X = width, Z = length, Y = height after the
+        // model is stood on the ground); the real size comes from AssetSizeConfig.
+        val DEFAULT_GUNSHIP = AssetSpecification(12.4f, 18.07f, 5.55f)
+            .scaledToLength(AssetSizeConfig.GUNSHIP_LENGTH_METERS)
+        val DEFAULT_K131 = AssetSpecification(3.45f, 6.24f, 5.45f)
+            .scaledToLength(AssetSizeConfig.K131_LENGTH_METERS)
+        val DEFAULT_K131_TAKEOFF = AssetSpecification(3.31f, 6.24f, 3.54f)
+            .scaledToLength(AssetSizeConfig.K131_TAKEOFF_LENGTH_METERS)
+        val DEFAULT_MILITARY_VEHICLE = AssetSpecification(1.47f, 3.41f, 2.64f)
+            .scaledToLength(AssetSizeConfig.MILITARY_VEHICLE_LENGTH_METERS)
+        val DEFAULT_OFFROAD_VEHICLE = AssetSpecification(2.43f, 4.66f, 3.54f)
+            .scaledToLength(AssetSizeConfig.OFFROAD_VEHICLE_LENGTH_METERS)
+        val DEFAULT_STR_MGS = AssetSpecification(3.75f, 8.33f, 3.79f)
+            .scaledToLength(AssetSizeConfig.STR_MGS_LENGTH_METERS)
+
+        fun forType(assetType: AssetType): AssetSpecification = assetType.defaultSpecification
     }
 }

@@ -19,6 +19,28 @@ object RegionDraftGeometry {
     /** Guards against a box so large that "region" stops meaning anything. */
     const val MAX_SIDE_METERS = 500_000.0
 
+    /** Side of the square region auto-created around the operator's own position. */
+    const val AUTO_REGION_SIDE_METERS = 250.0
+
+    private const val METERS_PER_DEGREE_LATITUDE = 111_320.0
+
+    /** Square of [sideMeters] centered on [latitude]/[longitude]; null near the poles or antimeridian. */
+    fun squareAround(
+        latitude: Double,
+        longitude: Double,
+        sideMeters: Double = AUTO_REGION_SIDE_METERS
+    ): GeoBounds? {
+        val half = sideMeters / 2.0
+        val dLat = half / METERS_PER_DEGREE_LATITUDE
+        val dLng = half / (METERS_PER_DEGREE_LATITUDE * kotlin.math.cos(Math.toRadians(latitude)))
+        return GeoBounds.createOrNull(
+            northLatitude = latitude + dLat,
+            southLatitude = latitude - dLat,
+            eastLongitude = longitude + dLng,
+            westLongitude = longitude - dLng
+        )
+    }
+
     /** Corner order does not matter; the box is normalised. */
     fun boundsBetween(
         firstLatitude: Double,

@@ -22,3 +22,20 @@ enum class ArVisualizationScale(
     /** Scales a planning-meter offset into AR meters for this mode. */
     fun scaleMeters(planMeters: Float): Float = planMeters * scaleFactor
 }
+
+/**
+ * Display-only enlargement of the 3D models. Unlike [ArVisualizationScale] it never moves
+ * objects: each model grows about its own ground pivot, so positions stay true to the plan.
+ */
+object ArAssetSize {
+    const val MIN = 0.5f
+    const val MAX = 10f
+    const val STEP = 0.5f
+    const val DEFAULT = 1.0f
+
+    /** One step larger or smaller, kept inside [MIN]..[MAX]. */
+    fun step(current: Float, increase: Boolean): Float =
+        (current + if (increase) STEP else -STEP).coerceIn(MIN, MAX)
+
+    fun label(factor: Float): String = String.format(java.util.Locale.US, "%.1f×", factor)
+}

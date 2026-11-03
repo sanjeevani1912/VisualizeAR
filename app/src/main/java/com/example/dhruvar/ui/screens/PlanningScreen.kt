@@ -71,7 +71,6 @@ import com.example.dhruvar.domain.model.MapInteractionMode
 import com.example.dhruvar.domain.model.PlanningSetupStep
 import com.example.dhruvar.domain.model.PlanningSurface
 import com.example.dhruvar.domain.model.AR_REQUIRES_REGION_AND_ORIGIN
-import com.example.dhruvar.domain.model.canContinueFindLocation
 import com.example.dhruvar.domain.model.canEnterAr
 import com.example.dhruvar.domain.model.canContinueSetOrigin
 import com.example.dhruvar.domain.model.handlesSystemBackInternally
@@ -88,9 +87,10 @@ import com.example.dhruvar.ui.components.PlanningCanvas
 import com.example.dhruvar.ui.components.PlanningModeContext
 import com.example.dhruvar.ui.components.PlanningModeRail
 import com.example.dhruvar.ui.components.FindLocationContinueBar
+import com.example.dhruvar.ui.components.GnssDetectBar
 import com.example.dhruvar.ui.components.PlanningSearchButton
+import com.example.dhruvar.ui.components.RegionSizeChips
 import com.example.dhruvar.ui.components.PlanningSearchField
-import com.example.dhruvar.ui.components.PlanningSurfaceSwitcher
 import com.example.dhruvar.ui.components.SelectedPlaceChip
 import com.example.dhruvar.ui.components.planningHudToolsFor
 import com.example.dhruvar.ui.components.SelectedObjectEditorOverlay
@@ -130,45 +130,54 @@ fun PlanningScreen(
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
-        val granted = results[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-            results[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        val granted = results[Manifest.permission.ACCESS_FINE_LOCATION] == true
         viewModel.onLocationPermissionResult(granted)
         if (!granted) {
             val activity = context as? Activity
-            val showRationale = activity != null && (
+            val showRationale = activity != null &&
                 ActivityCompat.shouldShowRequestPermissionRationale(
                     activity,
                     Manifest.permission.ACCESS_FINE_LOCATION
-                ) || ActivityCompat.shouldShowRequestPermissionRationale(
-                    activity,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
                 )
-            )
             locationPermissionPermanentlyDenied = !showRationale
         } else {
             locationPermissionPermanentlyDenied = false
         }
     }
 
-    fun hasLocationPermission(): Boolean {
-        val fine = ContextCompat.checkSelfPermission(
+    // Satellite positioning needs precise (fine) location; approximate location cannot use GPS.
+    fun hasLocationPermission(): Boolean =
+        ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
-        val coarse = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        return fine || coarse
-    }
 
     fun requestLocationPermission() {
-        locationPermissionLauncher.launch(
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            )
-        )
+        locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
+    }
+
+    /** Asks the ViewModel to center the map on the GNSS fix, requesting permission if needed. */
+    fun detectCurrentLocation(replaceChosenLocation: Boolean) {
+        if (hasLocationPermission()) {
+            viewModel.onLocationPermissionResult(true)
+            viewModel.beginAutoLocate(replaceChosenLocation)
+        } else {
+            viewModel.beginAutoLocate(replaceChosenLocation)
+            requestLocationPermission()
+        }
+    }
+
+    fun openLocationSourceSettings() {
+        context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+    }
+
+    // Opening Find location locates the device on its own, no Detect tap needed. Detect stays as a retry.
+    LaunchedEffect(uiState.currentLayout.id, uiState.setupStep) {
+        if (uiState.setupStep == PlanningSetupStep.FIND_LOCATION &&
+            uiState.currentLayout.regionBounds == null
+        ) {
+            detectCurrentLocation(replaceChosenLocation = true)
+        }
     }
 
     fun openAppLocationSettings() {
@@ -583,6 +592,8 @@ fun PlanningScreen(
                         viewModel.moveObjectToGeographic(id, lat, lng, announce = false)
                     },
                     setupStep = uiState.setupStep,
+                    deviceFix = uiState.locationState.lastFix
+                        ?.takeIf { uiState.setupStep == PlanningSetupStep.FIND_LOCATION },
                     modifier = Modifier.fillMaxSize()
                 )
 
@@ -688,7 +699,7 @@ fun PlanningScreen(
                     ) {
                         if (hudTools.showSearch) {
                             PlanningSearchButton(onClick = { viewModel.setSearchExpanded(true) })
-                            if (hudTools.showOriginChip || hudTools.showSurfaceSwitcher) {
+                            if (hudTools.showOriginChip) {
                                 Spacer(modifier = Modifier.width(8.dp))
                             }
                         }
@@ -698,22 +709,30 @@ fun PlanningScreen(
                                 onExpandedChange = { viewModel.setGeoOriginPanelExpanded(it) },
                                 anchor = uiState.currentLayout.anchor,
                                 locationState = uiState.locationState,
-                                modifier = if (hudTools.showSurfaceSwitcher) {
-                                    Modifier.weight(1f)
-                                } else {
-                                    Modifier.fillMaxWidth()
-                                }
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
-                        if (hudTools.showSurfaceSwitcher) {
-                            if (hudTools.showOriginChip) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                            }
-                            PlanningSurfaceSwitcher(
-                                surface = uiState.planningSurface,
-                                onSurfaceChange = { viewModel.setPlanningSurface(it) }
-                            )
-                        }
+                    }
+                }
+
+                if (isFindLocation) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    GnssDetectBar(
+                        state = uiState.locationState,
+                        onDetect = { detectCurrentLocation(replaceChosenLocation = true) },
+                        onOpenLocationSettings = { openLocationSourceSettings() }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        RegionSizeChips(
+                            selectedSideMeters = uiState.regionSideMeters,
+                            onSelectSide = { viewModel.setRegionSideMeters(it) },
+                            modifier = Modifier.padding(12.dp)
+                        )
                     }
                 }
 
@@ -783,6 +802,8 @@ fun PlanningScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         WorkspaceRegionStatus(
                             sizeLabel = RegionDraftGeometry.sizeLabel(region),
+                            selectedSideMeters = uiState.regionSideMeters,
+                            onSelectSide = { viewModel.setRegionSideMeters(it) },
                             onChangeRegion = {
                                 if (uiState.currentLayout.objects.isNotEmpty()) {
                                     confirmChangeRegion = true
@@ -889,18 +910,15 @@ fun PlanningScreen(
             if (hudTools.showSetupContinue) {
                 val originContinue = uiState.setupStep == PlanningSetupStep.SET_ORIGIN
                 FindLocationContinueBar(
+                    // Find location never blocks: a place is optional, the map is the fallback.
                     enabled = if (originContinue) {
                         canContinueSetOrigin(uiState.currentLayout.anchor.hasGeographicFix)
                     } else {
-                        canContinueFindLocation(uiState.setupSession)
+                        true
                     },
                     onContinue = { viewModel.advanceSetupStep() },
                     buttonText = if (originContinue) "Use this origin" else "Continue",
-                    disabledHint = if (originContinue) {
-                        null
-                    } else {
-                        "Search and select a place to continue"
-                    },
+                    disabledHint = null,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(start = 12.dp, end = 12.dp, bottom = bottomHudInset)

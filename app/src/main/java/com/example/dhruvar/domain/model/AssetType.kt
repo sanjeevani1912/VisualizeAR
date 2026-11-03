@@ -12,30 +12,35 @@ enum class AssetType(
     val defaultSpecification: AssetSpecification,
     val description: String
 ) {
-    TENT(
-        displayName = "Tent",
-        defaultSpecification = AssetSpecification.DEFAULT_TENT,
-        description = "Standard operational command or shelter tent"
+    GUNSHIP(
+        displayName = "Gunship",
+        defaultSpecification = AssetSpecification.DEFAULT_GUNSHIP,
+        description = "Armed rotary-wing gunship"
     ),
-    TRUCK(
-        displayName = "Truck",
-        defaultSpecification = AssetSpecification.DEFAULT_TRUCK,
-        description = "Heavy logistics or transport vehicle"
+    K131(
+        displayName = "K-131",
+        defaultSpecification = AssetSpecification.DEFAULT_K131,
+        description = "K-131 platform"
     ),
-    CAR(
-        displayName = "Car",
-        defaultSpecification = AssetSpecification.DEFAULT_CAR,
-        description = "Light utility or passenger vehicle"
+    K131_TAKEOFF(
+        displayName = "K-131 Take-Off",
+        defaultSpecification = AssetSpecification.DEFAULT_K131_TAKEOFF,
+        description = "K-131 platform in take-off configuration"
     ),
-    ANTENNA(
-        displayName = "Antenna",
-        defaultSpecification = AssetSpecification.DEFAULT_ANTENNA,
-        description = "High-gain RF communications mast"
+    MILITARY_VEHICLE(
+        displayName = "Military Vehicle",
+        defaultSpecification = AssetSpecification.DEFAULT_MILITARY_VEHICLE,
+        description = "Light military utility vehicle"
     ),
-    TRENCH(
-        displayName = "Trench",
-        defaultSpecification = AssetSpecification.DEFAULT_TRENCH,
-        description = "Linear defensive trench or utility conduit"
+    OFFROAD_VEHICLE(
+        displayName = "Off-road Vehicle",
+        defaultSpecification = AssetSpecification.DEFAULT_OFFROAD_VEHICLE,
+        description = "Off-road transport vehicle"
+    ),
+    STR_MGS(
+        displayName = "STR-MGS",
+        defaultSpecification = AssetSpecification.DEFAULT_STR_MGS,
+        description = "STR-MGS mobile gun system (olive drab)"
     );
 
     // Dimension delegate properties for seamless backward compatibility

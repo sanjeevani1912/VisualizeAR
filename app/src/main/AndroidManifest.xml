@@ -5,9 +5,8 @@
     <!-- ARCore requires camera access to capture environmental feed and track planes -->
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- GNSS / fused location for geographic layout origin -->
+    <!-- Satellite (GNSS) positioning for the geographic layout origin. Fine location is required for GPS_PROVIDER. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <!-- MapLibre / PMTiles network basemap (offline file:// also supported) -->
     <uses-permission android:name="android.permission.INTERNET" />

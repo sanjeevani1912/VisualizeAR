@@ -67,7 +67,6 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation("com.google.ar:core:1.47.0")
-    implementation(libs.play.services.location)
     // MapLibre Native Android — PMTiles via pmtiles:// requires >= 11.7.0 (pinned 11.8.0)
     implementation(libs.maplibre.android.sdk)
     // Map server style fetch + place search

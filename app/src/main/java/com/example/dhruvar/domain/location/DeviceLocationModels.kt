@@ -1,14 +1,16 @@
 package com.example.dhruvar.domain.location
 
 /**
- * A single GNSS / fused-location sample in WGS84.
+ * A single satellite (GNSS) position sample in WGS84.
  */
 data class DeviceLocationFix(
     val latitude: Double,
     val longitude: Double,
     val horizontalAccuracyMeters: Float? = null,
     val altitudeMeters: Double? = null,
-    val timestampEpochMs: Long = System.currentTimeMillis()
+    val timestampEpochMs: Long = System.currentTimeMillis(),
+    /** False when the position came from the network fallback instead of satellites. */
+    val satelliteDerived: Boolean = true
 ) {
     val isFinite: Boolean
         get() = latitude.isFinite() &&
@@ -29,7 +31,7 @@ enum class LocationAvailability {
     GPS_DISABLED,
     /** Permission OK but no sample yet. */
     NO_FIX,
-    /** Play Services / provider failure. */
+    /** The device GNSS provider reported an error. */
     PROVIDER_ERROR
 }
 
@@ -52,7 +54,11 @@ data class DeviceLocationState(
     val isUpdating: Boolean = false,
     val lastFix: DeviceLocationFix? = null,
     val availability: LocationAvailability = LocationAvailability.PERMISSION_MISSING,
-    val statusMessage: String? = null
+    val statusMessage: String? = null,
+    /** Satellites the receiver can see right now, all constellations. */
+    val satellitesInView: Int = 0,
+    /** Satellites the receiver is using for the current fix, all constellations. */
+    val satellitesInFix: Int = 0
 ) {
     val hasFix: Boolean
         get() = lastFix?.isFinite == true
@@ -75,7 +81,7 @@ data class DeviceLocationState(
 }
 
 /**
- * Mockable location data source. Android fused-provider details stay behind this interface
+ * Mockable location data source. Android GNSS details stay behind this interface
  * so JVM unit tests can inject a fake.
  */
 interface DeviceLocationController {

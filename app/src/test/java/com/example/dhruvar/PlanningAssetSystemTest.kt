@@ -18,36 +18,36 @@ import org.junit.Test
  */
 class PlanningAssetSystemTest {
 
-    // 1. Adding a TENT creates a LayoutObject of type TENT
+    // 1. Adding a MILITARY_VEHICLE creates a LayoutObject of type MILITARY_VEHICLE
     @Test
     fun addAsset_tent_createsLayoutObjectWithTentType() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TENT)
+        viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
 
         viewModel.addAssetAt(xMeters = 5.0f, zMeters = 3.0f)
 
         val objects = viewModel.uiState.value.currentLayout.objects
         assertEquals(1, objects.size)
         val tent = objects.first()
-        assertEquals(AssetType.TENT, tent.assetType)
+        assertEquals(AssetType.MILITARY_VEHICLE, tent.assetType)
         assertEquals(5.0f, tent.x, 0.001f)
         assertEquals(3.0f, tent.z, 0.001f)
     }
 
-    // 2. Adding a TRUCK creates a separate LayoutObject of type TRUCK
+    // 2. Adding a STR_MGS creates a separate LayoutObject of type STR_MGS
     @Test
     fun addAsset_truck_createsLayoutObjectWithTruckType() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TRUCK)
+        viewModel.selectAssetType(AssetType.STR_MGS)
 
         viewModel.addAssetAt(xMeters = -8.0f, zMeters = 4.0f)
 
         val objects = viewModel.uiState.value.currentLayout.objects
         assertEquals(1, objects.size)
         val truck = objects.first()
-        assertEquals(AssetType.TRUCK, truck.assetType)
+        assertEquals(AssetType.STR_MGS, truck.assetType)
         assertEquals(-8.0f, truck.x, 0.001f)
         assertEquals(4.0f, truck.z, 0.001f)
     }
@@ -57,7 +57,7 @@ class PlanningAssetSystemTest {
     fun addAsset_multipleSameType_createsDistinctInstances() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TENT)
+        viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
 
         viewModel.addAssetAt(xMeters = 2.0f, zMeters = 2.0f)
         viewModel.addAssetAt(xMeters = 6.0f, zMeters = 2.0f)
@@ -65,7 +65,7 @@ class PlanningAssetSystemTest {
 
         val objects = viewModel.uiState.value.currentLayout.objects
         assertEquals(3, objects.size)
-        assertTrue(objects.all { it.assetType == AssetType.TENT })
+        assertTrue(objects.all { it.assetType == AssetType.MILITARY_VEHICLE })
     }
 
     // 4. Every object has a unique ID
@@ -74,11 +74,11 @@ class PlanningAssetSystemTest {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
 
-        viewModel.selectAssetType(AssetType.CAR)
+        viewModel.selectAssetType(AssetType.OFFROAD_VEHICLE)
         viewModel.addAssetAt(1f, 1f)
         viewModel.addAssetAt(2f, 2f)
 
-        viewModel.selectAssetType(AssetType.ANTENNA)
+        viewModel.selectAssetType(AssetType.K131)
         viewModel.addAssetAt(3f, 3f)
 
         val objects = viewModel.uiState.value.currentLayout.objects
@@ -91,7 +91,7 @@ class PlanningAssetSystemTest {
     fun addAsset_logicalCoordinatesPreservedExactFromTap() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TRENCH)
+        viewModel.selectAssetType(AssetType.GUNSHIP)
 
         val targetX = 14.5f
         val targetZ = -9.2f
@@ -107,7 +107,7 @@ class PlanningAssetSystemTest {
     fun addAsset_defaultsRotationToZeroAndScaleToOne() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.ANTENNA)
+        viewModel.selectAssetType(AssetType.K131)
 
         viewModel.addAssetAt(0.0f, 5.0f)
 
@@ -122,9 +122,9 @@ class PlanningAssetSystemTest {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
 
-        viewModel.selectAssetType(AssetType.TENT)
+        viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(0f, 0f)
-        viewModel.selectAssetType(AssetType.TRUCK)
+        viewModel.selectAssetType(AssetType.STR_MGS)
         viewModel.addAssetAt(10f, 10f)
 
         val objects = viewModel.uiState.value.currentLayout.objects
@@ -149,11 +149,11 @@ class PlanningAssetSystemTest {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
 
-        viewModel.selectAssetType(AssetType.TENT)
+        viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(1f, 1f)
         val tentId = viewModel.uiState.value.currentLayout.objects.last().id
 
-        viewModel.selectAssetType(AssetType.CAR)
+        viewModel.selectAssetType(AssetType.OFFROAD_VEHICLE)
         viewModel.addAssetAt(2f, 2f)
         val carId = viewModel.uiState.value.currentLayout.objects.last().id
 
@@ -188,7 +188,7 @@ class PlanningAssetSystemTest {
     fun zoomAndPan_doNotModifyLogicalCoordinatesOfPlacedObjects() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TRUCK)
+        viewModel.selectAssetType(AssetType.STR_MGS)
         viewModel.addAssetAt(15.0f, -20.0f)
 
         val initialObj = viewModel.uiState.value.currentLayout.objects.first()
@@ -222,7 +222,7 @@ class PlanningAssetSystemTest {
 
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TENT) // width = 4m, length = 6m
+        viewModel.selectAssetType(AssetType.MILITARY_VEHICLE) // width = 4m, length = 6m
         viewModel.addAssetAt(10.0f, 5.0f) // (X=10m, Z=5m)
 
         val tent = viewModel.uiState.value.currentLayout.objects.first()

@@ -17,11 +17,11 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cabin
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Flight
+import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.LocalShipping
-import androidx.compose.material.icons.filled.SettingsInputAntenna
-import androidx.compose.material.icons.filled.Straighten
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -41,11 +41,12 @@ import com.example.dhruvar.ui.theme.Moss
  */
 fun AssetType.toIcon(): ImageVector {
     return when (this) {
-        AssetType.TENT -> Icons.Default.Cabin
-        AssetType.TRUCK -> Icons.Default.LocalShipping
-        AssetType.CAR -> Icons.Default.DirectionsCar
-        AssetType.ANTENNA -> Icons.Default.SettingsInputAntenna
-        AssetType.TRENCH -> Icons.Default.Straighten
+        AssetType.GUNSHIP -> Icons.Default.Flight
+        AssetType.K131 -> Icons.Default.Shield
+        AssetType.K131_TAKEOFF -> Icons.Default.FlightTakeoff
+        AssetType.MILITARY_VEHICLE -> Icons.Default.LocalShipping
+        AssetType.OFFROAD_VEHICLE -> Icons.Default.DirectionsCar
+        AssetType.STR_MGS -> Icons.Default.Shield
     }
 }
 

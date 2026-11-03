@@ -23,7 +23,7 @@ class PlanningObjectInteractionTest {
     fun moveObject_updatesTargetObjectWorldCoordinates() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TRUCK)
+        viewModel.selectAssetType(AssetType.STR_MGS)
         viewModel.addAssetAt(5.0f, 2.0f)
 
         val truck = viewModel.uiState.value.currentLayout.objects.first()
@@ -43,7 +43,7 @@ class PlanningObjectInteractionTest {
         val viewModel = PlanningViewModel()
         val initialAnchor = viewModel.uiState.value.currentLayout.anchor
 
-        viewModel.selectAssetType(AssetType.TENT)
+        viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(1.0f, 1.0f)
         val tent = viewModel.uiState.value.currentLayout.objects.last()
 
@@ -61,11 +61,11 @@ class PlanningObjectInteractionTest {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
 
-        viewModel.selectAssetType(AssetType.CAR)
+        viewModel.selectAssetType(AssetType.OFFROAD_VEHICLE)
         viewModel.addAssetAt(10.0f, 10.0f)
         val carId = viewModel.uiState.value.currentLayout.objects.last().id
 
-        viewModel.selectAssetType(AssetType.ANTENNA)
+        viewModel.selectAssetType(AssetType.K131)
         viewModel.addAssetAt(-5.0f, -5.0f)
         val antennaId = viewModel.uiState.value.currentLayout.objects.last().id
 
@@ -88,7 +88,7 @@ class PlanningObjectInteractionTest {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
 
-        viewModel.selectAssetType(AssetType.TENT)
+        viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(10.0f, 8.0f)
         val original = viewModel.uiState.value.currentLayout.objects.first()
 
@@ -100,7 +100,7 @@ class PlanningObjectInteractionTest {
 
         val duplicate = objects.first { it.id != original.id }
         assertNotEquals(original.id, duplicate.id)
-        assertEquals(AssetType.TENT, duplicate.assetType)
+        assertEquals(AssetType.MILITARY_VEHICLE, duplicate.assetType)
         assertEquals(original.x + 1.5f, duplicate.x, 0.001f)
         assertEquals(original.z + 1.5f, duplicate.z, 0.001f)
         assertEquals(original.rotationDegrees, duplicate.rotationDegrees, 0.001f)
@@ -121,11 +121,11 @@ class PlanningObjectInteractionTest {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
 
-        viewModel.selectAssetType(AssetType.TRENCH)
+        viewModel.selectAssetType(AssetType.GUNSHIP)
         viewModel.addAssetAt(0.0f, 0.0f)
         val trenchId = viewModel.uiState.value.currentLayout.objects.last().id
 
-        viewModel.selectAssetType(AssetType.CAR)
+        viewModel.selectAssetType(AssetType.OFFROAD_VEHICLE)
         viewModel.addAssetAt(10.0f, 0.0f)
         val carId = viewModel.uiState.value.currentLayout.objects.last().id
 
@@ -144,7 +144,7 @@ class PlanningObjectInteractionTest {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
 
-        viewModel.selectAssetType(AssetType.TRUCK)
+        viewModel.selectAssetType(AssetType.STR_MGS)
         viewModel.addAssetAt(8.5f, -14.2f)
         val truckId = viewModel.uiState.value.currentLayout.objects.first().id
 
@@ -173,7 +173,7 @@ class PlanningObjectInteractionTest {
 
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.CAR)
+        viewModel.selectAssetType(AssetType.OFFROAD_VEHICLE)
         viewModel.addAssetAt(10.0f, 5.0f) // (X=10m, Z=5m)
         val car = viewModel.uiState.value.currentLayout.objects.first()
 
@@ -205,7 +205,7 @@ class PlanningObjectInteractionTest {
 
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.ANTENNA)
+        viewModel.selectAssetType(AssetType.K131)
         viewModel.addAssetAt(-6.0f, 8.0f) // (X=-6m, Z=8m)
         val antenna = viewModel.uiState.value.currentLayout.objects.first()
 

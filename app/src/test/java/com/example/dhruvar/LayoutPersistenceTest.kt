@@ -57,7 +57,7 @@ class LayoutPersistenceTest {
             objects = listOf(
                 LayoutObject(
                     id = "obj-1",
-                    assetType = AssetType.TENT,
+                    assetType = AssetType.MILITARY_VEHICLE,
                     name = "HQ Tent",
                     x = 4.5f,
                     z = -3.2f,
@@ -69,7 +69,7 @@ class LayoutPersistenceTest {
                 ),
                 LayoutObject(
                     id = "obj-2",
-                    assetType = AssetType.ANTENNA,
+                    assetType = AssetType.K131,
                     name = "Comms Mast",
                     x = -8.0f,
                     z = 6.0f,
@@ -102,7 +102,7 @@ class LayoutPersistenceTest {
         // Validate Objects
         assertEquals(2, loaded.objects.size)
         val hqTent = loaded.objects.first { it.id == "obj-1" }
-        assertEquals(AssetType.TENT, hqTent.assetType)
+        assertEquals(AssetType.MILITARY_VEHICLE, hqTent.assetType)
         assertEquals("HQ Tent", hqTent.name)
         assertEquals(4.5f, hqTent.x, 0.001f)
         assertEquals(-3.2f, hqTent.z, 0.001f)
@@ -112,7 +112,7 @@ class LayoutPersistenceTest {
         assertEquals(3.0f, hqTent.heightMeters, 0.001f)
 
         val commsMast = loaded.objects.first { it.id == "obj-2" }
-        assertEquals(AssetType.ANTENNA, commsMast.assetType)
+        assertEquals(AssetType.K131, commsMast.assetType)
         assertEquals(270f, commsMast.rotationDegrees, 0.001f)
     }
 
@@ -153,7 +153,7 @@ class LayoutPersistenceTest {
             objects = listOf(
                 LayoutObject(
                     id = "obj-initial",
-                    assetType = AssetType.CAR,
+                    assetType = AssetType.OFFROAD_VEHICLE,
                     x = 1f,
                     z = 1f
                 )
@@ -166,7 +166,7 @@ class LayoutPersistenceTest {
             name = "Revised Deployment",
             objects = layout.objects + LayoutObject(
                 id = "obj-added",
-                assetType = AssetType.TRUCK,
+                assetType = AssetType.STR_MGS,
                 x = 5f,
                 z = 5f
             ),
@@ -207,7 +207,7 @@ class LayoutPersistenceTest {
             objects = listOf(
                 LayoutObject(
                     id = "o1",
-                    assetType = AssetType.TRENCH,
+                    assetType = AssetType.GUNSHIP,
                     widthMeters = 1.2f,
                     lengthMeters = 8.0f
                 )
@@ -258,13 +258,13 @@ class LayoutPersistenceTest {
 
         assertEquals(1, parsed.objects.size)
         val recoveredObj = parsed.objects[0]
-        // Falls back safely to TENT when assetType is unknown
-        assertEquals(AssetType.TENT, recoveredObj.assetType)
+        // Falls back safely to MILITARY_VEHICLE when assetType is unknown
+        assertEquals(AssetType.MILITARY_VEHICLE, recoveredObj.assetType)
         assertEquals(3.5f, recoveredObj.x, 0.001f)
         assertEquals(0f, recoveredObj.z, 0.001f) // Missing z default
         // Non-positive dimensions fall back to default specification
-        assertEquals(AssetType.TENT.defaultWidthMeters, recoveredObj.widthMeters, 0.001f)
-        assertEquals(AssetType.TENT.defaultLengthMeters, recoveredObj.lengthMeters, 0.001f)
+        assertEquals(AssetType.MILITARY_VEHICLE.defaultWidthMeters, recoveredObj.widthMeters, 0.001f)
+        assertEquals(AssetType.MILITARY_VEHICLE.defaultLengthMeters, recoveredObj.lengthMeters, 0.001f)
     }
 
     @Test
@@ -329,7 +329,7 @@ class LayoutPersistenceTest {
             objects = listOf(
                 LayoutObject(
                     id = "t1",
-                    assetType = AssetType.TENT,
+                    assetType = AssetType.MILITARY_VEHICLE,
                     x = 3f,
                     z = 3f,
                     isSelected = true // was selected when saved
@@ -400,7 +400,7 @@ class LayoutPersistenceTest {
             objects = listOf(
                 LayoutObject(
                     id = "obj-tent",
-                    assetType = AssetType.TENT,
+                    assetType = AssetType.MILITARY_VEHICLE,
                     name = "Command Tent",
                     x = 5f,
                     z = -2f,
@@ -462,7 +462,7 @@ class LayoutPersistenceTest {
                 "objects": [
                     {
                         "id": "o1",
-                        "assetType": "TENT",
+                        "assetType": "MILITARY_VEHICLE",
                         "name": "Tent 1",
                         "x": 2.0,
                         "z": 3.0,
@@ -521,6 +521,41 @@ class LayoutPersistenceTest {
         assertEquals(28.6, loaded.anchor.latitude!!, 1e-9)
         assertEquals(77.2, loaded.anchor.longitude!!, 1e-9)
         assertTrue(loaded.anchor.hasGeographicFix)
+    }
+
+    @Test
+    fun deserialize_retiredAssetTypes_mapToCurrentAssetsWithTheirDefaultSize() {
+        val json = """
+            {
+                "version": 2,
+                "id": "old-plan",
+                "name": "Saved Before Asset Change",
+                "objects": [
+                    {"id": "o1", "assetType": "TRUCK", "name": "Truck 1", "x": 1.0, "z": 2.0,
+                     "widthMeters": 2.5, "lengthMeters": 8.0, "heightMeters": 3.2},
+                    {"id": "o2", "assetType": "CAR", "x": 3.0, "z": 4.0},
+                    {"id": "o3", "assetType": "TENT", "x": 5.0, "z": 6.0},
+                    {"id": "o4", "assetType": "NOT_A_TYPE", "x": 7.0, "z": 8.0},
+                    {"id": "o5", "assetType": "GUNSHIP", "x": 9.0, "z": 10.0, "widthMeters": 11.0}
+                ]
+            }
+        """.trimIndent()
+
+        val objects = LayoutJsonSerializer.deserialize(json).objects
+        assertEquals(5, objects.size)
+        assertEquals(AssetType.MILITARY_VEHICLE, objects[0].assetType)
+        assertEquals(AssetType.OFFROAD_VEHICLE, objects[1].assetType)
+        assertEquals(AssetType.MILITARY_VEHICLE, objects[2].assetType)
+        assertEquals(AssetType.MILITARY_VEHICLE, objects[3].assetType)
+        // Retired types take the replacement's size, not the stored truck size
+        assertEquals(AssetType.MILITARY_VEHICLE.defaultLengthMeters, objects[0].lengthMeters, 0.001f)
+        assertEquals("Military Vehicle 1", objects[0].name)
+        // A current type keeps its stored dimensions
+        assertEquals(AssetType.GUNSHIP, objects[4].assetType)
+        assertEquals(11.0f, objects[4].widthMeters, 0.001f)
+        // Positions survive the mapping
+        assertEquals(1.0f, objects[0].x, 0.001f)
+        assertEquals(2.0f, objects[0].z, 0.001f)
     }
 
     @Test

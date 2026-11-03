@@ -173,7 +173,7 @@ class ARCalibrationTest {
             objects = listOf(
                 LayoutObject(
                     id = "obj-1",
-                    assetType = AssetType.TENT,
+                    assetType = AssetType.MILITARY_VEHICLE,
                     name = "Command Post",
                     x = 10.0f,
                     z = 5.0f,

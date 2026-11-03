@@ -12,6 +12,7 @@ import androidx.core.view.WindowCompat
 import com.example.dhruvar.data.location.DefaultDeviceLocationControllerProvider
 import com.example.dhruvar.data.repository.DefaultLayoutRepositoryProvider
 import com.example.dhruvar.navigation.AppNavigation
+import com.example.dhruvar.ui.ar.render.AssetModelRegistry
 import com.example.dhruvar.ui.theme.DhruvARTheme
 import org.maplibre.android.MapLibre
 
@@ -20,6 +21,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         DefaultLayoutRepositoryProvider.init(filesDir.resolve("dhruvar_layouts"))
         DefaultDeviceLocationControllerProvider.init(applicationContext)
+        AssetModelRegistry.install { fileName ->
+            try {
+                assets.open("models/$fileName").use { it.readBytes() }
+            } catch (_: java.io.IOException) {
+                null
+            }
+        }
         MapLibre.getInstance(this)
         enableEdgeToEdge()
         // Field Kit is light-only, so the status/navigation icons must be dark to stay legible

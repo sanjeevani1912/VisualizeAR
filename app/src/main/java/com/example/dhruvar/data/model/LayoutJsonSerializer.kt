@@ -29,6 +29,17 @@ object LayoutJsonSerializer {
 
     const val CURRENT_SCHEMA_VERSION = 2
 
+    private val DEFAULT_ASSET_TYPE = AssetType.MILITARY_VEHICLE
+
+    /** Asset types removed from the library, mapped to their nearest replacement. */
+    private val LEGACY_ASSET_TYPES = mapOf(
+        "TENT" to AssetType.MILITARY_VEHICLE,
+        "TRUCK" to AssetType.MILITARY_VEHICLE,
+        "CAR" to AssetType.OFFROAD_VEHICLE,
+        "ANTENNA" to AssetType.MILITARY_VEHICLE,
+        "TRENCH" to AssetType.MILITARY_VEHICLE
+    )
+
     /**
      * Serializes a [Layout] into a formatted JSON string.
      * Optional geographic fields are written only when present.
@@ -132,17 +143,21 @@ object LayoutJsonSerializer {
                 for (i in 0 until objectsArray.length()) {
                     val objJson = objectsArray.optJSONObject(i) ?: continue
 
-                    // Safe AssetType recovery
-                    val typeStr = objJson.optString("assetType", "TENT")
-                    val assetType = try {
-                        AssetType.valueOf(typeStr.uppercase())
+                    // Safe AssetType recovery. Plans saved before the asset library changed
+                    // carry retired type names; those map to the closest current asset and
+                    // take its default dimensions instead of the stored ones.
+                    val typeStr = objJson.optString("assetType", DEFAULT_ASSET_TYPE.name).uppercase()
+                    val legacyType = LEGACY_ASSET_TYPES[typeStr]
+                    val assetType = legacyType ?: try {
+                        AssetType.valueOf(typeStr)
                     } catch (_: Exception) {
-                        AssetType.TENT
+                        DEFAULT_ASSET_TYPE
                     }
+                    val isLegacyObject = legacyType != null
 
                     val objId = objJson.optString("id").takeIf { it.isNotBlank() }
                         ?: java.util.UUID.randomUUID().toString()
-                    val objName = objJson.optString("name").takeIf { it.isNotBlank() }
+                    val objName = objJson.optString("name").takeIf { it.isNotBlank() && !isLegacyObject }
                         ?: "${assetType.displayName} ${i + 1}"
 
                     val x = sanitizeFloat(objJson.optDouble("x", 0.0).toFloat())
@@ -157,9 +172,9 @@ object LayoutJsonSerializer {
                     val lRaw = sanitizeFloat(objJson.optDouble("lengthMeters", defaultSpec.lengthMeters.toDouble()).toFloat())
                     val hRaw = sanitizeFloat(objJson.optDouble("heightMeters", defaultSpec.heightMeters.toDouble()).toFloat())
 
-                    val widthMeters = if (wRaw > 0f) wRaw else defaultSpec.widthMeters
-                    val lengthMeters = if (lRaw > 0f) lRaw else defaultSpec.lengthMeters
-                    val heightMeters = if (hRaw > 0f) hRaw else defaultSpec.heightMeters
+                    val widthMeters = if (wRaw > 0f && !isLegacyObject) wRaw else defaultSpec.widthMeters
+                    val lengthMeters = if (lRaw > 0f && !isLegacyObject) lRaw else defaultSpec.lengthMeters
+                    val heightMeters = if (hRaw > 0f && !isLegacyObject) hRaw else defaultSpec.heightMeters
                     val scale = sanitizeFloat(objJson.optDouble("scale", 1.0).toFloat()).coerceIn(0.1f, 10.0f)
 
                     objectsList.add(

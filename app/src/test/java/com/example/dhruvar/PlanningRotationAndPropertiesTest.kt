@@ -33,7 +33,7 @@ class PlanningRotationAndPropertiesTest {
         val angles = listOf(0.0f, 90.0f, 180.0f, 270.0f)
         for (angle in angles) {
             val obj = LayoutObject(
-                assetType = AssetType.TRUCK,
+                assetType = AssetType.STR_MGS,
                 rotationDegrees = angle
             )
             assertEquals(angle, LayoutObject.normalizeDegrees(obj.rotationDegrees), 0.001f)
@@ -63,7 +63,7 @@ class PlanningRotationAndPropertiesTest {
     fun rotation_stepping_updatesModelCorrectly() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TENT)
+        viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(2.0f, 2.0f)
 
         val tent = viewModel.uiState.value.selectedObject!!
@@ -91,7 +91,7 @@ class PlanningRotationAndPropertiesTest {
     fun rotation_directAngleEditing_setsExactNormalizedAngle() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.CAR)
+        viewModel.selectAssetType(AssetType.OFFROAD_VEHICLE)
         viewModel.addAssetAt(0.0f, 0.0f)
 
         // Set 45°
@@ -116,7 +116,7 @@ class PlanningRotationAndPropertiesTest {
     fun properties_directEditingXAndZ_updatesLogicalCoordinates() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TRUCK)
+        viewModel.selectAssetType(AssetType.STR_MGS)
         viewModel.addAssetAt(1.0f, 1.0f)
 
         val truckId = viewModel.uiState.value.selectedObjectId!!
@@ -142,7 +142,7 @@ class PlanningRotationAndPropertiesTest {
     fun dragging_rotatedObject_preservesRotationAngle() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.ANTENNA)
+        viewModel.selectAssetType(AssetType.K131)
         viewModel.addAssetAt(5.0f, 5.0f)
 
         // Rotate antenna to 67.5°
@@ -165,7 +165,7 @@ class PlanningRotationAndPropertiesTest {
     fun duplicate_rotatedObject_retainsExactRotationAndDimensions() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TENT)
+        viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(3.0f, 4.0f)
 
         // Set rotation to 135°
@@ -194,13 +194,13 @@ class PlanningRotationAndPropertiesTest {
         viewModel.clearLayout()
 
         // Place object 1 (rotated 45°)
-        viewModel.selectAssetType(AssetType.TENT)
+        viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(2.0f, 2.0f)
         viewModel.setSelectedObjectRotation(45.0f)
         val obj1Id = viewModel.uiState.value.selectedObjectId!!
 
         // Place object 2 (rotated 90°)
-        viewModel.selectAssetType(AssetType.TRUCK)
+        viewModel.selectAssetType(AssetType.STR_MGS)
         viewModel.addAssetAt(10.0f, 10.0f)
         viewModel.setSelectedObjectRotation(90.0f)
         val obj2Id = viewModel.uiState.value.selectedObjectId!!
@@ -231,7 +231,7 @@ class PlanningRotationAndPropertiesTest {
 
         // Logistics Truck: 2m wide x 8m long -> 56px wide x 224px long
         val truckAtOrigin = LayoutObject(
-            assetType = AssetType.TRUCK,
+            assetType = AssetType.STR_MGS,
             x = 0.0f,
             z = 0.0f,
             rotationDegrees = 0.0f,
@@ -271,7 +271,7 @@ class PlanningRotationAndPropertiesTest {
     fun viewport_panAndZoom_preservesRotatedObjectState() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TRENCH)
+        viewModel.selectAssetType(AssetType.GUNSHIP)
         viewModel.addAssetAt(8.5f, -12.0f)
         viewModel.setSelectedObjectRotation(75.0f)
 

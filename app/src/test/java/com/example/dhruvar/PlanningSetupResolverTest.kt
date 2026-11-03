@@ -11,7 +11,6 @@ import com.example.dhruvar.domain.model.PlanningSurface
 import com.example.dhruvar.domain.model.PlaceSearchHit
 import com.example.dhruvar.domain.model.allowedModes
 import com.example.dhruvar.domain.model.canConfirmSetupRegion
-import com.example.dhruvar.domain.model.canContinueFindLocation
 import com.example.dhruvar.domain.model.canContinueSetOrigin
 import com.example.dhruvar.domain.model.canEnterAr
 import com.example.dhruvar.domain.model.progressSubtitle
@@ -161,12 +160,6 @@ class PlanningSetupResolverTest {
         assertFalse(canConfirmSetupRegion(draftBounds = null, committedBounds = null))
         assertTrue(canConfirmSetupRegion(draftBounds = null, committedBounds = region))
         assertTrue(canConfirmSetupRegion(draftBounds = region, committedBounds = null))
-    }
-
-    @Test
-    fun continueFromFindLocation_requiresChosenPlace() {
-        assertFalse(canContinueFindLocation(PlanningSetupSession()))
-        assertTrue(canContinueFindLocation(PlanningSetupSession(chosenLocation = chosen)))
     }
 
     @Test

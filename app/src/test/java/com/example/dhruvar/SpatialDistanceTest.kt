@@ -101,7 +101,7 @@ class SpatialDistanceTest {
 
         for (deg in rotations) {
             val obj = LayoutObject(
-                assetType = AssetType.TRUCK,
+                assetType = AssetType.STR_MGS,
                 x = 6.0f,
                 z = 8.0f,
                 rotationDegrees = deg
@@ -116,7 +116,7 @@ class SpatialDistanceTest {
     fun distance_isInvariantUnderViewportPanAndZoom() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TENT)
+        viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(9.0f, 12.0f)
 
         val tent = viewModel.uiState.value.selectedObject!!
@@ -148,8 +148,8 @@ class SpatialDistanceTest {
     // 11. Object-to-Object distance calculation (future-ready architecture)
     @Test
     fun distance_betweenTwoObjects_calculatesCorrectly() {
-        val obj1 = LayoutObject(assetType = AssetType.TENT, x = 2.0f, z = 3.0f)
-        val obj2 = LayoutObject(assetType = AssetType.CAR, x = 5.0f, z = 7.0f)
+        val obj1 = LayoutObject(assetType = AssetType.MILITARY_VEHICLE, x = 2.0f, z = 3.0f)
+        val obj2 = LayoutObject(assetType = AssetType.OFFROAD_VEHICLE, x = 5.0f, z = 7.0f)
 
         val dist = SpatialDistanceCalculator.calculateDistanceBetween(obj1, obj2)
         assertEquals(5.0f, dist, 0.0001f)

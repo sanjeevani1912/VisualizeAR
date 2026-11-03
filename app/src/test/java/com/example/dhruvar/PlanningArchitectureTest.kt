@@ -1,6 +1,7 @@
 package com.example.dhruvar
 
 import com.example.dhruvar.domain.model.Anchor
+import com.example.dhruvar.domain.model.AssetSizeConfig
 import com.example.dhruvar.domain.model.AssetType
 import com.example.dhruvar.domain.model.Layout
 import com.example.dhruvar.domain.model.LayoutObject
@@ -27,23 +28,24 @@ class PlanningArchitectureTest {
 
     @Test
     fun assetTypes_haveAccurateRealWorldMetricDimensions() {
-        val tent = AssetType.TENT
-        assertEquals(4.0f, tent.defaultWidthMeters, 0.001f)
-        assertEquals(6.0f, tent.defaultLengthMeters, 0.001f)
-
-        val truck = AssetType.TRUCK
-        assertEquals(2.5f, truck.defaultWidthMeters, 0.001f)
-        assertEquals(8.0f, truck.defaultLengthMeters, 0.001f)
-
-        val antenna = AssetType.ANTENNA
-        assertEquals(1.5f, antenna.defaultWidthMeters, 0.001f)
-        assertEquals(1.5f, antenna.defaultLengthMeters, 0.001f)
+        // Real-world average lengths live in AssetSizeConfig; models are scaled uniformly to them.
+        val expectedLength = mapOf(
+            AssetType.MILITARY_VEHICLE to AssetSizeConfig.MILITARY_VEHICLE_LENGTH_METERS,
+            AssetType.STR_MGS to AssetSizeConfig.STR_MGS_LENGTH_METERS,
+            AssetType.GUNSHIP to AssetSizeConfig.GUNSHIP_LENGTH_METERS
+        )
+        expectedLength.forEach { (type, meters) ->
+            assertEquals(meters, maxOf(type.defaultWidthMeters, type.defaultLengthMeters), 0.001f)
+        }
+        // The helicopter is the biggest asset and a vehicle stays car-sized.
+        assertTrue(AssetType.GUNSHIP.defaultLengthMeters > AssetType.STR_MGS.defaultLengthMeters)
+        assertTrue(AssetType.MILITARY_VEHICLE.defaultLengthMeters in 3.0f..6.0f)
     }
 
     @Test
     fun layoutObject_storesMetricSpatialCoordinatesNotPixels() {
         val obj = LayoutObject(
-            assetType = AssetType.TENT,
+            assetType = AssetType.MILITARY_VEHICLE,
             name = "Test Tent",
             x = 10.0f, // meters
             z = 15.0f, // meters
@@ -66,21 +68,21 @@ class PlanningArchitectureTest {
         assertNotNull(state.currentLayout)
         assertNotNull(state.currentLayout.anchor)
         assertTrue(state.currentLayout.objects.isEmpty())
-        assertEquals(AssetType.TENT, state.selectedAssetType)
+        assertEquals(AssetType.MILITARY_VEHICLE, state.selectedAssetType)
     }
 
     @Test
     fun planningViewModel_selectAssetType_updatesState() {
         val viewModel = PlanningViewModel()
-        viewModel.selectAssetType(AssetType.ANTENNA)
+        viewModel.selectAssetType(AssetType.K131)
 
-        assertEquals(AssetType.ANTENNA, viewModel.uiState.value.selectedAssetType)
+        assertEquals(AssetType.K131, viewModel.uiState.value.selectedAssetType)
     }
 
     @Test
     fun planningViewModel_addAssetAt_appendsObjectWithLogicalMetricCoordinates() {
         val viewModel = PlanningViewModel()
-        viewModel.selectAssetType(AssetType.CAR)
+        viewModel.selectAssetType(AssetType.OFFROAD_VEHICLE)
 
         val initialCount = viewModel.uiState.value.currentLayout.objects.size
         viewModel.addAssetAt(xMeters = 5.0f, zMeters = -8.0f)
@@ -89,7 +91,7 @@ class PlanningArchitectureTest {
         assertEquals(initialCount + 1, updatedObjects.size)
 
         val addedObj = updatedObjects.last()
-        assertEquals(AssetType.CAR, addedObj.assetType)
+        assertEquals(AssetType.OFFROAD_VEHICLE, addedObj.assetType)
         assertEquals(5.0f, addedObj.x, 0.001f)
         assertEquals(-8.0f, addedObj.z, 0.001f)
     }
@@ -97,7 +99,7 @@ class PlanningArchitectureTest {
     @Test
     fun planningViewModel_selectObject_marksTargetObjectAsSelected() {
         val viewModel = PlanningViewModel()
-        viewModel.selectAssetType(AssetType.TENT)
+        viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(xMeters = 2.0f, zMeters = 2.0f)
         val targetObjId = viewModel.uiState.value.currentLayout.objects.first().id
 

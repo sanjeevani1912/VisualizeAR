@@ -21,6 +21,9 @@ object MapBasemapConfig {
     /** Camera zoom used after jumping to a place-search result. */
     const val SEARCH_RESULT_ZOOM = 15.0
 
+    /** Street-level zoom used when centering on the device's own GNSS fix. */
+    const val GNSS_FIX_ZOOM = 18.0
+
     /** Mandatory on every map screen — see `docs/android.md` §9. */
     const val ATTRIBUTION = "© OpenStreetMap contributors · " +
         "Boundaries: Survey of India via DataMeet (CC BY 4.0)"

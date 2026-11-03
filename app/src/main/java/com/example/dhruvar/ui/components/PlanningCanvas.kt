@@ -533,67 +533,47 @@ private fun DrawScope.drawDistinctLayoutObject(
 
         // 2. Distinct 2D Architectural Symbol based on AssetType
         when (obj.assetType) {
-            AssetType.TENT -> {
-                // Ridge line down longitudinal center
+            AssetType.GUNSHIP -> {
+                // Fuselage axis with a rotor disc over it
                 drawLine(
                     color = baseStrokeColor,
                     start = Offset(screenPos.x, rectTopLeft.y),
                     end = Offset(screenPos.x, rectTopLeft.y + lengthPx),
                     strokeWidth = 1.5.dp.toPx()
                 )
-                // Triangular apex flaps at front and rear
-                drawLine(
-                    color = baseStrokeColor,
-                    start = Offset(rectTopLeft.x, rectTopLeft.y),
-                    end = Offset(screenPos.x, rectTopLeft.y + (lengthPx * 0.22f)),
-                    strokeWidth = 1.dp.toPx()
+                drawCircle(
+                    color = baseStrokeColor.copy(alpha = 0.5f),
+                    radius = (widthPx * 0.5f).coerceAtLeast(6f),
+                    center = screenPos,
+                    style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 3f), 0f))
                 )
+                // Tail boom stub
                 drawLine(
                     color = baseStrokeColor,
-                    start = Offset(rectTopLeft.x + widthPx, rectTopLeft.y),
-                    end = Offset(screenPos.x, rectTopLeft.y + (lengthPx * 0.22f)),
-                    strokeWidth = 1.dp.toPx()
-                )
-                drawLine(
-                    color = baseStrokeColor,
-                    start = Offset(rectTopLeft.x, rectTopLeft.y + lengthPx),
-                    end = Offset(screenPos.x, rectTopLeft.y + (lengthPx * 0.78f)),
-                    strokeWidth = 1.dp.toPx()
-                )
-                drawLine(
-                    color = baseStrokeColor,
-                    start = Offset(rectTopLeft.x + widthPx, rectTopLeft.y + lengthPx),
-                    end = Offset(screenPos.x, rectTopLeft.y + (lengthPx * 0.78f)),
-                    strokeWidth = 1.dp.toPx()
-                )
-            }
-
-            AssetType.TRUCK -> {
-                // Cab section line (front 35%)
-                val cabY = rectTopLeft.y + (lengthPx * 0.35f)
-                drawLine(
-                    color = baseStrokeColor,
-                    start = Offset(rectTopLeft.x, cabY),
-                    end = Offset(rectTopLeft.x + widthPx, cabY),
+                    start = Offset(screenPos.x - (widthPx * 0.15f), rectTopLeft.y + lengthPx),
+                    end = Offset(screenPos.x + (widthPx * 0.15f), rectTopLeft.y + lengthPx),
                     strokeWidth = 1.8.dp.toPx()
                 )
-                // Windshield band
-                drawRoundRect(
-                    color = baseStrokeColor.copy(alpha = 0.5f),
-                    topLeft = Offset(rectTopLeft.x + (widthPx * 0.15f), rectTopLeft.y + (lengthPx * 0.08f)),
-                    size = Size(widthPx * 0.7f, lengthPx * 0.12f),
-                    cornerRadius = CornerRadius(2f, 2f)
-                )
-                // Rear cargo bed cross / divider
+            }
+
+            AssetType.K131, AssetType.K131_TAKEOFF -> {
+                // Centre line with a nose bar
                 drawLine(
-                    color = baseStrokeColor.copy(alpha = 0.6f),
-                    start = Offset(screenPos.x, cabY),
+                    color = baseStrokeColor,
+                    start = Offset(screenPos.x, rectTopLeft.y),
                     end = Offset(screenPos.x, rectTopLeft.y + lengthPx),
-                    strokeWidth = 1.dp.toPx()
+                    strokeWidth = 1.5.dp.toPx()
+                )
+                val noseY = rectTopLeft.y + (lengthPx * 0.2f)
+                drawLine(
+                    color = baseStrokeColor,
+                    start = Offset(rectTopLeft.x, noseY),
+                    end = Offset(rectTopLeft.x + widthPx, noseY),
+                    strokeWidth = 1.8.dp.toPx()
                 )
             }
 
-            AssetType.CAR -> {
+            AssetType.MILITARY_VEHICLE, AssetType.OFFROAD_VEHICLE -> {
                 // Front hood line (front 28%)
                 val hoodY = rectTopLeft.y + (lengthPx * 0.28f)
                 drawLine(
@@ -609,71 +589,30 @@ private fun DrawScope.drawDistinctLayoutObject(
                     size = Size(widthPx * 0.7f, lengthPx * 0.45f),
                     cornerRadius = CornerRadius(2f, 2f)
                 )
-                // Rear trunk line
-                val trunkY = rectTopLeft.y + (lengthPx * 0.73f)
+                // Rear line
+                val rearY = rectTopLeft.y + (lengthPx * 0.73f)
                 drawLine(
                     color = baseStrokeColor,
-                    start = Offset(rectTopLeft.x, trunkY),
-                    end = Offset(rectTopLeft.x + widthPx, trunkY),
+                    start = Offset(rectTopLeft.x, rearY),
+                    end = Offset(rectTopLeft.x + widthPx, rearY),
                     strokeWidth = 1.2.dp.toPx()
                 )
             }
 
-            AssetType.ANTENNA -> {
-                // Central transmitter mast
+            AssetType.STR_MGS -> {
+                // Turret ring with the gun barrel pointing forward
                 drawCircle(
                     color = baseStrokeColor,
-                    radius = (widthPx * 0.22f).coerceAtLeast(3f),
-                    center = screenPos
-                )
-                // Cross mast base
-                drawLine(
-                    color = baseStrokeColor,
-                    start = Offset(screenPos.x - (widthPx / 2f), screenPos.y),
-                    end = Offset(screenPos.x + (widthPx / 2f), screenPos.y),
-                    strokeWidth = 1.2.dp.toPx()
-                )
-                drawLine(
-                    color = baseStrokeColor,
-                    start = Offset(screenPos.x, screenPos.y - (lengthPx / 2f)),
-                    end = Offset(screenPos.x, screenPos.y + (lengthPx / 2f)),
-                    strokeWidth = 1.2.dp.toPx()
-                )
-                // Radio broadcast wave rings
-                drawCircle(
-                    color = baseStrokeColor.copy(alpha = 0.5f),
-                    radius = (widthPx * 0.45f).coerceAtLeast(6f),
+                    radius = (widthPx * 0.3f).coerceAtLeast(4f),
                     center = screenPos,
-                    style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 3f), 0f))
+                    style = Stroke(width = 1.4.dp.toPx())
                 )
-            }
-
-            AssetType.TRENCH -> {
-                // Elongated trench center conduit
-                val insetX = widthPx * 0.2f
-                drawRect(
-                    color = OverlayFill,
-                    topLeft = Offset(rectTopLeft.x + insetX, rectTopLeft.y),
-                    size = Size(widthPx - (insetX * 2f), lengthPx)
+                drawLine(
+                    color = baseStrokeColor,
+                    start = screenPos,
+                    end = Offset(screenPos.x, rectTopLeft.y),
+                    strokeWidth = 2.dp.toPx()
                 )
-                // Revetment hatch marks along the walls
-                val hatchStep = (lengthPx / 6f).coerceAtLeast(8f)
-                var hy = rectTopLeft.y + 4f
-                while (hy < rectTopLeft.y + lengthPx - 2f) {
-                    drawLine(
-                        color = baseStrokeColor,
-                        start = Offset(rectTopLeft.x, hy),
-                        end = Offset(rectTopLeft.x + insetX, hy),
-                        strokeWidth = 1.dp.toPx()
-                    )
-                    drawLine(
-                        color = baseStrokeColor,
-                        start = Offset(rectTopLeft.x + widthPx - insetX, hy),
-                        end = Offset(rectTopLeft.x + widthPx, hy),
-                        strokeWidth = 1.dp.toPx()
-                    )
-                    hy += hatchStep
-                }
             }
         }
 

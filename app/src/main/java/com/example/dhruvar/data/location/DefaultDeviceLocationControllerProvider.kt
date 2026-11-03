@@ -6,7 +6,7 @@ import com.example.dhruvar.domain.location.FakeDeviceLocationController
 
 /**
  * Provides the active [DeviceLocationController].
- * Initialized from [com.example.dhruvar.MainActivity] with a fused-location implementation;
+ * Initialized from [com.example.dhruvar.MainActivity] with the platform GNSS receiver;
  * falls back to [FakeDeviceLocationController] for JVM tests / pre-init.
  */
 object DefaultDeviceLocationControllerProvider {
@@ -15,7 +15,7 @@ object DefaultDeviceLocationControllerProvider {
     private var instance: DeviceLocationController? = null
 
     fun init(context: Context) {
-        instance = FusedDeviceLocationController(context.applicationContext)
+        instance = PlatformGnssLocationController(context.applicationContext)
     }
 
     fun setController(controller: DeviceLocationController) {

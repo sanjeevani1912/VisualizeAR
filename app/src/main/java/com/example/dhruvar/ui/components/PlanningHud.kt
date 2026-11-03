@@ -47,6 +47,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.example.dhruvar.domain.model.AssetSizeConfig
 import com.example.dhruvar.domain.model.MapInteractionMode
 import com.example.dhruvar.domain.model.PlaceSearchHit
 import com.example.dhruvar.domain.model.PlanningSetupStep
@@ -609,6 +610,8 @@ fun SelectedPlaceChip(
 fun WorkspaceRegionStatus(
     sizeLabel: String,
     onChangeRegion: () -> Unit,
+    selectedSideMeters: Double,
+    onSelectSide: (Double) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -618,21 +621,72 @@ fun WorkspaceRegionStatus(
         shadowElevation = 2.dp,
         modifier = modifier
     ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Region · $sizeLabel",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = onChangeRegion) {
+                    Text("Change region", fontWeight = FontWeight.SemiBold)
+                }
+            }
+            RegionSizeChips(
+                selectedSideMeters = selectedSideMeters,
+                onSelectSide = onSelectSide,
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp)
+            )
+        }
+    }
+}
+
+/** Area picker: how many meters per side the visualized region covers. */
+@Composable
+fun RegionSizeChips(
+    selectedSideMeters: Double,
+    onSelectSide: (Double) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = "Area to visualize",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(top = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(
-                text = "Region · $sizeLabel",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
-            )
-            TextButton(onClick = onChangeRegion) {
-                Text("Change region", fontWeight = FontWeight.SemiBold)
+            AssetSizeConfig.regionSideChoicesMeters.forEach { side ->
+                val active = kotlin.math.abs(side - selectedSideMeters) < 1.0
+                Text(
+                    text = "${side.toInt()} m",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                    color = if (active) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            if (active) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        )
+                        .clickable { onSelectSide(side) }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                )
             }
         }
     }

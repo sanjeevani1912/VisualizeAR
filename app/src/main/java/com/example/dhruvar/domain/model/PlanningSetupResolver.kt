@@ -41,8 +41,6 @@ fun PlanningSetupStep.progressSubtitle(): String? = when (this) {
     PlanningSetupStep.PLACE_ASSETS -> null
 }
 
-fun canContinueFindLocation(session: PlanningSetupSession): Boolean =
-    session.chosenLocation != null
 
 /** Continue on SET_ORIGIN is for an origin that already exists (legacy / stepped back). */
 fun canContinueSetOrigin(hasGeographicFix: Boolean): Boolean = hasGeographicFix

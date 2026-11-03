@@ -17,18 +17,26 @@ class AssetCatalogTest {
     }
 
     @Test
-    fun `trucks drill down lists the truck and the car`() {
-        val names = AssetCatalog.inCategory(AssetCategory.TRUCKS, "").map { it.displayName }
-        assertEquals(listOf("Truck", "Car"), names)
+    fun `library holds exactly the six supplied assets`() {
+        assertEquals(
+            setOf("Gunship", "K-131", "K-131 Take-Off", "Military Vehicle", "Off-road Vehicle", "STR-MGS"),
+            AssetCatalog.entries.map { it.displayName }.toSet()
+        )
+    }
+
+    @Test
+    fun `vehicles drill down lists both vehicles`() {
+        val names = AssetCatalog.inCategory(AssetCategory.VEHICLES, "").map { it.displayName }
+        assertEquals(listOf("Military Vehicle", "Off-road Vehicle"), names)
     }
 
     @Test
     fun `search stays inside the open category`() {
-        assertTrue(AssetCatalog.inCategory(AssetCategory.MASTS, "ant").any { it.displayName == "Antenna" })
-        assertTrue(AssetCatalog.inCategory(AssetCategory.TRUCKS, "ant").isEmpty())
+        assertTrue(AssetCatalog.inCategory(AssetCategory.SYSTEMS, "k-1").any { it.displayName == "K-131" })
+        assertTrue(AssetCatalog.inCategory(AssetCategory.VEHICLES, "k-1").isEmpty())
         assertEquals(
-            listOf("Truck"),
-            AssetCatalog.inCategory(AssetCategory.TRUCKS, "tru").map { it.displayName }
+            listOf("Gunship"),
+            AssetCatalog.inCategory(AssetCategory.AIRCRAFT, "gun").map { it.displayName }
         )
     }
 }

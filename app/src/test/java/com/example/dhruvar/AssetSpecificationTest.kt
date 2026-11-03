@@ -80,7 +80,7 @@ class AssetSpecificationTest {
         )
 
         val truck = LayoutObject(
-            assetType = AssetType.TRUCK,
+            assetType = AssetType.STR_MGS,
             widthMeters = 2.5f,
             lengthMeters = 8.0f,
             heightMeters = 3.2f
@@ -104,7 +104,7 @@ class AssetSpecificationTest {
     fun rotation_doesNotModifyPhysicalDimensions() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.CAR)
+        viewModel.selectAssetType(AssetType.OFFROAD_VEHICLE)
         viewModel.addAssetAt(5.0f, 5.0f)
 
         val initialObj = viewModel.uiState.value.selectedObject!!
@@ -130,7 +130,7 @@ class AssetSpecificationTest {
     fun moving_doesNotModifyPhysicalDimensions() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TENT)
+        viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(2.0f, 3.0f)
 
         val tent = viewModel.uiState.value.selectedObject!!
@@ -153,7 +153,7 @@ class AssetSpecificationTest {
     fun duplicate_preservesPhysicalDimensions() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TRUCK)
+        viewModel.selectAssetType(AssetType.STR_MGS)
         viewModel.addAssetAt(0.0f, 0.0f)
 
         // Custom dimension override
@@ -175,11 +175,12 @@ class AssetSpecificationTest {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
 
-        viewModel.selectAssetType(AssetType.ANTENNA)
+        viewModel.selectAssetType(AssetType.K131)
         viewModel.addAssetAt(1.0f, 1.0f)
         val antennaId = viewModel.uiState.value.selectedObjectId!!
+        val antennaBefore = viewModel.uiState.value.currentLayout.objects.first { it.id == antennaId }
 
-        viewModel.selectAssetType(AssetType.TRENCH)
+        viewModel.selectAssetType(AssetType.GUNSHIP)
         viewModel.addAssetAt(10.0f, 10.0f)
         val trenchId = viewModel.uiState.value.selectedObjectId!!
 
@@ -189,22 +190,22 @@ class AssetSpecificationTest {
         assertEquals(1, viewModel.uiState.value.currentLayout.objects.size)
         val remainingAntenna = viewModel.uiState.value.currentLayout.objects.first()
         assertEquals(antennaId, remainingAntenna.id)
-        assertEquals(AssetType.ANTENNA.defaultWidthMeters, remainingAntenna.widthMeters, 0.001f)
-        assertEquals(AssetType.ANTENNA.defaultLengthMeters, remainingAntenna.lengthMeters, 0.001f)
+        assertEquals(antennaBefore.widthMeters, remainingAntenna.widthMeters, 0.001f)
+        assertEquals(antennaBefore.lengthMeters, remainingAntenna.lengthMeters, 0.001f)
     }
 
     // 8. Distance calculation remains correct and independent of dimensions
     @Test
     fun distance_remainsIndependentOfPhysicalDimensions() {
         val objSmall = LayoutObject(
-            assetType = AssetType.ANTENNA,
+            assetType = AssetType.K131,
             x = 3.0f,
             z = 4.0f,
             widthMeters = 1.0f,
             lengthMeters = 1.0f
         )
         val objLarge = LayoutObject(
-            assetType = AssetType.TRENCH,
+            assetType = AssetType.GUNSHIP,
             x = 3.0f,
             z = 4.0f,
             widthMeters = 5.0f,
@@ -224,7 +225,7 @@ class AssetSpecificationTest {
     fun zoom_doesNotAlterLogicalDimensions() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TENT)
+        viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(4.0f, 4.0f)
 
         val initialObj = viewModel.uiState.value.selectedObject!!
@@ -245,7 +246,7 @@ class AssetSpecificationTest {
     fun pan_doesNotAlterLogicalDimensions() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TRUCK)
+        viewModel.selectAssetType(AssetType.STR_MGS)
         viewModel.addAssetAt(2.0f, 2.0f)
 
         val initialObj = viewModel.uiState.value.selectedObject!!
@@ -264,7 +265,7 @@ class AssetSpecificationTest {
     fun customDimensionEditing_validatesAndApplies() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.TENT)
+        viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(0.0f, 0.0f)
 
         val initial = viewModel.uiState.value.selectedObject!!
@@ -293,7 +294,7 @@ class AssetSpecificationTest {
     fun customDimensionUpdates_preservePositionAndRotation() {
         val viewModel = PlanningViewModel()
         viewModel.clearLayout()
-        viewModel.selectAssetType(AssetType.CAR)
+        viewModel.selectAssetType(AssetType.OFFROAD_VEHICLE)
         viewModel.addAssetAt(8.5f, -12.3f)
         viewModel.setSelectedObjectRotation(45.0f)
 

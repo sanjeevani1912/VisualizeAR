@@ -7,36 +7,60 @@ import com.example.dhruvar.domain.spatial.SpatialDistanceCalculator
 import com.example.dhruvar.ui.ar.render.AssetModelRegistry
 import com.example.dhruvar.ui.ar.render.Mesh3D
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
+import java.io.File
 import kotlin.math.sqrt
 
 /**
  * Unit test suite validating Part 12: AR 3D Asset Integration, Model Registry,
  * Ground-Level Pivot, Authoritative Distance Calculations, and Selection System.
+ *
+ * The registry tests load the real GLB files from `src/main/assets/models`.
  */
 class ARVisualizationV12Test {
 
-    private val supportedAssetTypes = listOf(
-        AssetType.TENT,
-        AssetType.TRUCK,
-        AssetType.CAR,
-        AssetType.ANTENNA,
-        AssetType.TRENCH
-    )
+    private val supportedAssetTypes = AssetType.entries.toList()
+
+    @Before
+    fun installModelSource() {
+        AssetModelRegistry.reset()
+        AssetModelRegistry.install { fileName ->
+            File("src/main/assets/models/$fileName").takeIf { it.exists() }?.readBytes()
+        }
+    }
+
+    private fun loadedMesh(assetType: AssetType): Mesh3D {
+        val mesh = AssetModelRegistry.loadBlocking(assetType)
+        assertNotNull("Model for $assetType must load from assets/models", mesh)
+        assertFalse("Loaded model for $assetType must not be the placeholder", mesh!!.isPlaceholder)
+        return mesh
+    }
 
     @Test
     fun assetModelRegistry_providesValid3DMeshesForAllSupportedTypes() {
         for (assetType in supportedAssetTypes) {
-            val mesh = AssetModelRegistry.getMesh(assetType)
-            assertNotNull("Mesh for $assetType must not be null", mesh)
+            val mesh = loadedMesh(assetType)
             assertTrue("Mesh for $assetType must have positive vertex count", mesh.vertexCount > 0)
             assertTrue("Mesh for $assetType must have positive index count", mesh.indexCount > 0)
-            assertEquals("Index count must be a multiple of 3 (triangles)", 0, mesh.indexCount % 3)
-            assertEquals("Primary color must be 4-component RGBA", 4, mesh.primaryColor.size)
-            assertEquals("Accent color must be 4-component RGBA", 4, mesh.accentColor.size)
+            for (part in mesh.parts) {
+                assertEquals("Index count must be a multiple of 3 (triangles)", 0, part.indexCount % 3)
+                assertEquals("Part color must be 4-component RGBA", 4, part.color.size)
+            }
         }
+    }
+
+    @Test
+    fun placeholder_isReturnedBeforeTheRealModelHasLoaded() {
+        AssetModelRegistry.reset()
+        AssetModelRegistry.install { null } // nothing to load
+        val mesh = AssetModelRegistry.getMesh(AssetType.GUNSHIP)
+        assertTrue(mesh.isPlaceholder)
+        assertEquals(AssetType.GUNSHIP.defaultHeightMeters, mesh.heightMeters, 0.001f)
+        assertEquals(20, mesh.vertexCount)
     }
 
     @Test
@@ -44,40 +68,30 @@ class ARVisualizationV12Test {
         // Critical AR requirement: Base pivot is at ground level (Y = 0.0)
         // No vertex may extend below the detected physical surface (Y < 0.0)
         for (assetType in supportedAssetTypes) {
-            val mesh = AssetModelRegistry.getMesh(assetType)
-            val buffer = mesh.vertexBuffer.duplicate()
-            buffer.position(0)
-
+            val mesh = loadedMesh(assetType)
             var minY = Float.MAX_VALUE
-            var maxY = Float.MIN_VALUE
+            var maxY = -Float.MAX_VALUE
 
-            for (i in 0 until mesh.vertexCount) {
-                val x = buffer.get()
-                val y = buffer.get()
-                val z = buffer.get()
-
-                if (y < minY) minY = y
-                if (y > maxY) maxY = y
-
-                assertTrue(
-                    "Asset $assetType vertex $i has Y=$y < 0.0 (ground penetration error)",
-                    y >= -0.001f
-                )
+            for (part in mesh.parts) {
+                val buffer = part.vertexBuffer.duplicate()
+                buffer.position(0)
+                for (i in 0 until part.vertexCount) {
+                    buffer.get()
+                    val y = buffer.get()
+                    buffer.get()
+                    if (y < minY) minY = y
+                    if (y > maxY) maxY = y
+                    assertTrue(
+                        "Asset $assetType vertex $i has Y=$y < 0.0 (ground penetration error)",
+                        y >= -0.001f
+                    )
+                }
             }
 
+            assertEquals("Asset $assetType base pivot must be on the ground plane (Y=0.0)", 0.0f, minY, 0.01f)
             assertEquals(
-                "Asset $assetType base pivot must be exactly on the ground plane (Y=0.0)",
-                0.0f,
-                minY,
-                0.01f
-            )
-            assertTrue(
-                "Asset $assetType must have positive physical height",
-                maxY > 0.1f
-            )
-            assertEquals(
-                "Asset $assetType maximum vertex height must match reported heightMeters",
-                mesh.heightMeters,
+                "Asset $assetType maximum vertex height must match its specification",
+                assetType.defaultHeightMeters,
                 maxY,
                 0.05f
             )
@@ -85,50 +99,58 @@ class ARVisualizationV12Test {
     }
 
     @Test
-    fun modelDimensions_matchPhysicalMetricSpecifications() {
-        // Tent: 4.0m W x 6.0m L x 2.5m H
-        val tent = AssetModelRegistry.getMesh(AssetType.TENT)
-        assertEquals(2.5f, tent.heightMeters, 0.01f)
-
-        // Truck: 2.5m W x 8.0m L x 3.2m H
-        val truck = AssetModelRegistry.getMesh(AssetType.TRUCK)
-        assertEquals(3.2f, truck.heightMeters, 0.01f)
-
-        // Car: 1.8m W x 4.5m L x 1.5m H
-        val car = AssetModelRegistry.getMesh(AssetType.CAR)
-        assertEquals(1.5f, car.heightMeters, 0.01f)
-
-        // Antenna: 1.5m W x 1.5m L x 9.2m H (8.0m mast + 1.2m spire)
-        val antenna = AssetModelRegistry.getMesh(AssetType.ANTENNA)
-        assertEquals(9.2f, antenna.heightMeters, 0.01f)
-
-        // Trench: 1.2m W x 10.0m L x 1.8m H
-        val trench = AssetModelRegistry.getMesh(AssetType.TRENCH)
-        assertEquals(1.8f, trench.heightMeters, 0.01f)
+    fun modelFootprint_matchesSpecificationAndIsCenteredOnOrigin() {
+        for (assetType in supportedAssetTypes) {
+            val mesh = loadedMesh(assetType)
+            var minX = Float.MAX_VALUE; var maxX = -Float.MAX_VALUE
+            var minZ = Float.MAX_VALUE; var maxZ = -Float.MAX_VALUE
+            for (part in mesh.parts) {
+                val buffer = part.vertexBuffer.duplicate()
+                buffer.position(0)
+                for (i in 0 until part.vertexCount) {
+                    val x = buffer.get(); buffer.get(); val z = buffer.get()
+                    minX = minOf(minX, x); maxX = maxOf(maxX, x)
+                    minZ = minOf(minZ, z); maxZ = maxOf(maxZ, z)
+                }
+            }
+            assertEquals("$assetType width", assetType.defaultWidthMeters, maxX - minX, 0.02f)
+            assertEquals("$assetType length", assetType.defaultLengthMeters, maxZ - minZ, 0.02f)
+            assertEquals("$assetType X centre", 0f, (minX + maxX) / 2f, 0.02f)
+            assertEquals("$assetType Z centre", 0f, (minZ + maxZ) / 2f, 0.02f)
+        }
     }
 
     @Test
     fun modelNormals_areProperlyNormalizedUnitVectors() {
         // AR diffuse lighting requires unit normals for correct lambertian shading
         for (assetType in supportedAssetTypes) {
-            val mesh = AssetModelRegistry.getMesh(assetType)
-            val nBuf = mesh.normalBuffer.duplicate()
-            nBuf.position(0)
-
-            for (i in 0 until mesh.vertexCount) {
-                val nx = nBuf.get()
-                val ny = nBuf.get()
-                val nz = nBuf.get()
-
-                val length = sqrt((nx * nx + ny * ny + nz * nz).toDouble()).toFloat()
-                assertEquals(
-                    "Normal vector for $assetType vertex $i must have unit length (~1.0)",
-                    1.0f,
-                    length,
-                    0.05f
-                )
+            val mesh = loadedMesh(assetType)
+            for (part in mesh.parts) {
+                val nBuf = part.normalBuffer.duplicate()
+                nBuf.position(0)
+                for (i in 0 until part.vertexCount) {
+                    val nx = nBuf.get()
+                    val ny = nBuf.get()
+                    val nz = nBuf.get()
+                    val length = sqrt((nx * nx + ny * ny + nz * nz).toDouble()).toFloat()
+                    assertEquals(
+                        "Normal vector for $assetType vertex $i must have unit length (~1.0)",
+                        1.0f,
+                        length,
+                        0.05f
+                    )
+                }
             }
         }
+    }
+
+    @Test
+    fun texturedModels_carryUvsAndImageData() {
+        val gunship = loadedMesh(AssetType.GUNSHIP)
+        assertTrue(gunship.parts.any { it.texture != null && it.uvBuffer != null })
+        // The olive-drab STR-MGS model is flat colored
+        val strMgs = loadedMesh(AssetType.STR_MGS)
+        assertTrue(strMgs.parts.all { it.texture == null })
     }
 
     @Test
@@ -137,8 +159,8 @@ class ARVisualizationV12Test {
 
         val obj1 = LayoutObject(
             id = "obj_3_4",
-            name = "Tent Alpha",
-            assetType = AssetType.TENT,
+            name = "Vehicle Alpha",
+            assetType = AssetType.MILITARY_VEHICLE,
             x = 3.0f,
             z = 4.0f
         )
@@ -146,8 +168,8 @@ class ARVisualizationV12Test {
 
         val obj2 = LayoutObject(
             id = "obj_6_8",
-            name = "Logistics Truck",
-            assetType = AssetType.TRUCK,
+            name = "Mobile Gun",
+            assetType = AssetType.STR_MGS,
             x = 6.0f,
             z = 8.0f
         )
@@ -155,8 +177,8 @@ class ARVisualizationV12Test {
 
         val objAtOrigin = LayoutObject(
             id = "obj_origin",
-            name = "Command Post",
-            assetType = AssetType.TENT,
+            name = "Command Vehicle",
+            assetType = AssetType.MILITARY_VEHICLE,
             x = 0.0f,
             z = 0.0f
         )
@@ -164,8 +186,8 @@ class ARVisualizationV12Test {
 
         val objNegativeCoords = LayoutObject(
             id = "obj_neg",
-            name = "Rear Antenna",
-            assetType = AssetType.ANTENNA,
+            name = "Rear Launcher",
+            assetType = AssetType.K131,
             x = -5.0f,
             z = -12.0f
         )
