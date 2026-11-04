@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { ASSET_DEFAULTS, footprintRing, gridFeatures, offsetToLatLng } from '../geo'
+import { ASSET_DEFAULTS, dim, footprintRing, gridFeatures, offsetToLatLng } from '../geo'
 import type { LayoutData } from '../types'
 
 const STYLE_URL = import.meta.env.VITE_MAP_STYLE_URL as string | undefined
@@ -157,7 +157,7 @@ export function MapView({ layout, highlightId, onSelect }: Props) {
         if (o) {
           popup
             .setLngLat(e.lngLat)
-            .setHTML(`<strong>${o.name}</strong><br/>${ASSET_DEFAULTS[o.assetType].label} · ${o.widthMeters}×${o.lengthMeters} m`)
+            .setHTML(`<strong>${o.name}</strong><br/>${ASSET_DEFAULTS[o.assetType].label} · ${dim(o.widthMeters)}×${dim(o.lengthMeters)} m`)
             .addTo(map)
         } else popup.remove()
       })

@@ -4,12 +4,29 @@ import type { AssetType, GeoBounds, LayoutAnchor, LayoutData, LayoutObject } fro
 export const EARTH_RADIUS_M = 6_371_008.7714
 const DEG = Math.PI / 180
 
-export const ASSET_DEFAULTS: Record<AssetType, { w: number; l: number; h: number; label: string; color: string }> = {
-  TENT: { w: 4, l: 6, h: 2.5, label: 'Tent', color: '#63703D' },
-  TRUCK: { w: 2.5, l: 8, h: 3.2, label: 'Truck', color: '#B56B37' },
-  CAR: { w: 1.8, l: 4.5, h: 1.5, label: 'Car', color: '#603620' },
-  ANTENNA: { w: 1.5, l: 1.5, h: 8, label: 'Antenna', color: '#231F20' },
-  TRENCH: { w: 1.2, l: 10, h: 1.8, label: 'Trench', color: '#8A7A4A' },
+// The first six mirror the app's asset library (AssetType.kt, sizes from AssetSizeConfig.kt); the
+// last five are retired app types kept so older plans and the demo data still draw. Sizes here
+// are only a fallback: the app writes each object's real dimensions into the layout file.
+export const ASSET_DEFAULTS: Record<AssetType, { w: number; l: number; h: number; label: string; plural: string; color: string }> = {
+  GUNSHIP: { w: 13.52, l: 19.7, h: 6.05, label: 'Gunship', plural: 'gunships', color: '#8B2E2E' },
+  K131: { w: 3.45, l: 6.24, h: 5.45, label: 'K-131', plural: 'K-131s', color: '#3E5C76' },
+  K131_TAKEOFF: { w: 3.31, l: 6.24, h: 3.54, label: 'K-131 Take-Off', plural: 'K-131 take-offs', color: '#6C8FB5' },
+  MILITARY_VEHICLE: { w: 1.72, l: 4, h: 3.1, label: 'Military Vehicle', plural: 'military vehicles', color: '#2F6F5E' },
+  OFFROAD_VEHICLE: { w: 2.43, l: 4.66, h: 3.54, label: 'Off-road Vehicle', plural: 'off-road vehicles', color: '#C28A2C' },
+  STR_MGS: { w: 3.44, l: 7.63, h: 3.47, label: 'STR-MGS', plural: 'STR-MGS', color: '#7A6B2E' },
+  TENT: { w: 4, l: 6, h: 2.5, label: 'Tent', plural: 'tents', color: '#63703D' },
+  TRUCK: { w: 2.5, l: 8, h: 3.2, label: 'Truck', plural: 'trucks', color: '#B56B37' },
+  CAR: { w: 1.8, l: 4.5, h: 1.5, label: 'Car', plural: 'cars', color: '#603620' },
+  ANTENNA: { w: 1.5, l: 1.5, h: 8, label: 'Antenna', plural: 'antennas', color: '#231F20' },
+  TRENCH: { w: 1.2, l: 10, h: 1.8, label: 'Trench', plural: 'trenches', color: '#8A7A4A' },
+}
+
+/** "2 gunships", "1 K-131": the count with the right wording for it. */
+export function assetCountText(type: AssetType, count: number): string {
+  const d = ASSET_DEFAULTS[type]
+  // Names such as K-131 and STR-MGS keep their capitals; ordinary words ("tent") are lower-cased.
+  const singular = /[A-Z]{2}|\d/.test(d.label) ? d.label : d.label.toLowerCase()
+  return `${count} ${count === 1 ? singular : d.plural}`
 }
 
 export function offsetToLatLng(anchor: LayoutAnchor, x: number, z: number): [number, number] {
@@ -37,6 +54,11 @@ export function regionSizeMeters(b: GeoBounds): { width: number; height: number 
     width: haversineMeters(midLat, b.westLongitude, midLat, b.eastLongitude),
     height: haversineMeters(b.southLatitude, midLng, b.northLatitude, midLng),
   }
+}
+
+/** A dimension to the centimetre, without trailing zeros: 27.037078857421875 becomes "27.04". */
+export function dim(n: number): string {
+  return String(Math.round(n * 100) / 100)
 }
 
 export function formatMeters(m: number): string {

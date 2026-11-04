@@ -1,7 +1,19 @@
 // Mirrors the Android layout schema v2 (docs/layout-schema-v2.md). Positions are meters from the
 // anchor; +Z is "forward" at the anchor heading (north when heading = 0).
 
-export type AssetType = 'TENT' | 'TRUCK' | 'CAR' | 'ANTENNA' | 'TRENCH'
+/** The app's current library first, then the retired types that older plans and the demo still use. */
+export type AssetType =
+  | 'GUNSHIP'
+  | 'K131'
+  | 'K131_TAKEOFF'
+  | 'MILITARY_VEHICLE'
+  | 'OFFROAD_VEHICLE'
+  | 'STR_MGS'
+  | 'TENT'
+  | 'TRUCK'
+  | 'CAR'
+  | 'ANTENNA'
+  | 'TRENCH'
 
 export interface LayoutObject {
   id: string

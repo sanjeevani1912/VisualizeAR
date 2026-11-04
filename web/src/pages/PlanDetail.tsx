@@ -7,7 +7,7 @@ import { FieldImages } from '../components/FieldImages'
 import { OwnerActions } from '../components/OwnerActions'
 import { StatusBadge } from '../components/StatusBadge'
 import { canComment, canStartReview } from '../rules'
-import { ASSET_DEFAULTS, distanceFromOrigin, formatLatLng, formatRegion, summarizeAssets } from '../geo'
+import { ASSET_DEFAULTS, assetCountText, dim, distanceFromOrigin, formatLatLng, formatRegion, summarizeAssets } from '../geo'
 import { fullDate, latestVersion, relTime, shortDate, waitingLabel, OPEN_STATUSES } from '../util'
 
 type Tab = 'assets' | 'images' | 'versions' | 'comments' | 'audit'
@@ -87,7 +87,7 @@ export function PlanDetail() {
           <section className="card flush map-card">
             <MapView layout={layout} highlightId={selected} onSelect={setSelected} />
             <div className="map-legend" aria-label="Legend">
-              {(Object.keys(ASSET_DEFAULTS) as (keyof typeof ASSET_DEFAULTS)[]).map((t) => (
+              {summarizeAssets(layout).map(({ type: t }) => (
                 <span key={t}><i style={{ background: ASSET_DEFAULTS[t].color }} />{ASSET_DEFAULTS[t].label}</span>
               ))}
               <span><i className="lg-origin" />Origin</span>
@@ -124,7 +124,7 @@ export function PlanDetail() {
                           <td>{o.z.toFixed(1)}</td>
                           <td>{distanceFromOrigin(o).toFixed(1)} m</td>
                           <td>{Math.round(o.rotationDegrees)}°</td>
-                          <td>{o.widthMeters} × {o.lengthMeters} × {o.heightMeters}</td>
+                          <td>{dim(o.widthMeters)} × {dim(o.lengthMeters)} × {dim(o.heightMeters)}</td>
                         </tr>
                       ))}
                       {layout.objects.length === 0 && <tr><td colSpan={7} className="empty">No assets placed in this version.</td></tr>}
@@ -214,7 +214,7 @@ export function PlanDetail() {
               <dt>GPS accuracy</dt>
               <dd className={poorAccuracy ? 'text-bad' : ''}>{accuracy === null ? 'Unknown' : `± ${accuracy.toFixed(1)} m`}{poorAccuracy && ' — poor'}</dd>
               <dt>Assets</dt>
-              <dd>{summarizeAssets(layout).map((s) => `${s.count} ${ASSET_DEFAULTS[s.type].label.toLowerCase()}${s.count > 1 ? 's' : ''}`).join(', ') || 'None'}</dd>
+              <dd>{summarizeAssets(layout).map((s) => assetCountText(s.type, s.count)).join(', ') || 'None'}</dd>
               <dt>Field images</dt><dd>{plan.attachments.length}</dd>
               <dt>Version</dt><dd>v{version.version} of {plan.versions.length}</dd>
               <dt>Content hash</dt><dd><code>{version.contentHash}</code></dd>
