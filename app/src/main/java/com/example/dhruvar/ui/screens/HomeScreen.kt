@@ -53,8 +53,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.dhruvar.data.remote.SentPlan
 import com.example.dhruvar.domain.model.Layout
+import com.example.dhruvar.ui.components.AccountMenuButton
 import com.example.dhruvar.ui.components.AppTopBar
+import com.example.dhruvar.ui.components.PlanSubmissionRow
+import com.example.dhruvar.ui.components.SendPlanDialog
+import com.example.dhruvar.viewmodel.AccountViewModel
 import com.example.dhruvar.viewmodel.PlanningViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -65,18 +70,52 @@ fun HomeScreen(
     onCreateNewLayout: () -> Unit,
     onOpenLayout: (Layout) -> Unit,
     onOpenFieldGuide: () -> Unit = {},
+    onOpenSignIn: () -> Unit = {},
     modifier: Modifier = Modifier,
-    viewModel: PlanningViewModel = viewModel()
+    viewModel: PlanningViewModel = viewModel(),
+    accountViewModel: AccountViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val account by accountViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var layoutToRename by remember { mutableStateOf<Layout?>(null) }
     var renameInput by remember { mutableStateOf("") }
     var layoutToDelete by remember { mutableStateOf<Layout?>(null) }
+    var layoutToSend by remember { mutableStateOf<Layout?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.loadSavedLayouts()
+    }
+
+    // Pick up the latest approval decisions whenever Home opens or the user signs in.
+    LaunchedEffect(account.user) {
+        if (account.user != null) accountViewModel.refreshStatuses()
+    }
+
+    LaunchedEffect(account.message) {
+        account.message?.let { msg ->
+            snackbarHostState.showSnackbar(msg)
+            accountViewModel.clearMessage()
+        }
+    }
+
+    layoutToSend?.let { target ->
+        SendPlanDialog(
+            layout = target,
+            isResubmit = account.sent[target.id]?.canResubmit == true,
+            signedIn = account.isSignedIn,
+            onConfirm = { note ->
+                layoutToSend = null
+                if (account.isSignedIn) {
+                    accountViewModel.send(target, note)
+                } else {
+                    accountViewModel.sendAfterSignIn(target, note)
+                    onOpenSignIn()
+                }
+            },
+            onDismiss = { layoutToSend = null }
+        )
     }
 
     LaunchedEffect(uiState.userFeedbackMessage) {
@@ -170,6 +209,12 @@ fun HomeScreen(
             AppTopBar(
                 title = "DhruvAR",
                 actions = {
+                    AccountMenuButton(
+                        user = account.user,
+                        onSignIn = onOpenSignIn,
+                        onRefresh = { accountViewModel.refreshStatuses() },
+                        onSignOut = { accountViewModel.signOut() }
+                    )
                     IconButton(onClick = onOpenFieldGuide) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.MenuBook,
@@ -244,7 +289,10 @@ fun HomeScreen(
                                 layoutToRename = latest
                                 renameInput = latest.name
                             },
-                            onDelete = { layoutToDelete = latest }
+                            onDelete = { layoutToDelete = latest },
+                            sent = account.sent[latest.id],
+                            isSending = account.sendingLayoutId == latest.id,
+                            onSend = { layoutToSend = latest }
                         )
                     }
                     items(
@@ -259,7 +307,10 @@ fun HomeScreen(
                                 layoutToRename = layout
                                 renameInput = layout.name
                             },
-                            onDelete = { layoutToDelete = layout }
+                            onDelete = { layoutToDelete = layout },
+                            sent = account.sent[layout.id],
+                            isSending = account.sendingLayoutId == layout.id,
+                            onSend = { layoutToSend = layout }
                         )
                     }
                 }
@@ -328,7 +379,10 @@ private fun PlanCard(
     featured: Boolean,
     onOpen: () -> Unit,
     onRename: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    sent: SentPlan?,
+    isSending: Boolean,
+    onSend: () -> Unit
 ) {
     val shape = RoundedCornerShape(12.dp)
     val primary = MaterialTheme.colorScheme.primary
@@ -397,6 +451,12 @@ private fun PlanCard(
                         StatusChip(label = "Incomplete", done = false)
                     }
                 }
+                PlanSubmissionRow(
+                    layout = layout,
+                    sent = sent,
+                    isSending = isSending,
+                    onSend = onSend
+                )
             }
             PlanActionsMenu(onRename = onRename, onDelete = onDelete)
         }

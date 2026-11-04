@@ -9,7 +9,12 @@
         <include .../>
         <exclude .../>
         -->
+        <!-- The dashboard sign-in token is a credential and must never leave the device. -->
+        <exclude domain="sharedpref" path="dhruvar_session.xml"/>
     </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="dhruvar_session.xml"/>
+    </device-transfer>
     <!--
     <device-transfer>
         <include .../>

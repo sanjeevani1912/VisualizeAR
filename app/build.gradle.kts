@@ -33,9 +33,17 @@ android {
         // MAP_STYLE_URL above and disable place search. See docs/Map-Server-Configuration.md.
         // No trailing slash. Cleartext hosts must also be listed in res/xml/network_security_config.xml.
         buildConfigField("String", "MAP_SERVER_BASE", "\"http://192.168.1.205:8088\"")
+        // Dashboard server the app signs in to and sends plans for approval to. Empty = the user
+        // types it on the sign-in screen. Release builds only accept https:// addresses.
+        buildConfigField("String", "DEFAULT_SERVER_URL", "\"\"")
     }
 
     buildTypes {
+        debug {
+            // Developer PC on the LAN. Plain HTTP is permitted for debug builds only: see
+            // src/debug/res/xml/network_security_config.xml.
+            buildConfigField("String", "DEFAULT_SERVER_URL", "\"http://192.168.1.214:4000\"")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(

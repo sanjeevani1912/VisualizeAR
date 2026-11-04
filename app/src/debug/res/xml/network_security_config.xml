@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DEBUG BUILDS ONLY. This file replaces src/main/res/xml/network_security_config.xml in the debug
+  variant so the app can talk to the dashboard server on a developer PC (http://<pc-ip>:4000).
+  The address is typed on the sign-in screen, so a per-host allow-list is not possible.
+
+  Release builds keep the strict main config: cleartext only to the listed map-server hosts, and
+  the sign-in screen refuses any server address that does not start with https://.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

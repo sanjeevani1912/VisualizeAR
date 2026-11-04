@@ -12,6 +12,8 @@ import com.example.dhruvar.ui.screens.ARVisualizationScreen
 import com.example.dhruvar.ui.screens.FieldGuideScreen
 import com.example.dhruvar.ui.screens.HomeScreen
 import com.example.dhruvar.ui.screens.PlanningScreen
+import com.example.dhruvar.ui.screens.SignInScreen
+import com.example.dhruvar.viewmodel.AccountViewModel
 import com.example.dhruvar.viewmodel.PlanningViewModel
 
 /**
@@ -23,7 +25,8 @@ import com.example.dhruvar.viewmodel.PlanningViewModel
 fun AppNavigation(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
-    planningViewModel: PlanningViewModel = viewModel()
+    planningViewModel: PlanningViewModel = viewModel(),
+    accountViewModel: AccountViewModel = viewModel()
 ) {
     NavHost(
         navController = navController,
@@ -43,7 +46,19 @@ fun AppNavigation(
                 onOpenFieldGuide = {
                     navController.navigate(Screen.FieldGuide.route)
                 },
-                viewModel = planningViewModel
+                onOpenSignIn = {
+                    navController.navigate(Screen.SignIn.route)
+                },
+                viewModel = planningViewModel,
+                accountViewModel = accountViewModel
+            )
+        }
+
+        composable(Screen.SignIn.route) {
+            SignInScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onSignedIn = { navController.popBackStack() },
+                viewModel = accountViewModel
             )
         }
 

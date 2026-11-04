@@ -10,4 +10,6 @@
    <include domain="sharedpref" path="."/>
    <exclude domain="sharedpref" path="device.xml"/>
 -->
+    <!-- The dashboard sign-in token is a credential and must never leave the device. -->
+    <exclude domain="sharedpref" path="dhruvar_session.xml"/>
 </full-backup-content>
