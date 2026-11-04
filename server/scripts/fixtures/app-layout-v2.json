@@ -1,0 +1,98 @@
+{
+  "anchor": {
+    "horizontalAccuracyMeters": 4.199999809265137,
+    "headingDegrees": 12.5,
+    "latitude": 28.614,
+    "x": 0,
+    "description": "Primary deployment reference datum",
+    "z": 0,
+    "id": "9747a5ea-c121-427b-b859-0ec576f8c18b",
+    "label": "Origin Anchor",
+    "longitude": 77.21
+  },
+  "objects": [
+    {
+      "widthMeters": 27.037078857421875,
+      "heightMeters": 12.101274490356445,
+      "rotationDegrees": 0,
+      "name": "Gunship 1",
+      "x": -20,
+      "scale": 1,
+      "z": 3,
+      "id": "eb0c5f83-4c10-4417-a58f-a24845962599",
+      "lengthMeters": 39.400001525878906,
+      "assetType": "GUNSHIP"
+    },
+    {
+      "widthMeters": 6.900000095367432,
+      "heightMeters": 10.899999618530273,
+      "rotationDegrees": 15,
+      "name": "K-131 1",
+      "x": -10,
+      "scale": 1,
+      "z": 10,
+      "id": "e90f72f7-c68e-4e34-85b9-2427a18260fc",
+      "lengthMeters": 12.479999542236328,
+      "assetType": "K131"
+    },
+    {
+      "widthMeters": 6.619999885559082,
+      "heightMeters": 7.079999923706055,
+      "rotationDegrees": 30,
+      "name": "K-131 Take-Off 1",
+      "x": 0,
+      "scale": 1,
+      "z": 17,
+      "id": "60e10b8a-b330-42c4-a3f5-c18e6c94b3e3",
+      "lengthMeters": 12.479999542236328,
+      "assetType": "K131_TAKEOFF"
+    },
+    {
+      "widthMeters": 3.4486804008483887,
+      "heightMeters": 6.193548202514648,
+      "rotationDegrees": 45,
+      "name": "Military Vehicle 1",
+      "x": 10,
+      "scale": 1,
+      "z": 24,
+      "id": "b54a2c84-5929-4fef-8d68-49d82aa2d59f",
+      "lengthMeters": 8,
+      "assetType": "MILITARY_VEHICLE"
+    },
+    {
+      "widthMeters": 4.860000133514404,
+      "heightMeters": 7.079999923706055,
+      "rotationDegrees": 60,
+      "name": "Off-road Vehicle 1",
+      "x": 20,
+      "scale": 1,
+      "z": 31,
+      "id": "94920f63-8818-4fc5-8b6a-c297a89f9b21",
+      "lengthMeters": 9.319999694824219,
+      "assetType": "OFFROAD_VEHICLE"
+    },
+    {
+      "widthMeters": 6.869748115539551,
+      "heightMeters": 6.9430251121521,
+      "rotationDegrees": 75,
+      "name": "STR-MGS 1",
+      "x": 30,
+      "scale": 1,
+      "z": 38,
+      "id": "ddd9a15e-2019-4a49-817a-9b4927df3f70",
+      "lengthMeters": 15.260000228881836,
+      "assetType": "STR_MGS"
+    }
+  ],
+  "name": "Real serializer sample",
+  "createdAtEpochMs": 1793695973822,
+  "id": "9f30b216-1f83-4d1a-ad85-05421bc11dc2",
+  "updatedAtEpochMs": 1793695973822,
+  "version": 2,
+  "regionBounds": {
+    "westLongitude": 77.2075,
+    "northLatitude": 28.6165,
+    "eastLongitude": 77.2125,
+    "southLatitude": 28.6115
+  }
+}

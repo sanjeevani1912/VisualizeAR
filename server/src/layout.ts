@@ -4,7 +4,16 @@ import { z } from 'zod'
 // Accepts the JSON the Android app writes (layout schema v2, docs/layout-schema-v2.md) and
 // normalises it into the shape the dashboard stores. Anything malformed is rejected, not repaired.
 
+// Sizes are only a fallback for a file that omits them; the app always writes real dimensions.
+// The first six are the app's current asset library (AssetType.kt / AssetSizeConfig.kt). The
+// last five were retired from the app but are kept so older plans and the demo data still load.
 export const ASSET_DEFAULTS = {
+  GUNSHIP: { w: 13.52, l: 19.7, h: 6.05 },
+  K131: { w: 3.45, l: 6.24, h: 5.45 },
+  K131_TAKEOFF: { w: 3.31, l: 6.24, h: 3.54 },
+  MILITARY_VEHICLE: { w: 1.72, l: 4, h: 3.1 },
+  OFFROAD_VEHICLE: { w: 2.43, l: 4.66, h: 3.54 },
+  STR_MGS: { w: 3.44, l: 7.63, h: 3.47 },
   TENT: { w: 4, l: 6, h: 2.5 },
   TRUCK: { w: 2.5, l: 8, h: 3.2 },
   CAR: { w: 1.8, l: 4.5, h: 1.5 },
@@ -12,6 +21,7 @@ export const ASSET_DEFAULTS = {
   TRENCH: { w: 1.2, l: 10, h: 1.8 },
 } as const
 type AssetType = keyof typeof ASSET_DEFAULTS
+const ASSET_TYPES = Object.keys(ASSET_DEFAULTS) as [AssetType, ...AssetType[]]
 
 const lat = z.number().min(-90).max(90)
 const lng = z.number().min(-180).max(180)
@@ -20,7 +30,7 @@ const size = z.number().positive().max(1000)
 
 const objectSchema = z.object({
   id: z.string().max(80).optional(),
-  assetType: z.enum(['TENT', 'TRUCK', 'CAR', 'ANTENNA', 'TRENCH']),
+  assetType: z.enum(ASSET_TYPES),
   name: z.string().max(80).optional(),
   x: meters,
   z: meters,

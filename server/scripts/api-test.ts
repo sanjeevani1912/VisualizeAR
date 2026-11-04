@@ -98,6 +98,91 @@ test('login works, sets an httpOnly session cookie, and wrong passwords are reje
   assert.equal((await c.call('GET', '/auth/me')).json.username, 'menon')
 })
 
+test('the phone app can sign in for a bearer token and submit a plan with it', async () => {
+  const auth = (t: string) => ({ authorization: `Bearer ${t}`, 'content-type': 'application/json' })
+  const res = await fetch(base + '/auth/token', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'rao', password: pw.rao }) })
+  assert.equal(res.status, 200)
+  assert.equal(res.headers.get('set-cookie'), null, 'no cookie for app sign-in')
+  const { token, user } = (await res.json()) as any
+  assert.equal(user.role, 'planner')
+
+  // No x-requested-with header is needed; the bearer token is not sent by browsers on their own.
+  const made = await fetch(base + '/plans', { method: 'POST', headers: auth(token), body: JSON.stringify({ layout: layout('From the app'), note: 'sent by app' }) })
+  assert.equal(made.status, 201)
+  const plan = (await made.json()) as any
+  const mine = (await (await fetch(base + '/plans', { headers: auth(token) })).json()) as any[]
+  assert.equal(mine.find((p) => p.id === plan.id)?.ownerId, user.id)
+
+  // A wrong token gets nothing, and a wrong password gets no token.
+  assert.equal((await fetch(base + '/plans', { headers: auth('x'.repeat(43)) })).status, 401)
+  const bad = await fetch(base + '/auth/token', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'rao', password: 'nope' }) })
+  assert.equal(bad.status, 401)
+
+  // Signing out ends that token.
+  assert.equal((await fetch(base + '/auth/logout', { method: 'POST', headers: auth(token) })).status, 200)
+  assert.equal((await fetch(base + '/plans', { headers: auth(token) })).status, 401)
+})
+
+test('a layout file exactly as the Android app writes it is accepted and can be matched by its id', async () => {
+  // Field-for-field what LayoutJsonSerializer.serialize() emits (docs/layout-schema-v2.md),
+  // including the extras the dashboard ignores: anchor id/label/x/z, timestamps and scale.
+  const fromApp = {
+    version: 2,
+    id: 'b6c7f3a2-0000-4000-8000-aaaaaaaaaaaa',
+    name: 'Phone plan',
+    createdAtEpochMs: 1761900000000,
+    updatedAtEpochMs: 1761900500000,
+    regionBounds: { northLatitude: 28.6165, southLatitude: 28.6115, eastLongitude: 77.2125, westLongitude: 77.2075 },
+    anchor: {
+      id: 'anchor-1', label: 'Origin Anchor', x: 0, z: 0, description: 'Primary deployment reference datum',
+      latitude: 28.614, longitude: 77.21, headingDegrees: 12.5, horizontalAccuracyMeters: 4.2,
+    },
+    objects: [
+      { id: 'o1', assetType: 'TENT', name: 'Tent 1', x: 5, z: -2, rotationDegrees: 30, widthMeters: 4, lengthMeters: 6, heightMeters: 3, scale: 1 },
+      { id: 'o2', assetType: 'TRUCK', name: 'Truck 1', x: -12.5, z: 20, rotationDegrees: 180, widthMeters: 2.5, lengthMeters: 8, heightMeters: 3.2, scale: 1 },
+    ],
+  }
+  const auth = (t: string) => ({ authorization: `Bearer ${t}`, 'content-type': 'application/json' })
+  const tok = (await (await fetch(base + '/auth/token', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'bose', password: pw.bose }) })).json()) as any
+  const made = await fetch(base + '/plans', { method: 'POST', headers: auth(tok.token), body: JSON.stringify({ layout: fromApp, note: '' }) })
+  assert.equal(made.status, 201)
+  const { id } = (await made.json()) as any
+
+  const mine = (await (await fetch(base + '/plans', { headers: auth(tok.token) })).json()) as any[]
+  const plan = mine.find((p) => p.id === id)
+  const sent = plan.versions[plan.versions.length - 1].layout
+  assert.equal(sent.id, fromApp.id, 'the app finds its plan again by layout id')
+  assert.equal(plan.status, 'SUBMITTED')
+  assert.deepEqual(sent.objects.map((o: any) => [o.assetType, o.x, o.z, o.rotationDegrees]), [['TENT', 5, -2, 30], ['TRUCK', -12.5, 20, 180]])
+  assert.equal(sent.anchor.headingDegrees, 12.5)
+})
+
+// scripts/fixtures/app-layout-v2.json was written by the Android app's own LayoutJsonSerializer
+// with one object of every asset type in the current library. If the app's format or asset
+// library changes, regenerate it from the app; this test then shows exactly what the server
+// no longer accepts, before a planner finds out by failing to send.
+test('a plan written by the real app, with every current asset type, is stored without change', async () => {
+  const sample = JSON.parse(fs.readFileSync(path.join(root, 'scripts', 'fixtures', 'app-layout-v2.json'), 'utf8'))
+  assert.ok(sample.objects.length >= 6)
+  const auth = (t: string) => ({ authorization: `Bearer ${t}`, 'content-type': 'application/json' })
+  const tok = (await (await fetch(base + '/auth/token', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'khan', password: pw.khan }) })).json()) as any
+  const made = await fetch(base + '/plans', { method: 'POST', headers: auth(tok.token), body: JSON.stringify({ layout: sample, note: '' }) })
+  assert.equal(made.status, 201, JSON.stringify(await made.clone().json()))
+  const { id } = (await made.json()) as any
+  const plan = ((await (await fetch(base + '/plans', { headers: auth(tok.token) })).json()) as any[]).find((p) => p.id === id)
+  const stored = plan.versions[0].layout
+  assert.equal(stored.id, sample.id)
+  assert.equal(stored.objects.length, sample.objects.length)
+  sample.objects.forEach((o: any, i: number) => {
+    const s = stored.objects[i]
+    assert.deepEqual(
+      [s.assetType, s.x, s.z, s.rotationDegrees, s.widthMeters, s.lengthMeters, s.heightMeters],
+      [o.assetType, o.x, o.z, o.rotationDegrees, o.widthMeters, o.lengthMeters, o.heightMeters],
+      `object ${i} (${o.assetType}) changed on the way in`,
+    )
+  })
+})
+
 test('repeated failures lock the account for that client', async () => {
   const c = new Client()
   let last = 0

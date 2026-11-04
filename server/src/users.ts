@@ -12,12 +12,13 @@ import {
   destroySession,
   destroyUserSessions,
   hashPassword,
+  presentedToken,
   requireAuth,
   requireRole,
   setSessionCookie,
   verifyPassword,
 } from './auth.js'
-import { COOKIE_NAME } from './config.js'
+import { COOKIE_NAME, config } from './config.js'
 import { all, get, run, tx } from './db.js'
 import { passwordError } from './rules.js'
 
@@ -42,9 +43,26 @@ authRouter.post('/auth/login', (req, res) => {
   res.json(user)
 })
 
+/**
+ * Sign-in for the phone app: same checks and lock-out as the browser login, but the session token
+ * comes back in the response body (to be sent as `Authorization: Bearer`) and no cookie is set.
+ */
+authRouter.post('/auth/token', (req, res) => {
+  const parsed = z.object({ username: z.string().max(80), password: z.string().max(200) }).safeParse(req.body)
+  if (!parsed.success) throw new HttpError(400, 'Username and password are required')
+  const ip = req.ip ?? 'unknown'
+  const wait = checkLocked(parsed.data.username, ip)
+  if (wait > 0) throw new HttpError(429, `Too many failed attempts. Try again in ${wait} minute${wait === 1 ? '' : 's'}`)
+  const user = authenticate(parsed.data.username, parsed.data.password, ip)
+  if (!user) throw new HttpError(401, 'Incorrect username or password')
+  const token = createSession(user.id)
+  audit(user.id, 'Signed in', null, `${user.username} signed in from the app`)
+  res.json({ token, idleMinutes: config.sessionIdleMinutes, user })
+})
+
 authRouter.post('/auth/logout', (req, res) => {
-  const token = req.cookies?.[COOKIE_NAME]
-  if (typeof token === 'string' && token) destroySession(token)
+  const token = presentedToken(req)
+  if (token) destroySession(token)
   clearSessionCookie(res)
   res.json({ ok: true })
 })

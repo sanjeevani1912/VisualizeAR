@@ -15,6 +15,8 @@ export interface SessionUser {
 declare module 'express-serve-static-core' {
   interface Request {
     user?: SessionUser
+    /** True when the caller authenticated with an Authorization header (the phone app), not a cookie. */
+    viaBearer?: boolean
   }
 }
 
@@ -146,14 +148,34 @@ function userForToken(token: string): SessionUser | null {
 }
 
 // ---------- middleware ----------
+/** The session token the caller presented: an Authorization bearer token wins over the cookie. */
+export function presentedToken(req: Request): string | null {
+  const header = req.get('authorization')
+  if (header) {
+    const m = /^Bearer ([A-Za-z0-9_-]{20,100})$/.exec(header)
+    return m ? m[1]! : null
+  }
+  const cookie = req.cookies?.[COOKIE_NAME]
+  return typeof cookie === 'string' && cookie ? cookie : null
+}
+
 export function loadUser(req: Request, _res: Response, next: NextFunction): void {
-  const token = req.cookies?.[COOKIE_NAME]
-  if (typeof token === 'string' && token) req.user = userForToken(token) ?? undefined
+  const token = presentedToken(req)
+  if (token) {
+    req.user = userForToken(token) ?? undefined
+    req.viaBearer = !!req.get('authorization')
+  }
   next()
 }
 
-/** State-changing requests must carry a custom header, which cross-site forms cannot set. */
+/**
+ * State-changing requests must carry a custom header, which cross-site forms cannot set.
+ * A bearer token is never sent by a browser on its own, so those requests are not forgeable that way.
+ */
 export function csrfGuard(req: Request, _res: Response, next: NextFunction): void {
+  if (req.viaBearer && req.user) return next()
+  // App sign-in sets no cookie and needs the password, so there is nothing for a forged request to ride on.
+  if (req.method === 'POST' && req.path === '/auth/token') return next()
   if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && req.get('x-requested-with') !== 'dhruvar') {
     throw new HttpError(403, 'Missing request header')
   }
