@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="500" viewBox="0 0 960 500">
+  <rect width="960" height="500" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">API surface</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">All routes sit under /api. Responses are no-store. Roles are checked again inside each handler.</text>
+
+  <g font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">
+    <rect x="32" y="100" width="440" height="250" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="48" y="132" font-size="15" font-weight="600" fill="#1C1915">Auth and users</text>
+    <text x="48" y="164">POST /auth/login     browser cookie</text>
+    <text x="48" y="188">POST /auth/token     phone bearer</text>
+    <text x="48" y="212">POST /auth/logout</text>
+    <text x="48" y="236">GET  /auth/me</text>
+    <text x="48" y="260">POST /auth/change-password</text>
+    <text x="48" y="284">GET/POST/PATCH /users   admin</text>
+    <text x="48" y="316">POST /users/:id/password</text>
+
+    <rect x="492" y="100" width="436" height="250" rx="8" fill="#F3E6E2" stroke="#8C3F32"/>
+    <text x="508" y="132" font-size="15" font-weight="600" fill="#1C1915">Plans</text>
+    <text x="508" y="164">GET  /plans</text>
+    <text x="508" y="188">POST /plans                         planner</text>
+    <text x="508" y="212">POST /plans/:id/versions            planner</text>
+    <text x="508" y="236">POST /plans/:id/withdraw</text>
+    <text x="508" y="260">POST /plans/:id/start-review</text>
+    <text x="508" y="284">POST /plans/:id/decision</text>
+    <text x="508" y="316">POST /plans/:id/comments</text>
+  </g>
+  <text x="32" y="390" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Images: POST /plans/:id/attachments, GET and DELETE /attachments/:id.</text>
+  <text x="32" y="418" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Audit: GET /audit for the activity page. GET /audit/verify for admin and auditor.</text>
+  <text x="32" y="446" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">GET /health returns ok. JSON body limit is 2 MB. A layout the parser rejects is not repaired.</text>
+  <text x="32" y="474" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Rules live in server/src/rules.ts with no database calls, so the state machine is unit-tested on its own.</text>
+</svg>

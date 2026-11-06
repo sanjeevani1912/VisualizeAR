@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520">
+  <rect width="960" height="520" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Find location</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">Step 1 chooses a map centre. It is session-only and is not written into the layout file.</text>
+
+  <rect x="40" y="110" width="420" height="250" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+  <text x="60" y="146" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Place search</text>
+  <text x="60" y="178" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">GET /search?q= on the map server</text>
+  <text x="60" y="206" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">A hit becomes ChosenMapLocation</text>
+  <text x="60" y="234" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">latitude, longitude, display name, zoom</text>
+  <text x="60" y="262" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">The camera moves there. The map stays</text>
+  <text x="60" y="286" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">in Navigate. This step does not draw a box.</text>
+  <text x="60" y="328" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#5C564C">Cleared when the operator starts a new plan.</text>
+
+  <rect x="500" y="110" width="420" height="250" rx="8" fill="#F3EBD4" stroke="#8A6A2F"/>
+  <text x="520" y="146" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">GNSS Detect</text>
+  <text x="520" y="178" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Platform GNSS receiver, not fused location</text>
+  <text x="520" y="206" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Status line: permission, GPS off, error,</text>
+  <text x="520" y="230" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">network approximation, or satellite fix</text>
+  <text x="520" y="258" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">A satellite fix shows accuracy and the</text>
+  <text x="520" y="282" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">count of satellites in view and in the fix</text>
+  <text x="520" y="328" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#5C564C">Detect recentres the map on the device.</text>
+
+  <text x="40" y="420" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Continue is available after a place is chosen or the map has a centre the operator accepts.</text>
+  <text x="40" y="448" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">If the map server is empty, the app falls back to the public style and search is off.</text>
+  <text x="40" y="476" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Tiles are display only. Saved coordinates are WGS84 numbers inside the layout, not tile pixels.</text>
+</svg>

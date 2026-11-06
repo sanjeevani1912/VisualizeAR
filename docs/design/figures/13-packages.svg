@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="620" viewBox="0 0 960 620">
+  <rect width="960" height="620" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Android packages</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">com.example.dhruvar. Screens call view models. View models call domain and data. Domain has no Android UI.</text>
+
+  <g font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#1C1915">
+    <rect x="32" y="100" width="290" height="150" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="48" y="128" font-size="15" font-weight="600">ui</text>
+    <text x="48" y="154" fill="#3D4450">screens: Home, Planning, AR, SignIn</text>
+    <text x="48" y="176" fill="#3D4450">components: HUD, GNSS bar, picker</text>
+    <text x="48" y="198" fill="#3D4450">map: PlanningMapView, region overlay</text>
+    <text x="48" y="220" fill="#3D4450">ar.render: GLB, meshes, GLES</text>
+
+    <rect x="338" y="100" width="290" height="150" rx="8" fill="#F3E6E2" stroke="#8C3F32"/>
+    <text x="354" y="128" font-size="15" font-weight="600">viewmodel</text>
+    <text x="354" y="154" fill="#3D4450">PlanningViewModel</text>
+    <text x="354" y="176" fill="#3D4450">AccountViewModel</text>
+    <text x="354" y="198" fill="#3D4450">StateFlow of UI state</text>
+    <text x="354" y="220" fill="#3D4450">No dependency-injection framework</text>
+
+    <rect x="644" y="100" width="284" height="150" rx="8" fill="#F3EBD4" stroke="#8A6A2F"/>
+    <text x="660" y="128" font-size="15" font-weight="600">navigation</text>
+    <text x="660" y="154" fill="#3D4450">AppNavigation NavHost</text>
+    <text x="660" y="176" fill="#3D4450">Home is the start route</text>
+    <text x="660" y="198" fill="#3D4450">One PlanningViewModel for the graph</text>
+    <text x="660" y="220" fill="#3D4450">AccountViewModel is shared too</text>
+
+    <rect x="32" y="280" width="440" height="180" rx="8" fill="#E8E6F2" stroke="#3D4450"/>
+    <text x="48" y="310" font-size="15" font-weight="600">domain</text>
+    <text x="48" y="338" fill="#3D4450">model: Layout, Anchor, LayoutObject, AssetType</text>
+    <text x="48" y="360" fill="#3D4450">model: AssetCatalog, AssetSizeConfig, setup steps</text>
+    <text x="48" y="382" fill="#3D4450">spatial: region draft, lat/lng conversion</text>
+    <text x="48" y="404" fill="#3D4450">location: GNSS state. ar: visualization scale</text>
+    <text x="48" y="432" fill="#3D4450">Pure Kotlin. Unit tests live beside these types.</text>
+
+    <rect x="492" y="280" width="436" height="180" rx="8" fill="#E7EEF2" stroke="#3D4450"/>
+    <text x="508" y="310" font-size="15" font-weight="600">data</text>
+    <text x="508" y="338" fill="#3D4450">model: LayoutJsonSerializer schema v2</text>
+    <text x="508" y="360" fill="#3D4450">repository: atomic JSON file writes</text>
+    <text x="508" y="382" fill="#3D4450">location: PlatformGnssLocationController</text>
+    <text x="508" y="404" fill="#3D4450">map: MapBasemapConfig</text>
+    <text x="508" y="432" fill="#3D4450">remote: ServerClient, SessionStore, SentPlanStore</text>
+  </g>
+  <text x="32" y="520" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">MainActivity hosts Compose and installs the GLB model source from assets/models.</text>
+  <text x="32" y="548" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Debug network security allows cleartext to the LAN map server and the dashboard. Release does not.</text>
+  <text x="32" y="580" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Min SDK 24, target SDK 36. UI is Jetpack Compose and Material 3, forced to the light Field Kit theme.</text>
+</svg>

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="620" viewBox="0 0 960 620">
+  <rect width="960" height="620" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Android layers</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">One shared PlanningViewModel. The saved Layout is the source of truth.</text>
+
+  <rect x="80" y="100" width="800" height="78" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+  <text x="100" y="132" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Screens</text>
+  <text x="100" y="156" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Home · Sign in · Planning map · AR visualization · Field guide</text>
+
+  <rect x="80" y="198" width="800" height="78" rx="8" fill="#F3E6E2" stroke="#8C3F32"/>
+  <text x="100" y="230" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">View models</text>
+  <text x="100" y="254" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">PlanningViewModel owns the layout. AccountViewModel owns sign-in and send.</text>
+
+  <rect x="80" y="296" width="800" height="90" rx="8" fill="#F3EBD4" stroke="#8A6A2F"/>
+  <text x="100" y="328" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Domain</text>
+  <text x="100" y="352" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Layout, Anchor, LayoutObject, AssetType, AssetSizeConfig</text>
+  <text x="100" y="372" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Region geometry, lat/lng to meters, setup steps, AR scale</text>
+
+  <rect x="80" y="406" width="386" height="110" rx="8" fill="#E8E6F2" stroke="#3D4450"/>
+  <text x="100" y="440" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Local data</text>
+  <text x="100" y="464" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">JSON files in dhruvar_layouts/</text>
+  <text x="100" y="486" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">GNSS, MapLibre, encrypted session</text>
+
+  <rect x="494" y="406" width="386" height="110" rx="8" fill="#E8E6F2" stroke="#3D4450"/>
+  <text x="514" y="440" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Device</text>
+  <text x="514" y="464" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">ARCore + OpenGL ES 2.0</text>
+  <text x="514" y="486" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">GLB models, camera, MediaStore</text>
+
+  <text x="80" y="560" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#5C564C">AR and the dashboard never become the saved plan. They read the Layout, or a copy of it.</text>
+</svg>

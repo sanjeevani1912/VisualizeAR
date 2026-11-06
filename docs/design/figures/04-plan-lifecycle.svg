@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="460" viewBox="0 0 960 460">
+  <rect width="960" height="460" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Plan lifecycle</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">The server stores each submission as a numbered version. A decision names that version.</text>
+
+  <g font-family="Segoe UI, Calibri, sans-serif">
+    <rect x="40" y="120" width="160" height="70" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="60" y="150" font-size="15" font-weight="600" fill="#1C1915">SUBMITTED</text>
+    <text x="60" y="170" font-size="12" fill="#3D4450">Planner sent it</text>
+
+    <rect x="260" y="120" width="180" height="70" rx="8" fill="#F3EBD4" stroke="#8A6A2F"/>
+    <text x="280" y="150" font-size="15" font-weight="600" fill="#1C1915">UNDER REVIEW</text>
+    <text x="280" y="170" font-size="12" fill="#3D4450">Reviewer opened it</text>
+
+    <rect x="500" y="40" width="180" height="64" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="520" y="78" font-size="15" font-weight="600" fill="#1C1915">APPROVED</text>
+
+    <rect x="500" y="124" width="200" height="64" rx="8" fill="#F3E6E2" stroke="#8C3F32"/>
+    <text x="520" y="162" font-size="15" font-weight="600" fill="#1C1915">CHANGES REQUESTED</text>
+
+    <rect x="500" y="208" width="180" height="64" rx="8" fill="#E8E4E0" stroke="#3D4450"/>
+    <text x="520" y="246" font-size="15" font-weight="600" fill="#1C1915">REJECTED</text>
+
+    <rect x="760" y="124" width="160" height="64" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="780" y="162" font-size="15" font-weight="600" fill="#1C1915">New version</text>
+
+    <rect x="40" y="280" width="160" height="64" rx="8" fill="#E8E4E0" stroke="#3D4450"/>
+    <text x="60" y="318" font-size="15" font-weight="600" fill="#1C1915">WITHDRAWN</text>
+  </g>
+  <path d="M200 155 H260" stroke="#1C1915" stroke-width="1.4"/>
+  <path d="M440 140 H500" stroke="#1C1915" stroke-width="1.4"/>
+  <path d="M440 155 H490 V156 H500" stroke="#1C1915" stroke-width="1.2" fill="none"/>
+  <path d="M440 170 V240 H500" stroke="#1C1915" stroke-width="1.2" fill="none"/>
+  <path d="M700 156 H760" stroke="#8C3F32" stroke-width="1.4"/>
+  <path d="M680 240 H740 V186" stroke="#3D4450" stroke-width="1.2" fill="none"/>
+  <path d="M120 190 V280" stroke="#3D4450" stroke-width="1.2"/>
+
+  <text x="40" y="400" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">A planner can withdraw while the plan is submitted or under review.</text>
+  <text x="40" y="424" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Resubmit is allowed after changes or rejection. The reviewer cannot decide their own plan.</text>
+</svg>

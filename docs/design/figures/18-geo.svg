@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520">
+  <rect width="960" height="520" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Shared geography</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">Android GeographicCoordinateConverter and web geo.ts use the same local equirectangular conversion.</text>
+
+  <rect x="32" y="110" width="896" height="150" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+  <text x="52" y="146" font-family="Segoe UI, Calibri, sans-serif" font-size="15" font-weight="600" fill="#1C1915">Metres to latitude and longitude</text>
+  <text x="52" y="178" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Rotate (x, z) by the anchor heading. East and north come out of that rotation.</text>
+  <text x="52" y="206" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Latitude adds north / 6,371,008.7714 m. Longitude divides east by the cosine of latitude.</text>
+  <text x="52" y="234" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Heading 0: +Z is north, +X is east. GeoJSON for the map is [longitude, latitude].</text>
+
+  <rect x="32" y="284" width="430" height="160" rx="8" fill="#F3EBD4" stroke="#8A6A2F"/>
+  <text x="52" y="320" font-family="Segoe UI, Calibri, sans-serif" font-size="15" font-weight="600" fill="#1C1915">Footprint</text>
+  <text x="52" y="350" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Four corners from half width and half length.</text>
+  <text x="52" y="376" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Rotate by the object's own degrees.</text>
+  <text x="52" y="402" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Add the object x, z, then convert.</text>
+  <text x="52" y="428" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">The ring closes on the first corner.</text>
+
+  <rect x="486" y="284" width="442" height="160" rx="8" fill="#F3E6E2" stroke="#8C3F32"/>
+  <text x="506" y="320" font-family="Segoe UI, Calibri, sans-serif" font-size="15" font-weight="600" fill="#1C1915">Grid</text>
+  <text x="506" y="350" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Spacing follows the shorter region side.</text>
+  <text x="506" y="376" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Under 100 m: 10 m. Under 500 m: 25 m.</text>
+  <text x="506" y="402" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Under 2 km: 50 m. Otherwise 100 m.</text>
+  <text x="506" y="428" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Lines are clipped to the region.</text>
+</svg>

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560">
+  <rect width="960" height="560" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Authentication</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">Two ways to present the same session token. The browser uses a cookie. The phone uses a bearer header.</text>
+
+  <rect x="32" y="110" width="430" height="250" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+  <text x="52" y="146" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Browser</text>
+  <text x="52" y="178" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">POST /api/auth/login</text>
+  <text x="52" y="206" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">httpOnly, SameSite=Strict cookie</text>
+  <text x="52" y="234" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Mutations also send</text>
+  <text x="52" y="258" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">X-Requested-With: dhruvar</text>
+  <text x="52" y="290" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Idle 60 min, absolute 12 h</text>
+  <text x="52" y="326" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#5C564C">COOKIE_SECURE=true behind HTTPS.</text>
+
+  <rect x="498" y="110" width="430" height="250" rx="8" fill="#F3E6E2" stroke="#8C3F32"/>
+  <text x="518" y="146" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Android app</text>
+  <text x="518" y="178" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">POST /api/auth/token</text>
+  <text x="518" y="206" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Authorization: Bearer token</text>
+  <text x="518" y="234" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Bearer skips the CSRF header</text>
+  <text x="518" y="258" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">because a browser will not attach it</text>
+  <text x="518" y="290" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">401 clears the local session</text>
+  <text x="518" y="326" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#5C564C">Sign-out still calls the server.</text>
+
+  <text x="32" y="410" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Passwords are scrypt with a per-user salt. Minimum 10 characters, with upper, lower, and a digit.</text>
+  <text x="32" y="438" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Five failures for the same username and IP lock that pair for 15 minutes. Unknown users cost the same time.</text>
+  <text x="32" y="466" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Changing a role or disabling a user ends that user's sessions.</text>
+  <text x="32" y="494" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Only a hash of the token is stored. Helmet sets a strict content security policy on the API process.</text>
+  <text x="32" y="522" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">If web/dist exists, the same process serves the built dashboard, so production is one origin.</text>
+</svg>

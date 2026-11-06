@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520">
+  <rect width="960" height="520" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Origin and coordinates</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">Every asset is stored as meters from one geographic point. Pixels are never saved.</text>
+
+  <rect x="40" y="110" width="430" height="280" rx="8" fill="#E7EEF2" stroke="#3D4450"/>
+  <line x1="80" y1="250" x2="430" y2="250" stroke="#2F4A3C" stroke-width="1.5"/>
+  <line x1="255" y1="140" x2="255" y2="360" stroke="#8C3F32" stroke-width="1.5"/>
+  <circle cx="255" cy="250" r="7" fill="#1C1915"/>
+  <text x="268" y="242" font-family="Segoe UI, Calibri, sans-serif" font-size="13" font-weight="600" fill="#1C1915">Origin</text>
+  <text x="360" y="242" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#2F4A3C">+X right</text>
+  <text x="262" y="160" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#8C3F32">+Z forward</text>
+  <text x="70" y="400" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#5C564C">Heading 0 means +Z points north.</text>
+
+  <rect x="500" y="110" width="420" height="280" rx="8" fill="#F7F4EE" stroke="#C8C2B6"/>
+  <text x="520" y="146" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">How the origin is set</text>
+  <text x="520" y="180" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">1. Region centre, the default</text>
+  <text x="520" y="208" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">2. A tap on the map, inside the box</text>
+  <text x="520" y="236" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">3. Stamp the current GNSS fix</text>
+  <text x="520" y="264" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">4. Capture compass heading</text>
+  <text x="520" y="304" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Stored: latitude, longitude, heading,</text>
+  <text x="520" y="328" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">and horizontal accuracy in metres</text>
+  <text x="520" y="360" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#8C3F32">A point outside the region is rejected.</text>
+
+  <text x="40" y="450" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Height is a size, not a placement. Objects sit on the ground. +Y is up and is not stored as a position.</text>
+  <text x="40" y="478" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">The same metre offsets are what the dashboard map and the AR scene both read.</text>
+</svg>

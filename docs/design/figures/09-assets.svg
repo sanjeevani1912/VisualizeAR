@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560">
+  <rect width="960" height="560" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Real-size asset placement</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">A model is scaled uniformly to a published length, then multiplied by the region factor.</text>
+
+  <g font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#1C1915">
+    <rect x="32" y="100" width="200" height="70" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="48" y="130" font-weight="600">GLB proportions</text>
+    <text x="48" y="152" font-size="12" fill="#3D4450">width, length, height</text>
+    <rect x="268" y="100" width="220" height="70" rx="8" fill="#F3EBD4" stroke="#8A6A2F"/>
+    <text x="284" y="130" font-weight="600">Real length</text>
+    <text x="284" y="152" font-size="12" fill="#3D4450">longest side, metres</text>
+    <rect x="524" y="100" width="180" height="70" rx="8" fill="#F3E6E2" stroke="#8C3F32"/>
+    <text x="540" y="130" font-weight="600">Region factor</text>
+    <text x="540" y="152" font-size="12" fill="#3D4450">side / 150 m</text>
+    <rect x="740" y="100" width="188" height="70" rx="8" fill="#E8E6F2" stroke="#3D4450"/>
+    <text x="756" y="130" font-weight="600">Saved object</text>
+    <text x="756" y="152" font-size="12" fill="#3D4450">x, z, size, rotation</text>
+  </g>
+  <path d="M232 135 H268 M488 135 H524 M704 135 H740" stroke="#1C1915" stroke-width="1.4"/>
+
+  <rect x="32" y="200" width="896" height="210" rx="8" fill="#F7F4EE" stroke="#C8C2B6"/>
+  <text x="52" y="232" font-family="Segoe UI, Calibri, sans-serif" font-size="15" font-weight="600" fill="#1C1915">Library and baseline length</text>
+  <g font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">
+    <text x="52" y="268">Gunship 19.7 m</text>
+    <text x="280" y="268">Military vehicle 4.0 m</text>
+    <text x="560" y="268">Off-road vehicle 4.66 m</text>
+    <text x="52" y="300">STR-MGS 7.63 m</text>
+    <text x="280" y="300">K-131 6.24 m</text>
+    <text x="560" y="300">K-131 Take-Off 6.24 m</text>
+    <text x="52" y="348">150 m region = 1.00 times real length</text>
+    <text x="52" y="374">250 m default = about 1.67 times, clamped between 0.50 and 3.00</text>
+  </g>
+
+  <text x="32" y="460" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Changing the region rescales assets already placed, by the ratio of the two factors.</text>
+  <text x="32" y="488" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">The map draws a top-down footprint at that size. Hit testing uses the same rectangle.</text>
+  <text x="32" y="516" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">K-131 keeps the supplied model length because no published overall length is in the config.</text>
+</svg>

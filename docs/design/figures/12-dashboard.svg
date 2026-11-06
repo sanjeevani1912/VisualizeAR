@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <rect width="960" height="540" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Web dashboard</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">One React app, two data sources. Live mode calls the API. Demo mode stays in the browser.</text>
+
+  <rect x="32" y="110" width="440" height="250" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+  <text x="52" y="146" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Live  /</text>
+  <text x="52" y="178" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Cookie session after /api/auth/login</text>
+  <text x="52" y="206" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Overview, plans, plan detail, activity</text>
+  <text x="52" y="234" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Planner: upload a layout JSON</text>
+  <text x="52" y="262" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Admin: users. Everyone: own password</text>
+  <text x="52" y="290" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Detail map draws region, grid, footprints</text>
+  <text x="52" y="328" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#5C564C">Vite dev server proxies /api to port 4000.</text>
+
+  <rect x="492" y="110" width="436" height="250" rx="8" fill="#F3EBD4" stroke="#8A6A2F"/>
+  <text x="512" y="146" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Demo  /demo</text>
+  <text x="512" y="178" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Same screens, fictional data in mock.ts</text>
+  <text x="512" y="206" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">No password. No server.</text>
+  <text x="512" y="234" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Kept so a presentation can run offline</text>
+  <text x="512" y="262" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Old asset types still draw here</text>
+  <text x="512" y="290" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Tent, truck, car, antenna, trench</text>
+  <text x="512" y="328" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#5C564C">The legend lists only types present in the plan.</text>
+
+  <text x="32" y="410" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Plan detail links the asset table to the map. Decisions confirm against a content hash of that version.</text>
+  <text x="32" y="438" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Field images are JPEG, PNG, or WebP, checked by file bytes, up to 10 MB and 30 per plan.</text>
+  <text x="32" y="466" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">The map is offline by default. A basemap appears only when VITE_MAP_STYLE_URL is set.</text>
+  <text x="32" y="494" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Footprints use the width and length stored on each object, including the region size factor.</text>
+</svg>

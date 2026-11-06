@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="480" viewBox="0 0 960 480">
+  <rect width="960" height="480" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Roles</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">The server checks the role on every request. The web screens only hide what the role cannot do.</text>
+
+  <g font-family="Segoe UI, Calibri, sans-serif">
+    <rect x="32" y="110" width="216" height="250" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="52" y="146" font-size="18" font-weight="600" fill="#1C1915">Planner</text>
+    <text x="52" y="180" font-size="14" fill="#3D4450">Own plans only</text>
+    <text x="52" y="206" font-size="14" fill="#3D4450">Submit and resubmit</text>
+    <text x="52" y="232" font-size="14" fill="#3D4450">Withdraw while open</text>
+    <text x="52" y="258" font-size="14" fill="#3D4450">Comment and photos</text>
+    <text x="52" y="284" font-size="14" fill="#3D4450">Phone uses this role</text>
+
+    <rect x="264" y="110" width="216" height="250" rx="8" fill="#F3E6E2" stroke="#8C3F32"/>
+    <text x="284" y="146" font-size="18" font-weight="600" fill="#1C1915">Reviewer</text>
+    <text x="284" y="180" font-size="14" fill="#3D4450">All plans</text>
+    <text x="284" y="206" font-size="14" fill="#3D4450">Start review</text>
+    <text x="284" y="232" font-size="14" fill="#3D4450">Approve, reject, changes</text>
+    <text x="284" y="258" font-size="14" fill="#3D4450">Reason required</text>
+    <text x="284" y="284" font-size="14" fill="#3D4450">except on approve</text>
+
+    <rect x="496" y="110" width="216" height="250" rx="8" fill="#F3EBD4" stroke="#8A6A2F"/>
+    <text x="516" y="146" font-size="18" font-weight="600" fill="#1C1915">Admin</text>
+    <text x="516" y="180" font-size="14" fill="#3D4450">Create users</text>
+    <text x="516" y="206" font-size="14" fill="#3D4450">Change role</text>
+    <text x="516" y="232" font-size="14" fill="#3D4450">Disable an account</text>
+    <text x="516" y="258" font-size="14" fill="#3D4450">Reset a password</text>
+    <text x="516" y="284" font-size="14" fill="#3D4450">Cannot decide a plan</text>
+
+    <rect x="728" y="110" width="200" height="250" rx="8" fill="#E8E6F2" stroke="#3D4450"/>
+    <text x="748" y="146" font-size="18" font-weight="600" fill="#1C1915">Auditor</text>
+    <text x="748" y="180" font-size="14" fill="#3D4450">Read every plan</text>
+    <text x="748" y="206" font-size="14" fill="#3D4450">Read the activity log</text>
+    <text x="748" y="232" font-size="14" fill="#3D4450">Verify the hash chain</text>
+    <text x="748" y="258" font-size="14" fill="#3D4450">No comments</text>
+    <text x="748" y="284" font-size="14" fill="#3D4450">No decisions</text>
+  </g>
+  <text x="32" y="410" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">There is no sign-up. An administrator creates the username. The phone signs in with POST /api/auth/token.</text>
+  <text x="32" y="436" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">A plan the caller may not see is answered as 404.</text>
+</svg>

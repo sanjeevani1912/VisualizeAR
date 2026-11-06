@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="420" viewBox="0 0 960 420">
+  <rect width="960" height="420" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Operator journey</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">A new plan walks through three setup steps, then the asset workspace.</text>
+
+  <g font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#1C1915">
+    <rect x="28" y="120" width="150" height="88" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="48" y="156" font-weight="600">Home</text>
+    <text x="48" y="178" font-size="12" fill="#3D4450">New or open plan</text>
+
+    <rect x="214" y="120" width="150" height="88" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="234" y="156" font-weight="600">1 Find</text>
+    <text x="234" y="178" font-size="12" fill="#3D4450">Search or GNSS</text>
+
+    <rect x="400" y="120" width="150" height="88" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="420" y="156" font-weight="600">2 Region</text>
+    <text x="420" y="178" font-size="12" fill="#3D4450">Draw and confirm</text>
+
+    <rect x="586" y="120" width="150" height="88" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="606" y="156" font-weight="600">3 Origin</text>
+    <text x="606" y="178" font-size="12" fill="#3D4450">Inside the box</text>
+
+    <rect x="772" y="120" width="160" height="88" rx="8" fill="#F3EBD4" stroke="#8A6A2F"/>
+    <text x="792" y="156" font-weight="600">Place assets</text>
+    <text x="792" y="178" font-size="12" fill="#3D4450">Map workspace</text>
+  </g>
+  <path d="M178 164 H214 M364 164 H400 M550 164 H586 M736 164 H772" stroke="#2F4A3C" stroke-width="1.5"/>
+
+  <rect x="214" y="250" width="336" height="120" rx="8" fill="#F3E6E2" stroke="#8C3F32"/>
+  <text x="234" y="286" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Save on the phone</text>
+  <text x="234" y="312" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Schema v2 JSON. Works with no network.</text>
+  <text x="234" y="336" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">AR is allowed once region and origin exist.</text>
+
+  <rect x="586" y="250" width="346" height="120" rx="8" fill="#E8E6F2" stroke="#3D4450"/>
+  <text x="606" y="286" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Optional later</text>
+  <text x="606" y="312" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Visualize on a detected ground plane.</text>
+  <text x="606" y="336" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Sign in and send the same JSON.</text>
+</svg>

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560">
+  <rect width="960" height="560" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">AR visualization</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">AR reads the saved layout. The ARCore pose is for this session and is not written back.</text>
+
+  <g font-family="Segoe UI, Calibri, sans-serif">
+    <rect x="36" y="110" width="200" height="90" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="52" y="146" font-size="15" font-weight="600" fill="#1C1915">Saved layout</text>
+    <text x="52" y="170" font-size="13" fill="#3D4450">metres from origin</text>
+
+    <rect x="270" y="110" width="200" height="90" rx="8" fill="#F3EBD4" stroke="#8A6A2F"/>
+    <text x="286" y="146" font-size="15" font-weight="600" fill="#1C1915">Detect ground</text>
+    <text x="286" y="170" font-size="13" fill="#3D4450">horizontal plane</text>
+
+    <rect x="504" y="110" width="210" height="90" rx="8" fill="#F3E6E2" stroke="#8C3F32"/>
+    <text x="520" y="146" font-size="15" font-weight="600" fill="#1C1915">Set AR origin</text>
+    <text x="520" y="170" font-size="13" fill="#3D4450">tap the detected plane</text>
+
+    <rect x="748" y="110" width="176" height="90" rx="8" fill="#E8E6F2" stroke="#3D4450"/>
+    <text x="764" y="146" font-size="15" font-weight="600" fill="#1C1915">Draw models</text>
+    <text x="764" y="170" font-size="13" fill="#3D4450">OpenGL ES 2.0</text>
+  </g>
+  <path d="M236 155 H270 M470 155 H504 M714 155 H748" stroke="#1C1915" stroke-width="1.4"/>
+
+  <rect x="36" y="230" width="430" height="200" rx="8" fill="#F7F4EE" stroke="#C8C2B6"/>
+  <text x="56" y="264" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Scale knobs</text>
+  <text x="56" y="296" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Full is 1 planning metre = 1 AR metre</text>
+  <text x="56" y="322" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">1:20 and 1:50 shrink offsets and meshes</text>
+  <text x="56" y="348" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">about the origin, for a desk briefing</text>
+  <text x="56" y="382" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Model size 0.5x to 10x grows each mesh</text>
+  <text x="56" y="406" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">about its own pivot and does not move it</text>
+
+  <rect x="490" y="230" width="434" height="200" rx="8" fill="#F7F4EE" stroke="#C8C2B6"/>
+  <text x="510" y="264" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Model loading</text>
+  <text x="510" y="296" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">First draw shows a box of the footprint</text>
+  <text x="510" y="322" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">GLB parse runs on a background thread</text>
+  <text x="510" y="348" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Pivot is the bottom centre, front is +Z</text>
+  <text x="510" y="382" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">K-131 models yaw 90 degrees on load</text>
+  <text x="510" y="406" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">so their length lies on planning +Z</text>
+
+  <text x="36" y="480" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Entry requires a region and a geographic origin. Zero assets is still allowed.</text>
+  <text x="36" y="508" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Re-opening AR calibrates again. GPS does not move the AR models.</text>
+</svg>

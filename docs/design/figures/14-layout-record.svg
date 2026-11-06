@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640">
+  <rect width="960" height="640" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Layout record</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">Schema version 2. One file per plan. The phone, the API, and the dashboard share this shape.</text>
+
+  <rect x="40" y="100" width="400" height="480" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+  <text x="60" y="132" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Layout</text>
+  <g font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">
+    <text x="60" y="164">id, name</text>
+    <text x="60" y="190">createdAtEpochMs</text>
+    <text x="60" y="216">updatedAtEpochMs</text>
+    <text x="60" y="250">regionBounds</text>
+    <text x="80" y="274">north, south latitude</text>
+    <text x="80" y="298">east, west longitude</text>
+    <text x="60" y="332">anchor</text>
+    <text x="80" y="356">latitude, longitude</text>
+    <text x="80" y="380">headingDegrees</text>
+    <text x="80" y="404">horizontalAccuracyMeters</text>
+    <text x="60" y="438">objects [ ]</text>
+    <text x="80" y="462">see the object card</text>
+    <text x="60" y="500">version: 2</text>
+    <text x="60" y="540">Null geo fields are omitted on write.</text>
+  </g>
+
+  <rect x="480" y="100" width="440" height="360" rx="8" fill="#F3E6E2" stroke="#8C3F32"/>
+  <text x="500" y="132" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">LayoutObject</text>
+  <g font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">
+    <text x="500" y="164">id, name</text>
+    <text x="500" y="190">assetType enum name</text>
+    <text x="500" y="216">x, z metres from the anchor</text>
+    <text x="500" y="242">rotationDegrees about Y</text>
+    <text x="500" y="268">widthMeters, lengthMeters</text>
+    <text x="500" y="294">heightMeters</text>
+    <text x="500" y="320">scale, default 1</text>
+    <text x="500" y="356">isSelected is UI state.</text>
+    <text x="500" y="380">It is not part of the contract</text>
+    <text x="500" y="404">the dashboard stores.</text>
+    <text x="500" y="436">Sizes must be greater than zero.</text>
+  </g>
+
+  <text x="480" y="500" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">File path: app files / dhruvar_layouts / id.json</text>
+  <text x="480" y="528" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Write is atomic: a temp file, then rename.</text>
+  <text x="480" y="564" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">The server normalises missing sizes from</text>
+  <text x="480" y="588" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">ASSET_DEFAULTS and hashes the result.</text>
+</svg>

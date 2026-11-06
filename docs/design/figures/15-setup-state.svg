@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520">
+  <rect width="960" height="520" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Planning state machine</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">PlanningSetupStep plus the map mode allowed on that step. A illegal mode is coerced back.</text>
+
+  <g font-family="Segoe UI, Calibri, sans-serif">
+    <rect x="36" y="120" width="210" height="130" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="52" y="152" font-size="15" font-weight="600" fill="#1C1915">FIND_LOCATION</text>
+    <text x="52" y="180" font-size="13" fill="#3D4450">Mode: Navigate</text>
+    <text x="52" y="204" font-size="13" fill="#3D4450">Title: Find location</text>
+    <text x="52" y="228" font-size="13" fill="#3D4450">Step 1 of 3</text>
+
+    <rect x="270" y="120" width="210" height="130" rx="8" fill="#F3EBD4" stroke="#8A6A2F"/>
+    <text x="286" y="152" font-size="15" font-weight="600" fill="#1C1915">SET_REGION</text>
+    <text x="286" y="180" font-size="13" fill="#3D4450">Mode: Select region</text>
+    <text x="286" y="204" font-size="13" fill="#3D4450">Overlay owns the drag</text>
+    <text x="286" y="228" font-size="13" fill="#3D4450">Step 2 of 3</text>
+
+    <rect x="504" y="120" width="210" height="130" rx="8" fill="#F3E6E2" stroke="#8C3F32"/>
+    <text x="520" y="152" font-size="15" font-weight="600" fill="#1C1915">SET_ORIGIN</text>
+    <text x="520" y="180" font-size="13" fill="#3D4450">Navigate, or Set anchor</text>
+    <text x="520" y="204" font-size="13" fill="#3D4450">Enters on Navigate</text>
+    <text x="520" y="228" font-size="13" fill="#3D4450">Step 3 of 3</text>
+
+    <rect x="738" y="120" width="186" height="130" rx="8" fill="#E8E6F2" stroke="#3D4450"/>
+    <text x="754" y="152" font-size="15" font-weight="600" fill="#1C1915">PLACE_ASSETS</text>
+    <text x="754" y="180" font-size="13" fill="#3D4450">Navigate, Place, Edit</text>
+    <text x="754" y="204" font-size="13" fill="#3D4450">No step subtitle</text>
+    <text x="754" y="228" font-size="13" fill="#3D4450">Title: Planning</text>
+  </g>
+  <path d="M246 185 H270 M480 185 H504 M714 185 H738" stroke="#1C1915" stroke-width="1.4"/>
+
+  <text x="36" y="310" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">System back is handled inside Set region and Set origin, so it steps backward instead of leaving the screen.</text>
+  <text x="36" y="338" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Confirm region calls confirmRegionAndAdvance, which commits bounds and moves to Place assets.</text>
+  <text x="36" y="366" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">canEnterAr is true when regionBounds is set and the anchor has a finite latitude and longitude.</text>
+  <text x="36" y="394" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">ChosenMapLocation lives on PlanningSetupSession. A new plan clears that session.</text>
+  <text x="36" y="430" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Opening a saved plan that already has a region and origin lands on the asset workspace.</text>
+  <text x="36" y="458" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Changing the region from the workspace leaves Place assets so the draft overlay can run again.</text>
+  <text x="36" y="490" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Map interaction modes outside the allowed set for the step are replaced by that step's default mode.</text>
+</svg>

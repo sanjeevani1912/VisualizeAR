@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560">
+  <rect width="960" height="560" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">System context</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">Who talks to whom. Planning works with the phone alone.</text>
+
+  <rect x="48" y="120" width="250" height="150" rx="10" fill="#E4EDE6" stroke="#2F4A3C" stroke-width="1.5"/>
+  <text x="68" y="156" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Field operator</text>
+  <text x="68" y="182" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#3D4450">Android phone</text>
+  <text x="68" y="204" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#3D4450">Plans on a map, saves JSON,</text>
+  <text x="68" y="224" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#3D4450">projects the plan in AR</text>
+
+  <rect x="355" y="108" width="250" height="174" rx="10" fill="#F3E6E2" stroke="#8C3F32" stroke-width="1.5"/>
+  <text x="375" y="144" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Dashboard server</text>
+  <text x="375" y="170" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#3D4450">Node, Express, SQLite</text>
+  <text x="375" y="192" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#3D4450">Accounts, plan versions,</text>
+  <text x="375" y="212" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#3D4450">decisions, field images,</text>
+  <text x="375" y="232" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#3D4450">hash-chained audit log</text>
+  <text x="375" y="258" font-family="Segoe UI, Calibri, sans-serif" font-size="12" fill="#8C3F32">Port 4000 in development</text>
+
+  <rect x="662" y="120" width="250" height="150" rx="10" fill="#E8E6F2" stroke="#3D4450" stroke-width="1.5"/>
+  <text x="682" y="156" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Reviewer</text>
+  <text x="682" y="182" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#3D4450">Web browser</text>
+  <text x="682" y="204" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#3D4450">Sees the same plan on a map</text>
+  <text x="682" y="224" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#3D4450">and records a decision</text>
+
+  <rect x="355" y="360" width="250" height="140" rx="10" fill="#F3EBD4" stroke="#8A6A2F" stroke-width="1.5"/>
+  <text x="375" y="396" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Map server</text>
+  <text x="375" y="422" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#3D4450">Tiles, fonts, place search</text>
+  <text x="375" y="444" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#3D4450">Debug base 192.168.1.205:8088</text>
+  <text x="375" y="470" font-family="Segoe UI, Calibri, sans-serif" font-size="12" fill="#8A6A2F">Optional. Layouts stay on the phone.</text>
+
+  <path d="M298 180 H355" stroke="#2F4A3C" stroke-width="1.5" fill="none" marker-end="url(#a)"/>
+  <path d="M605 180 H662" stroke="#8C3F32" stroke-width="1.5" fill="none" marker-end="url(#a)"/>
+  <path d="M173 270 V430 H355" stroke="#8A6A2F" stroke-width="1.5" fill="none" marker-end="url(#a)"/>
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0 0 L8 4 L0 8 Z" fill="#1C1915"/>
+    </marker>
+  </defs>
+  <text x="306" y="168" font-family="Segoe UI, Calibri, sans-serif" font-size="11" fill="#2F4A3C">send plan</text>
+  <text x="612" y="168" font-family="Segoe UI, Calibri, sans-serif" font-size="11" fill="#8C3F32">review</text>
+  <text x="188" y="418" font-family="Segoe UI, Calibri, sans-serif" font-size="11" fill="#8A6A2F">tiles and search</text>
+</svg>

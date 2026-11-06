@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520">
+  <rect width="960" height="520" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Web modules</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">React and TypeScript. Live and demo share pages. Only the store behind useStore changes.</text>
+
+  <g font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">
+    <rect x="32" y="110" width="280" height="200" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="48" y="142" font-size="15" font-weight="600" fill="#1C1915">pages</text>
+    <text x="48" y="172">Login, Overview, PlanList</text>
+    <text x="48" y="196">PlanDetail, NewPlan</text>
+    <text x="48" y="220">Activity, Users, Account</text>
+    <text x="48" y="252">RoleGate sends others home</text>
+    <text x="48" y="276">Filters live in the URL</text>
+
+    <rect x="340" y="110" width="280" height="200" rx="8" fill="#F3EBD4" stroke="#8A6A2F"/>
+    <text x="356" y="142" font-size="15" font-weight="600" fill="#1C1915">state</text>
+    <text x="356" y="172">store.tsx demo</text>
+    <text x="356" y="196">liveStore.tsx API</text>
+    <text x="356" y="220">storeContext useStore</text>
+    <text x="356" y="252">api.ts fetch wrapper</text>
+    <text x="356" y="276">rules.ts mirrors the server</text>
+
+    <rect x="648" y="110" width="280" height="200" rx="8" fill="#F3E6E2" stroke="#8C3F32"/>
+    <text x="664" y="142" font-size="15" font-weight="600" fill="#1C1915">map and types</text>
+    <text x="664" y="172">types.ts schema mirror</text>
+    <text x="664" y="196">geo.ts metres and footprints</text>
+    <text x="664" y="220">MapView.tsx MapLibre</text>
+    <text x="664" y="252">ASSET_DEFAULTS colours</text>
+    <text x="664" y="276">dim() rounds to 1 cm</text>
+  </g>
+  <text x="32" y="360" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">App.tsx mounts DemoProvider on /demo/* and LiveProvider on every other path.</text>
+  <text x="32" y="388" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">A signed-out visit to a protected page goes to login. Loading shows until the session check returns.</text>
+  <text x="32" y="416" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">DecisionPanel confirms approve, request changes, or reject. Changes and reject need a reason.</text>
+  <text x="32" y="444" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">The UI copy of the rules is for buttons and labels. A forged request still fails on the server.</text>
+  <text x="32" y="480" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Node 22.13 or newer. The API uses the built-in node:sqlite module, so there is no native database build.</text>
+</svg>

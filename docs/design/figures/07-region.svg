@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <rect width="960" height="540" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Set region</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">A draft box is drawn on a Compose overlay so the map cannot pan under the finger.</text>
+
+  <rect x="48" y="110" width="520" height="300" rx="8" fill="#E7EEF2" stroke="#3D4450"/>
+  <text x="68" y="142" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#5C564C">Map, Navigate is locked on this step</text>
+  <rect x="150" y="180" width="280" height="170" fill="none" stroke="#8C3F32" stroke-width="2" stroke-dasharray="6 4"/>
+  <circle cx="150" cy="180" r="6" fill="#8C3F32"/>
+  <circle cx="430" cy="180" r="6" fill="#8C3F32"/>
+  <circle cx="150" cy="350" r="6" fill="#8C3F32"/>
+  <circle cx="430" cy="350" r="6" fill="#8C3F32"/>
+  <text x="210" y="270" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#8C3F32">Draft, not saved yet</text>
+
+  <rect x="600" y="110" width="320" height="300" rx="8" fill="#F7F4EE" stroke="#C8C2B6"/>
+  <text x="620" y="146" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">Rules</text>
+  <text x="620" y="180" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Each side 25 m to 500 km</text>
+  <text x="620" y="208" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Finger-up does not commit</text>
+  <text x="620" y="236" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Confirm writes regionBounds</text>
+  <text x="620" y="264" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Cancel drops the draft</text>
+  <text x="620" y="292" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Area picker: 100 to 300 m</text>
+  <text x="620" y="320" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Default square side 250 m</text>
+  <text x="620" y="360" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#5C564C">Use visible area is the fallback</text>
+  <text x="620" y="382" font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#5C564C">when no draft is active.</text>
+
+  <text x="48" y="460" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Confirm also places the origin at the region centre, unless a chosen origin still sits inside the new box.</text>
+  <text x="48" y="488" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Shrinking a square that would leave a placed asset outside is refused. The operator moves or deletes that asset first.</text>
+</svg>

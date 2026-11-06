@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560">
+  <rect width="960" height="560" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Server tables</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">SQLite file server/data/dhruvar.db. Foreign keys on. WAL mode. One plan has many versions.</text>
+
+  <g font-family="Segoe UI, Calibri, sans-serif" font-size="13" fill="#3D4450">
+    <rect x="32" y="100" width="280" height="150" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="48" y="128" font-size="15" font-weight="600" fill="#1C1915">users</text>
+    <text x="48" y="156">username unique, role, rank</text>
+    <text x="48" y="178">password_hash, active</text>
+    <text x="48" y="200">created_at, last_login_at</text>
+    <text x="48" y="228">Role is a check constraint.</text>
+
+    <rect x="340" y="100" width="280" height="150" rx="8" fill="#F3EBD4" stroke="#8A6A2F"/>
+    <text x="356" y="128" font-size="15" font-weight="600" fill="#1C1915">sessions</text>
+    <text x="356" y="156">token_hash is the key</text>
+    <text x="356" y="178">user_id, created_at</text>
+    <text x="356" y="200">last_seen</text>
+    <text x="356" y="228">The raw token is never stored.</text>
+
+    <rect x="648" y="100" width="280" height="150" rx="8" fill="#F3E6E2" stroke="#8C3F32"/>
+    <text x="664" y="128" font-size="15" font-weight="600" fill="#1C1915">plans</text>
+    <text x="664" y="156">code unique, name</text>
+    <text x="664" y="178">owner_id, status</text>
+    <text x="664" y="200">created_at, updated_at</text>
+    <text x="664" y="228">Status is the lifecycle word.</text>
+
+    <rect x="32" y="280" width="280" height="160" rx="8" fill="#E8E6F2" stroke="#3D4450"/>
+    <text x="48" y="308" font-size="15" font-weight="600" fill="#1C1915">plan_versions</text>
+    <text x="48" y="336">plan_id + version</text>
+    <text x="48" y="358">layout_json, content_hash</text>
+    <text x="48" y="380">note, submitted_by, submitted_at</text>
+    <text x="48" y="412">Hash is the first 16 hex of SHA-256.</text>
+
+    <rect x="340" y="280" width="280" height="160" rx="8" fill="#E7EEF2" stroke="#3D4450"/>
+    <text x="356" y="308" font-size="15" font-weight="600" fill="#1C1915">decisions, comments</text>
+    <text x="356" y="336">Both name plan_id and version</text>
+    <text x="356" y="358">decision: approve, reject, changes</text>
+    <text x="356" y="380">reason, reviewer, time</text>
+    <text x="356" y="412">A stale version cannot be decided.</text>
+
+    <rect x="648" y="280" width="280" height="160" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="664" y="308" font-size="15" font-weight="600" fill="#1C1915">attachments, audit</text>
+    <text x="664" y="336">Image row plus stored file name</text>
+    <text x="664" y="358">audit.seq, prev_hash, hash</text>
+    <text x="664" y="380">actor, action, plan, detail</text>
+    <text x="664" y="412">Genesis hash is 64 zero digits.</text>
+  </g>
+  <text x="32" y="490" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Uploads live in server/data/uploads under a random stored name. The original file name is only a label.</text>
+  <text x="32" y="518" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Seed writes development passwords to server/data/seed-credentials.txt, which is git-ignored.</text>
+</svg>

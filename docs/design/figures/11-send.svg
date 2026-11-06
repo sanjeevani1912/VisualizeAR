@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520">
+  <rect width="960" height="520" fill="#F7F4EE"/>
+  <text x="32" y="42" font-family="Segoe UI, Calibri, sans-serif" font-size="22" font-weight="600" fill="#1C1915">Send for approval</text>
+  <text x="32" y="68" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#5C564C">The phone stays usable while signed out. The server is contacted only to sign in, send, or refresh.</text>
+
+  <g font-family="Segoe UI, Calibri, sans-serif">
+    <rect x="32" y="110" width="210" height="100" rx="8" fill="#E4EDE6" stroke="#2F4A3C"/>
+    <text x="48" y="148" font-size="15" font-weight="600" fill="#1C1915">Home card</text>
+    <text x="48" y="172" font-size="13" fill="#3D4450">Region and origin set</text>
+    <text x="48" y="192" font-size="13" fill="#3D4450">or the Send stays off</text>
+
+    <rect x="278" y="110" width="210" height="100" rx="8" fill="#F3EBD4" stroke="#8A6A2F"/>
+    <text x="294" y="148" font-size="15" font-weight="600" fill="#1C1915">Sign in</text>
+    <text x="294" y="172" font-size="13" fill="#3D4450">URL, username, password</text>
+    <text x="294" y="192" font-size="13" fill="#3D4450">Bearer token returned</text>
+
+    <rect x="524" y="110" width="210" height="100" rx="8" fill="#F3E6E2" stroke="#8C3F32"/>
+    <text x="540" y="148" font-size="15" font-weight="600" fill="#1C1915">POST /api/plans</text>
+    <text x="540" y="172" font-size="13" fill="#3D4450">Layout JSON plus a note</text>
+    <text x="540" y="192" font-size="13" fill="#3D4450">Server returns a code</text>
+
+    <rect x="770" y="110" width="158" height="100" rx="8" fill="#E8E6F2" stroke="#3D4450"/>
+    <text x="786" y="148" font-size="15" font-weight="600" fill="#1C1915">Status chip</text>
+    <text x="786" y="172" font-size="13" fill="#3D4450">Sent, review,</text>
+    <text x="786" y="192" font-size="13" fill="#3D4450">approved, changes</text>
+  </g>
+  <path d="M242 160 H278 M488 160 H524 M734 160 H770" stroke="#1C1915" stroke-width="1.4"/>
+
+  <rect x="32" y="250" width="896" height="200" rx="8" fill="#F7F4EE" stroke="#C8C2B6"/>
+  <text x="52" y="286" font-family="Segoe UI, Calibri, sans-serif" font-size="16" font-weight="600" fill="#1C1915">What is stored where</text>
+  <text x="52" y="318" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Token: Android Keystore, excluded from backup. Debug may use http://192.168.1.214:4000.</text>
+  <text x="52" y="346" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">Release accepts https addresses only. The default release URL is blank, so the operator types it.</text>
+  <text x="52" y="374" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">SentPlanStore remembers plan id, code, version, and status against the local layout id.</text>
+  <text x="52" y="402" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">A later refresh calls the plan list and updates those chips. Resubmit uses POST /api/plans/:id/versions.</text>
+  <text x="52" y="430" font-family="Segoe UI, Calibri, sans-serif" font-size="14" fill="#3D4450">The server rejects a layout with no region, an origin outside the region, or an unknown asset type.</text>
+</svg>
