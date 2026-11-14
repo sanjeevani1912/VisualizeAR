@@ -76,6 +76,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "api.middleware.ApiMiddleware",  # token -> user, CSRF header, no-store, JSON errors (see api/middleware.py)
 ]
 
 ROOT_URLCONF = "config.urls"

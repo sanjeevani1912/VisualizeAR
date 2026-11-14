@@ -81,6 +81,18 @@ class AuthSession(models.Model):
     last_seen = models.BigIntegerField()
 
 
+class LoginThrottle(models.Model):
+    """Failed sign-in counter per username + IP.
+
+    The Node server keeps this in memory. It lives in the database here so it still works when more
+    than one server process runs (several workers, or several machines behind a load balancer).
+    """
+
+    key = models.CharField(primary_key=True, max_length=200)  # "<username lower-case>|<ip>"
+    count = models.PositiveIntegerField(default=0)
+    locked_until = models.BigIntegerField(default=0)  # epoch ms; 0 = not locked
+
+
 class Plan(models.Model):
     id = models.CharField(primary_key=True, max_length=36, default=new_id, editable=False)
     code = models.CharField(max_length=20, unique=True)  # TP-YYYY-NNNN

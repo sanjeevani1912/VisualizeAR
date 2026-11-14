@@ -1,6 +1,7 @@
 # Moving the DhruvAR backend from Node to Django
 
-**Status: phase 0 done (scaffold). The Node server in `server/` is untouched and remains the live backend.**
+**Status: phases 0 and 1 done (scaffold; sign-in and users). Phase 2 next. The Node server in `server/` is untouched and remains the live backend.**
+Details of phase 1: `docs/PHASE-1-AUTH-AND-USERS.md`.
 
 ## Isolation: how the current system stays safe
 - Lives in a **separate git worktree** (`DhruvAR-django/`, a sibling of `DhruvAR/`) on its own branch, `django-backend`. The working folder and `main` are not changed by anything done here.
@@ -17,9 +18,9 @@ Both clients then work unchanged; only the server behind them is replaced.
 | Area | Route | Done |
 |---|---|---|
 | Health | `GET /api/health` | yes |
-| Auth | `POST /auth/login`, `POST /auth/token`, `POST /auth/logout`, `GET /auth/me`, `POST /auth/change-password` | |
-| Users | `GET /users` (names, any signed-in user) | |
-| Admin | `GET /admin/users`, `POST /admin/users`, `PATCH /admin/users/:id`, `POST /admin/users/:id/password` | |
+| Auth | `POST /auth/login`, `POST /auth/token`, `POST /auth/logout`, `GET /auth/me`, `POST /auth/change-password` | yes (phase 1) |
+| Users | `GET /users` (names, any signed-in user) | yes (phase 1) |
+| Admin | `GET /admin/users`, `POST /admin/users`, `PATCH /admin/users/:id`, `POST /admin/users/:id/password` | yes (phase 1) |
 | Audit | `GET /audit`, `GET /audit/verify` | |
 | Plans | `GET /plans`, `POST /plans`, `POST /plans/:id/versions`, `/withdraw`, `/start-review`, `/decision`, `/comments` | |
 | Images | `POST /plans/:id/attachments`, `GET /attachments/:id`, `DELETE /attachments/:id` | |
@@ -61,7 +62,7 @@ Each phase ends with its tests passing and nothing outside `server-django/` chan
 
 0. **Scaffold** (done): project, settings, data models, `rules.py` and `audit.py` ported, health route, 14 tests.
    Audit hashes are verified identical to the Node implementation.
-1. **Auth and users**: password hashing, sessions, bearer + cookie, login throttle, CSRF header, security headers/CSP; routes for auth, users, admin.
+1. **Auth and users** (done 2026-11-14, 84 tests, compared with Node on 55 requests): password hashing, sessions, bearer + cookie, login throttle, CSRF header, security headers/CSP; routes for auth, users, admin.
 2. **Layout and plans**: port `layout.ts` (same checks and messages, same content hash), then the plan routes and `/audit`.
 3. **Images**: upload, serve, delete.
 4. **Seed and conformance**: a seed command (sample users/plans, exported once from `web/src/data/mock.ts`); make `server/scripts/api-test.ts` able to run against either server, so the **same 13 end-to-end tests** judge both. The fixture produced by the Android app's own serializer must pass too.
@@ -70,7 +71,7 @@ Each phase ends with its tests passing and nothing outside `server-django/` chan
 
 ## Risks
 - Hash compatibility: the plan content hash uses `JSON.stringify` key order and number formatting (`10` not `10.0`). It needs a JS-style serialiser or hashes differ from Node's for the same layout.
-- The sign-in throttle is in memory, as in Node. That is wrong with more than one server process; it should move to the database or cache before any multi-worker deployment.
+- (Resolved in phase 1: the sign-in throttle now lives in the database table LoginThrottle.) The original risk: it was in memory, as in Node.
 - zod's error text differs from any Python validator's. Messages the clients display must be matched by hand and covered by tests.
 - `seed.ts` imports the dashboard's TypeScript mock data. The Django seed needs a one-off JSON export of it.
 
