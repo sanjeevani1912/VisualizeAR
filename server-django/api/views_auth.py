@@ -2,7 +2,6 @@
 
 from django.conf import settings
 from django.db import transaction
-from django.http import JsonResponse
 
 from .audit import audit
 from .auth import (
@@ -19,7 +18,7 @@ from .auth import (
     set_session_cookie,
     verify_password,
 )
-from .http import ApiError, StrField, endpoint, js_number, json_body, validate
+from .http import ApiError, JsResponse, StrField, endpoint, js_number, json_body, validate
 from .models import User
 from .rules import password_error
 
@@ -50,7 +49,7 @@ def login(request):
     if old:
         destroy_session(old)
     purge_expired_sessions()
-    response = JsonResponse(user.as_dict())
+    response = JsResponse(user.as_dict())
     set_session_cookie(response, create_session(user.id))
     audit(user.id, "Signed in", None, f"{user.username} signed in")
     return response
@@ -67,7 +66,7 @@ def token(request):
     purge_expired_sessions()
     session_token = create_session(user.id)
     audit(user.id, "Signed in", None, f"{user.username} signed in from the app")
-    return JsonResponse({"token": session_token, "idleMinutes": js_number(settings.SESSION_IDLE_MINUTES), "user": user.as_dict()})
+    return JsResponse({"token": session_token, "idleMinutes": js_number(settings.SESSION_IDLE_MINUTES), "user": user.as_dict()})
 
 
 @endpoint("POST")
@@ -75,7 +74,7 @@ def logout(request):
     session_token = presented_token(request)
     if session_token:
         destroy_session(session_token)
-    response = JsonResponse({"ok": True})
+    response = JsResponse({"ok": True})
     clear_session_cookie(response)
     return response
 
@@ -84,7 +83,7 @@ def logout(request):
 def me(request):
     if request.api_user is None:
         raise ApiError(401, "Not signed in")
-    return JsonResponse(request.api_user.as_dict())
+    return JsResponse(request.api_user.as_dict())
 
 
 @endpoint("POST", auth=True)
@@ -104,6 +103,6 @@ def change_password(request):
         audit(me_.id, "Password changed", None, f"{me_.username} changed their password")
     # Other sessions are ended; this one continues on a new token.
     destroy_user_sessions(me_.id)
-    response = JsonResponse({"ok": True})
+    response = JsResponse({"ok": True})
     set_session_cookie(response, create_session(me_.id))
     return response

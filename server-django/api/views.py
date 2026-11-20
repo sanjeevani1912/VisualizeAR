@@ -1,7 +1,7 @@
-from django.http import JsonResponse
+from .http import JsResponse
 
 
 def health(_request):
-    response = JsonResponse({"ok": True})
+    response = JsResponse({"ok": True})
     response["Cache-Control"] = "no-store"
     return response

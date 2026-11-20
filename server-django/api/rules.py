@@ -7,6 +7,8 @@ the web UI only mirrors them for display.
 from dataclasses import dataclass
 import re
 
+from .jsutil import js_len, js_trim
+
 OPEN = ("SUBMITTED", "UNDER_REVIEW")
 MIN_REASON = 10
 
@@ -71,7 +73,7 @@ def can_remove_attachment(a: Actor, uploader_id: str) -> bool:
 
 
 def reason_error(kind: str, reason: str) -> str | None:
-    if kind != "approve" and len(reason.strip()) < MIN_REASON:
+    if kind != "approve" and js_len(js_trim(reason)) < MIN_REASON:
         return f"A reason of at least {MIN_REASON} characters is required"
     return None
 

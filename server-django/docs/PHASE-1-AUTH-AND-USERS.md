@@ -168,7 +168,7 @@ after phase 4, when all routes exist). Real multi-process behaviour of the throt
 - **The audit writer** (`api/audit.py`) is still the phase 0 version. Before PostgreSQL goes live it needs a row lock so two simultaneous writes cannot chain to the same previous entry (listed in `docs/prompts/demo-and-deployment/REAL-DATA-AND-POSTGRES.md`, Task D2).
 - **Throttle rows** are never deleted (Node's in-memory entries also lived until restart). A small clean-up can be added with the other housekeeping.
 - **Case-insensitive username lookups** use `iexact`; the database-level unique rule `Lower(username)` from phase 0 backs it up.
-- Python counts characters by code point while the Node server counts UTF-16 units; they differ only for emoji-like characters in names. Not a practical problem.
+- String lengths: the Node validator (zod 4.6) counts code points, the same as Python, so there is no difference. (Corrected in phase 2; this note used to say UTF-16 units.)
 
 ---
 

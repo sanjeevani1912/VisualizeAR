@@ -325,7 +325,7 @@ class UnknownRouteTests(ApiTestCase):
         _, who = self.app_login("menon")
         res = Client().get("/api/nothing-here", headers=who)
         self.assertEqual((res.status_code, res.json()), (404, {"error": "Not found"}))
-        self.assertEqual(res["Content-Type"], "application/json")
+        self.assertEqual(res["Content-Type"], "application/json; charset=utf-8")
 
     def test_unknown_admin_paths_need_the_admin_role(self):
         self.make_user("menon", "reviewer")

@@ -1,11 +1,10 @@
 """User lists and administration. A port of userRouter and adminRouter in server/src/users.ts."""
 
 from django.db import IntegrityError, transaction
-from django.http import JsonResponse
 
 from .audit import audit
 from .auth import active_admin_count, destroy_user_sessions, hash_password
-from .http import ApiError, BoolField, EnumField, StrField, endpoint, json_body, validate
+from .http import ApiError, BoolField, EnumField, JsResponse, StrField, endpoint, json_body, validate
 from .models import ROLES, User, new_id, now_ms
 from .rules import password_error
 
@@ -24,7 +23,7 @@ USERNAME = StrField(
 def user_names(request):
     """Names only, so every signed-in user can see who wrote or decided something."""
     rows = User.objects.order_by("name")
-    return JsonResponse([{"id": u.id, "name": u.name, "rank": u.rank, "role": u.role, "active": u.active} for u in rows], safe=False)
+    return JsResponse([{"id": u.id, "name": u.name, "rank": u.rank, "role": u.role, "active": u.active} for u in rows])
 
 
 def _admin_row(u: User) -> dict:
@@ -43,7 +42,7 @@ def _admin_row(u: User) -> dict:
 @endpoint("GET", "POST", roles=("admin",))
 def admin_users(request):
     if request.method == "GET":
-        return JsonResponse([_admin_row(u) for u in User.objects.order_by("name")], safe=False)
+        return JsResponse([_admin_row(u) for u in User.objects.order_by("name")])
     return _create_user(request)
 
 
@@ -82,7 +81,7 @@ def _create_user(request):
             audit(request.api_user.id, "User created", None, f"{data['username']} created as {data['role']}")
     except IntegrityError:  # two admins creating the same name at once
         raise taken
-    return JsonResponse({"id": user_id}, status=201)
+    return JsResponse({"id": user_id}, status=201)
 
 
 @endpoint("PATCH", roles=("admin",))
@@ -124,7 +123,7 @@ def admin_user(request, user_id):
     # Permissions changed, so existing sessions must not keep the old ones.
     if next_role != target.role or not next_active:
         destroy_user_sessions(user_id)
-    return JsonResponse({"ok": True})
+    return JsResponse({"ok": True})
 
 
 @endpoint("POST", roles=("admin",))
@@ -142,4 +141,4 @@ def admin_user_password(request, user_id):
         User.objects.filter(pk=user_id).update(password=hash_password(data["password"]))
         audit(request.api_user.id, "Password reset", None, f"Password reset for {target.username}")
     destroy_user_sessions(user_id)
-    return JsonResponse({"ok": True})
+    return JsResponse({"ok": True})

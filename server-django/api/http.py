@@ -6,11 +6,15 @@ JSON shapes and error bodies the Node server produces. Errors are always `{ "err
 
 import functools
 import json
+import math
 import re
 
-from django.http import JsonResponse
+from django.http import HttpResponse
+
+from .jsutil import js_number_text, js_stringify, js_trim
 
 JSON_CONTENT_TYPE = re.compile(r"\bapplication/json\b", re.I)
+MAX_SAFE_INT = 9007199254740991  # JavaScript Number.MAX_SAFE_INTEGER
 MISSING = object()  # a field that was not sent at all (JavaScript's "undefined")
 
 
@@ -23,8 +27,16 @@ class ApiError(Exception):
         self.message = message
 
 
-def error_response(status: int, message: str) -> JsonResponse:
-    return JsonResponse({"error": message}, status=status)
+def error_response(status: int, message: str) -> "JsResponse":
+    return JsResponse({"error": message}, status=status)
+
+
+class JsResponse(HttpResponse):
+    """A JSON answer written exactly like Express's `res.json`: no spaces, JavaScript number format
+    (`10` not `10.0`), `application/json; charset=utf-8`. Used where a client may compare numbers as text."""
+
+    def __init__(self, data, status: int = 200):
+        super().__init__(js_stringify(data).encode("utf-8"), status=status, content_type="application/json; charset=utf-8")
 
 
 def js_number(value: float):
@@ -33,6 +45,11 @@ def js_number(value: float):
 
 
 # ---------- request body ----------
+def _reject_constant(name):
+    """Python accepts NaN and Infinity in JSON; JavaScript's JSON.parse does not, so neither do we."""
+    raise ValueError(name)
+
+
 def json_body(request):
     """The parsed JSON body, or MISSING when there is none.
 
@@ -45,7 +62,7 @@ def json_body(request):
     if not raw or not raw.strip():
         return MISSING
     try:
-        value = json.loads(raw)
+        value = json.loads(raw, parse_constant=_reject_constant)
     except (ValueError, UnicodeDecodeError):
         raise ApiError(400, "Malformed JSON")
     if not isinstance(value, (dict, list)):  # Express's strict mode accepts only objects and arrays
@@ -81,7 +98,7 @@ class StrField:
             return MISSING, None
         if not isinstance(value, str):
             return value, f"Invalid input: expected string, received {js_type(value)}"
-        text = value.strip() if self.trim else value
+        text = js_trim(value) if self.trim else value
         if self.min_len is not None and len(text) < self.min_len:
             return text, f"Too small: expected string to have >={self.min_len} characters"
         if self.max_len is not None and len(text) > self.max_len:
@@ -89,6 +106,59 @@ class StrField:
         if self.pattern is not None and not re.fullmatch(self.pattern, text):
             return text, self.pattern_message
         return text, None
+
+
+def check_number(value, *, integer=False, gt=None, ge=None, le=None):
+    """zod's z.number() with its checks, in the order they were chained. Returns an error message or None.
+
+    Also returns the value as a float in the second slot, so callers do arithmetic the way JavaScript does.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return f"Invalid input: expected number, received {js_type(value)}", None
+    try:
+        number = float(value)
+    except OverflowError:  # a whole number too large for a double: JavaScript reads it as Infinity
+        number = math.inf if value > 0 else -math.inf
+    if math.isinf(number):
+        return f"Invalid input: expected number, received {js_number_text(number)}", None
+    if integer:
+        if not number.is_integer():
+            return "Invalid input: expected int, received number", None
+        if number > MAX_SAFE_INT:
+            return f"Too big: expected int to be <={MAX_SAFE_INT}", None
+        if number < -MAX_SAFE_INT:
+            return f"Too small: expected int to be >=-{MAX_SAFE_INT}", None
+    if gt is not None and not number > gt:
+        return f"Too small: expected number to be >{js_number_text(gt)}", None
+    if ge is not None and number < ge:
+        return f"Too small: expected number to be >={js_number_text(ge)}", None
+    if le is not None and number > le:
+        return f"Too big: expected number to be <={js_number_text(le)}", None
+    return None, number
+
+
+class NumField:
+    def __init__(self, name, *, integer=False, gt=None, ge=None, le=None, optional=False):
+        self.name, self.optional = name, optional
+        self.rules = {"integer": integer, "gt": gt, "ge": ge, "le": le}
+
+    def check(self, value):
+        if value is MISSING and self.optional:
+            return MISSING, None
+        error, number = check_number(value, **self.rules)
+        return (value, error) if error else (number, None)
+
+
+class AnyField:
+    """zod's z.unknown() inside an object: any value is accepted, but the key must be present."""
+
+    def __init__(self, name):
+        self.name = name
+
+    def check(self, value):
+        if value is MISSING:
+            return value, "Invalid input: expected nonoptional, received undefined"
+        return value, None
 
 
 class EnumField:
