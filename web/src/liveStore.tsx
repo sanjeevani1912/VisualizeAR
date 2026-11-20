@@ -12,6 +12,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   const [plans, setPlans] = useState<Plan[]>([])
   const [audit, setAudit] = useState<AuditEvent[]>([])
   const [ready, setReady] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -19,8 +20,10 @@ export function LiveProvider({ children }: { children: ReactNode }) {
       setPlans(p)
       setAudit(a)
       setUsers(u)
+      setLoadError(null)
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) setUser(null) // session ended
+      else setLoadError(e instanceof ApiError ? e.message : 'Cannot reach the server.')
     }
   }, [])
 
@@ -79,6 +82,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
       mode: 'live',
       base: '',
       ready,
+      loadError,
       user,
       users,
       plans,
@@ -135,7 +139,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
       withdraw: (planId) => act(() => api('POST', `/plans/${planId}/withdraw`)),
       reset: () => {},
     }),
-    [ready, user, users, plans, audit, nameOf, load, act],
+    [ready, loadError, user, users, plans, audit, nameOf, load, act],
   )
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }
