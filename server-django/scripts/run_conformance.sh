@@ -49,13 +49,13 @@ SEEDCMP=$?
 cd "$DJ_DIR"
 echo; echo "=== 2. api-test.ts against NODE (external mode)"
 API_BASE=http://127.0.0.1:4100/api SEED_CREDENTIALS="$TMP_NODE/seed-credentials.txt" \
-TAMPER_COMMAND="node $HERE/tamper_audit_node.mjs $TMP_NODE/dhruvar.db" \
+TAMPER_COMMAND="node $(cygpath -m "$HERE")/tamper_audit_node.mjs $(cygpath -m "$TMP_NODE")/dhruvar.db" \
   node "$TSX" --test scripts/api-test.ts 2>&1 | grep -E "${TEST_FILTER:-^(✔|✖|ℹ (tests|pass|fail))}"
 NODERES=${PIPESTATUS[0]}
 
 echo; echo "=== 3. api-test.ts against DJANGO (the same file)"
 API_BASE=http://127.0.0.1:4101/api SEED_CREDENTIALS="$TMP_DJ/seed-credentials.txt" \
-TAMPER_COMMAND="DATA_DIR=$TMP_DJ $PY $HERE/tamper_audit_django.py" \
+DATA_DIR="$TMP_DJ" TAMPER_COMMAND="$(cygpath -m "$PY") $(cygpath -m "$HERE")/tamper_audit_django.py" \
   node "$TSX" --test scripts/api-test.ts 2>&1 | grep -E "${TEST_FILTER:-^(✔|✖|ℹ (tests|pass|fail))}"
 DJRES=${PIPESTATUS[0]}
 

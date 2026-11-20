@@ -1,7 +1,7 @@
 # Moving the DhruvAR backend from Node to Django
 
-**Status: phases 0-3 done (scaffold; sign-in and users; layout checking, plans, decisions, comments, audit; field images). All 23 routes built. Phase 4 (seed and conformance) next. The Node server in `server/` is untouched and remains the live backend.**
-Details: `docs/PHASE-1-AUTH-AND-USERS.md`, `docs/PHASE-2-PLANS.md`, `docs/PHASE-3-IMAGES.md`.
+**Status: phases 0-4 done (scaffold; sign-in and users; layout checking, plans, decisions, comments, audit; field images; seed, conformance and dashboard check). All 23 routes built. Next: PostgreSQL (B4), then serving/hardening. The Node server in `server/` is untouched and remains the live backend.**
+Details: `docs/PHASE-1-AUTH-AND-USERS.md`, `docs/PHASE-2-PLANS.md`, `docs/PHASE-3-IMAGES.md`, `docs/PHASE-4-SEED-AND-CONFORMANCE.md`.
 
 ## Isolation: how the current system stays safe
 - Lives in a **separate git worktree** (`DhruvAR-django/`, a sibling of `DhruvAR/`) on its own branch, `django-backend`. The working folder and `main` are not changed by anything done here.
@@ -65,7 +65,7 @@ Each phase ends with its tests passing and nothing outside `server-django/` chan
 1. **Auth and users** (done 2026-11-14, 84 tests, compared with Node on 55 requests): password hashing, sessions, bearer + cookie, login throttle, CSRF header, security headers/CSP; routes for auth, users, admin.
 2. **Layout and plans** (done 2026-11-20, 166 tests, 544 Node test vectors for layout and hash, compared with Node on 138 requests with 0 differences): `layout.ts` ported (same checks and messages, same content hash via a JavaScript-exact serialiser), then the plan routes and `/audit`.
 3. **Images** (done 2026-11-20, 191 tests, compared with Node on 229 requests with 0 differences): upload, serve, delete.
-4. **Seed and conformance**: a seed command (sample users/plans, exported once from `web/src/data/mock.ts`); make `server/scripts/api-test.ts` able to run against either server, so the **same 13 end-to-end tests** judge both. The fixture produced by the Android app's own serializer must pass too.
+4. **Seed and conformance** (done 2026-11-20: `seed` command identical to Node's seed on 10 API views; the same 13 end-to-end tests pass on Node and Django; real dashboard clicked through on Django; 201 tests): a seed command (sample users/plans, exported once from `web/src/data/mock.ts`); make `server/scripts/api-test.ts` able to run against either server, so the **same 13 end-to-end tests** judge both. The fixture produced by the Android app's own serializer must pass too.
 5. **Serving and hardening**: serve `web/dist` with the single-page-app fallback, CSP with the map origin, `Secure` cookies behind HTTPS, PostgreSQL settings, run notes.
 6. **Cutover decision**: only when every test passes against Django, the dashboard works in a browser and the app works on a phone. Until then Node stays live.
 
