@@ -145,3 +145,56 @@ not again on a full plan page.
 Checked on the full plan page with the final icons: the app-export plan (6 assets) and sample plan TP-2026-0135 (21 assets: tents,
 trenches, cars, trucks, antennas). Side-view icons stay upright and are readable at the opening zoom; legend and table show them.
 Screenshots: `screenshots-c2/final-6-assets-page.jpg`, `screenshots-c2/final-21-assets-map.png`. Owner approved the icon designs.
+
+---
+
+# Milestone C3 update: professional plan page (2026-11-20)
+
+Before/after screenshots: `docs/screenshots-c3/` (`before-laptop.jpg`, `after-laptop.jpg`, `before-phone.jpg`, `after-phone.jpg`,
+`after-print-approximation.jpg`, `after-not-found.jpg`). No information was removed and no behaviour changed except as listed.
+
+## What changed
+| Area | Change |
+|---|---|
+| Header | Code, planner, submitted and waiting time are separate items instead of one run-on line; status badge and a **Print plan** button sit on the right. |
+| Map card | Taller map (`clamp(380px, 58vh, 680px)`), legend now shows counts per type, **north arrow**, **Fit to assets** and **Fit to region** buttons, and a readout bar under the map (region size, origin, heading). The scale bar stays. The first view and the fit buttons leave room at the top so the legend never covers assets. A plan with no assets shows a note on the map. |
+| Assets tab | Chips with counts by type; the table sorts by **name, type, distance from origin and rotation** (click a heading again to reverse; `aria-sort`, natural order so "Tent 2" comes before "Tent 10"); rows select with Enter or Space; the selected row has a rust marker and stays in sync with the map. |
+| Decision area | The decision card has a moss top edge so it reads as the primary action area. |
+| States | "Plan not found" and "Loading plan" are proper cards (`role=alert` / `role=status`) with a Back button. |
+| Responsive | Laptop: map and tabs left, decision and summary right. At 1080 px and below one column in this order: **map, decision, summary, tabs** (the map used to sit below the decision and summary on a phone). At 1600 px and wider the page and text grow for a projector. |
+| Print | A print stylesheet hides the sidebar, banner, buttons, tab bar and decision card and prints header, map (9 cm), readout, summary and the active tab (the assets table by default). The map uses `preserveDrawingBuffer` so it can be printed. |
+| Accessibility | Table caption (screen readers), sort buttons with focus ring, tabpanel role, legend as a list, north arrow with a text label, focus styles unchanged. |
+
+Files: `src/pages/PlanDetail.tsx`, `src/components/MapView.tsx` (fit handle, padding, print), `src/styles.css`.
+
+## How it was checked
+`npm run typecheck` and `npm run build` pass. Private API + dashboard, signed in as a reviewer: sample plan TP-2026-0135 (21 assets) at
+1400 px and 390 px wide: layout, legend counts, north arrow, Fit to region, sorting by distance (47.6 m up to 216.7 m, arrow shown),
+not-found page. Print was checked by applying the print rules on screen at about A4 width (see the screenshot), not with a real print dialog.
+
+## Not checked
+- A real print or PDF export (page breaks, ink use, whether the map redraws at print size); a projector (only the CSS rule exists).
+- Contrast measured with a tool (colours reuse the existing palette; muted text is about 6:1 on white); screen-reader use; keyboard
+  selection of an icon directly on the map (table rows work); other browsers; the other pages (overview, plan list) were not touched.
+- Tablet width (only 1400, 1000 and 390 px were looked at); very long asset names or hundreds of assets.
+- The first paint of the map is slow in the embedded browser (several seconds); not diagnosed.
+
+## C3 audit (after finishing)
+- Contrast measured (WCAG ratios): body, muted text, links, primary button, "info" and "bad" badges, chips and selected row all pass AA (4.5:1).
+  The status badges "Approved" (4.2:1) and "Waiting" (3.9:1) were below AA before C3; their text colour is now darker (5.3:1 and 5.6:1;
+  badge and chip classes only, backgrounds unchanged). Typecheck and build pass after this change.
+- Known gaps against the C3 list: (1) no dedicated error card when the live data fails to load (the page shows "Plan not found" or the
+  last data); (2) table numbers use one decimal (x, z, distance) while sizes use `dim`, so formatting is consistent inside the table but
+  does not use `formatMeters` (it would show kilometres and lose precision); (3) print and projector were not tried for real.
+
+## C3 addition: error card (owner request)
+The live store now remembers when loading from the server fails (`loadError`, optional in `storeContext.ts`, set in `liveStore.tsx`;
+the demo store is unchanged). On the plan page:
+- if a plan cannot be loaded at all, a card "Could not load this plan" shows the reason with **Try again** and **Back to plans**
+  (instead of the misleading "Plan not found");
+- if a refresh fails while a plan is already shown, a red notice at the top says the data may be out of date, with **Try again**.
+  It clears by itself once the server answers again.
+Checked by stopping the private API while a plan was open (notice appeared after the next refresh), then restarting it and pressing
+Try again (notice cleared). Screenshot: `screenshots-c3/after-error-notice.jpg`. Not checked: the full "Could not load this plan" card
+(hard to trigger: it needs the sign-in check to succeed and the plan list to fail right after); other pages still ignore load errors.
+This closes gap (1) in the C3 audit above.

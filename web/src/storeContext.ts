@@ -11,6 +11,8 @@ export interface Ctx {
   /** URL prefix: '/demo' or ''. */
   base: string
   ready: boolean
+  /** Set when the last attempt to load data from the server failed (live mode only). */
+  loadError?: string | null
   user: User | null
   users: User[]
   plans: Plan[]

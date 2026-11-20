@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { ASSET_DEFAULTS, dim, footprintRing, gridFeatures, offsetToLatLng } from '../geo'
@@ -32,6 +32,9 @@ function fc(features: GeoJSON.Feature[]): GeoJSON.FeatureCollection {
 export function assetBearing(layout: LayoutData, rotationDegrees: number): number {
   return (((layout.anchor.headingDegrees - rotationDegrees) % 360) + 360) % 360
 }
+
+// Extra room at the top so the legend overlay never covers the assets.
+const FIT_PADDING = { top: 96, right: 56, bottom: 56, left: 56 }
 
 const ICON_PX = 32 // icon size in CSS pixels at icon-size 1
 const ICON_SCALE = 2 // drawn at 2x so icons stay sharp on high-density screens
@@ -145,7 +148,13 @@ function buildData(layout: LayoutData) {
   }
 }
 
-export function MapView({ layout, highlightId, onSelect }: Props) {
+/** What the plan page can ask the map to do (the "Fit" buttons). */
+export interface MapHandle {
+  fitAssets: () => void
+  fitRegion: () => void
+}
+
+export const MapView = forwardRef<MapHandle, Props>(function MapView({ layout, highlightId, onSelect }, ref) {
   const el = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const onSelectRef = useRef(onSelect)
@@ -156,6 +165,18 @@ export function MapView({ layout, highlightId, onSelect }: Props) {
   const layoutKey = useMemo(() => JSON.stringify(layout), [layout])
   const layoutRef = useRef(layout)
   layoutRef.current = layout
+
+  useImperativeHandle(ref, () => {
+    const fit = (box: maplibregl.LngLatBoundsLike) => mapRef.current?.fitBounds(box, { padding: FIT_PADDING, duration: 500 })
+    const regionBox = (): maplibregl.LngLatBoundsLike => {
+      const b = layoutRef.current.regionBounds
+      return [[b.westLongitude, b.southLatitude], [b.eastLongitude, b.northLatitude]]
+    }
+    return {
+      fitRegion: () => fit(regionBox()),
+      fitAssets: () => fit(layoutRef.current.objects.length > 0 ? assetBounds(layoutRef.current) : regionBox()),
+    }
+  }, [])
 
   useEffect(() => {
     if (!el.current) return
@@ -172,10 +193,12 @@ export function MapView({ layout, highlightId, onSelect }: Props) {
               [b.westLongitude, b.southLatitude],
               [b.eastLongitude, b.northLatitude],
             ],
-      fitBoundsOptions: { padding: 56 },
+      fitBoundsOptions: { padding: FIT_PADDING },
       attributionControl: false,
       maxPitch: 0,
       dragRotate: false,
+      // Lets the browser print the map (a reviewer may print a plan); costs a little speed.
+      preserveDrawingBuffer: true,
     })
     mapRef.current = map
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
@@ -299,7 +322,7 @@ export function MapView({ layout, highlightId, onSelect }: Props) {
   }, [highlightId, layoutKey])
 
   return <div ref={el} className="map" role="img" aria-label={`Map of ${layout.name}: region, grid and ${layout.objects.length} assets`} />
-}
+})
 
 function applyHighlight(map: maplibregl.Map, id: string | null) {
   const f: maplibregl.FilterSpecification = ['==', ['get', 'id'], id ?? '']
