@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useStore } from '../storeContext'
 import { MapView } from '../components/MapView'
+import { AssetIcon } from '../components/AssetIcon'
 import { DecisionPanel } from '../components/DecisionPanel'
 import { FieldImages } from '../components/FieldImages'
 import { OwnerActions } from '../components/OwnerActions'
@@ -88,7 +89,7 @@ export function PlanDetail() {
             <MapView layout={layout} highlightId={selected} onSelect={setSelected} />
             <div className="map-legend" aria-label="Legend">
               {summarizeAssets(layout).map(({ type: t }) => (
-                <span key={t}><i style={{ background: ASSET_DEFAULTS[t].color }} />{ASSET_DEFAULTS[t].label}</span>
+                <span key={t}><AssetIcon type={t} size={20} />{ASSET_DEFAULTS[t].label}</span>
               ))}
               <span><i className="lg-origin" />Origin</span>
             </div>
@@ -118,7 +119,7 @@ export function PlanDetail() {
                     <tbody>
                       {layout.objects.map((o) => (
                         <tr key={o.id} className={selected === o.id ? 'row-selected' : ''} onClick={() => setSelected(o.id === selected ? null : o.id)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') setSelected(o.id === selected ? null : o.id) }}>
-                          <td><i className="swatch" style={{ background: ASSET_DEFAULTS[o.assetType].color }} />{o.name}</td>
+                          <td className="name-cell"><AssetIcon type={o.assetType} size={18} />{o.name}</td>
                           <td>{ASSET_DEFAULTS[o.assetType].label}</td>
                           <td>{o.x.toFixed(1)}</td>
                           <td>{o.z.toFixed(1)}</td>

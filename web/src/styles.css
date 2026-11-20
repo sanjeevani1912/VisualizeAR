@@ -170,6 +170,11 @@ textarea { resize: vertical; }
 .map-card { position: relative; }
 .map { width: 100%; height: 460px; background: #ede6d2; }
 .map-legend { position: absolute; left: 10px; top: 10px; background: rgba(252, 249, 242, 0.95); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.76rem; max-width: 60%; }
+.map-legend span { display: inline-flex; align-items: center; }
+.map-legend .asset-icon { margin-right: 5px; }
+.asset-icon { display: inline-block; flex: none; vertical-align: middle; }
+.name-cell .asset-icon { margin-right: 8px; vertical-align: -4px; }
+.popup-head { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
 .map-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 .map-legend i.lg-origin { border-radius: 50%; background: var(--rust); box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--rust); margin-right: 8px; margin-left: 3px; }
 .map-selected { position: absolute; left: 10px; bottom: 36px; background: rgba(252, 249, 242, 0.97); border: 1px solid var(--rust); border-radius: 8px; padding: 6px 10px; font-size: 0.84rem; display: flex; gap: 12px; }
