@@ -1,6 +1,6 @@
 from django.urls import path, re_path
 
-from . import views, views_auth, views_plans, views_users
+from . import views, views_attachments, views_auth, views_plans, views_users
 from .http import not_found
 
 # Routes are added phase by phase; see PLAN.md for the full parity checklist.
@@ -26,6 +26,9 @@ urlpatterns = [
     path("plans/<str:plan_id>/start-review", views_plans.plan_start_review),
     path("plans/<str:plan_id>/decision", views_plans.plan_decision),
     path("plans/<str:plan_id>/comments", views_plans.plan_comments),
+    # phase 3: field images
+    path("plans/<str:plan_id>/attachments", views_attachments.plan_attachments),
+    path("attachments/<str:attachment_id>", views_attachments.attachment),
     # anything else under /api: JSON "Not found" (or "Not signed in") instead of Django's HTML page
     re_path(r"^.*$", not_found),
 ]

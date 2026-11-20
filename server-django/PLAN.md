@@ -1,7 +1,7 @@
 # Moving the DhruvAR backend from Node to Django
 
-**Status: phases 0, 1 and 2 done (scaffold; sign-in and users; layout checking, plans, decisions, comments, audit). Phase 3 (images) next. 20 of 23 routes built. The Node server in `server/` is untouched and remains the live backend.**
-Details: `docs/PHASE-1-AUTH-AND-USERS.md`, `docs/PHASE-2-PLANS.md`.
+**Status: phases 0-3 done (scaffold; sign-in and users; layout checking, plans, decisions, comments, audit; field images). All 23 routes built. Phase 4 (seed and conformance) next. The Node server in `server/` is untouched and remains the live backend.**
+Details: `docs/PHASE-1-AUTH-AND-USERS.md`, `docs/PHASE-2-PLANS.md`, `docs/PHASE-3-IMAGES.md`.
 
 ## Isolation: how the current system stays safe
 - Lives in a **separate git worktree** (`DhruvAR-django/`, a sibling of `DhruvAR/`) on its own branch, `django-backend`. The working folder and `main` are not changed by anything done here.
@@ -23,7 +23,7 @@ Both clients then work unchanged; only the server behind them is replaced.
 | Admin | `GET /admin/users`, `POST /admin/users`, `PATCH /admin/users/:id`, `POST /admin/users/:id/password` | yes (phase 1) |
 | Audit | `GET /audit`, `GET /audit/verify` | yes (phase 2) |
 | Plans | `GET /plans`, `POST /plans`, `POST /plans/:id/versions`, `/withdraw`, `/start-review`, `/decision`, `/comments` | yes (phase 2) |
-| Images | `POST /plans/:id/attachments`, `GET /attachments/:id`, `DELETE /attachments/:id` | |
+| Images | `POST /plans/:id/attachments`, `GET /attachments/:id`, `DELETE /attachments/:id` | yes (phase 3) |
 
 ### Behaviours that are easy to get subtly wrong
 - A plan the user may not see is reported as **404**, never 403, so ids cannot be probed.
@@ -64,7 +64,7 @@ Each phase ends with its tests passing and nothing outside `server-django/` chan
    Audit hashes are verified identical to the Node implementation.
 1. **Auth and users** (done 2026-11-14, 84 tests, compared with Node on 55 requests): password hashing, sessions, bearer + cookie, login throttle, CSRF header, security headers/CSP; routes for auth, users, admin.
 2. **Layout and plans** (done 2026-11-20, 166 tests, 544 Node test vectors for layout and hash, compared with Node on 138 requests with 0 differences): `layout.ts` ported (same checks and messages, same content hash via a JavaScript-exact serialiser), then the plan routes and `/audit`.
-3. **Images**: upload, serve, delete.
+3. **Images** (done 2026-11-20, 191 tests, compared with Node on 229 requests with 0 differences): upload, serve, delete.
 4. **Seed and conformance**: a seed command (sample users/plans, exported once from `web/src/data/mock.ts`); make `server/scripts/api-test.ts` able to run against either server, so the **same 13 end-to-end tests** judge both. The fixture produced by the Android app's own serializer must pass too.
 5. **Serving and hardening**: serve `web/dist` with the single-page-app fallback, CSP with the map origin, `Secure` cookies behind HTTPS, PostgreSQL settings, run notes.
 6. **Cutover decision**: only when every test passes against Django, the dashboard works in a browser and the app works on a phone. Until then Node stays live.

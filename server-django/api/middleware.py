@@ -31,7 +31,8 @@ class ApiMiddleware:
             response = self.get_response(request)
         except ApiError as e:
             response = error_response(e.status, e.message)
-        response["Cache-Control"] = "no-store"
+        if "Cache-Control" not in response:  # an image sets its own (private, max-age=300)
+            response["Cache-Control"] = "no-store"
         return response
 
     def process_exception(self, request, exception):
