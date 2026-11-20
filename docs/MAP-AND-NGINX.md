@@ -98,7 +98,8 @@ Verified on 2026-11-20:
 **Not verified**
 - Phone over Wi-Fi: the phone's two networks (`192.168.137.x`, `192.168.0.x`) are not the PC's `192.168.1.x`. Windows Firewall for port 8000 was not checked.
 - The Android app itself with the new address; HTTPS; load or many users; image upload near the 12 MB limit; the signed-in dashboard screens; a dashboard map using `/map/style.json`; Content-Security-Policy (none set).
-- **Viewer quirk:** on a fresh page load `viewer.html` stayed blank until the map was moved (same on 8088 directly, so not caused by Nginx). Cause unknown.
+- **Viewer blank on first load (explained, not a fault):** in the test browser pane `viewer.html` stayed blank until the map was nudged. The pane was hidden, so the page had a 0x0 window and almost no animation frames (about 3 in 1.5 s), and MapLibre needs frames to finish loading. Same on port 8088 directly, so not caused by Nginx. After sizing the viewport and nudging, the map drew. A fresh load with a visible window was not re-tested.
+- **Firewall (not proven):** the PC's cable network is "Public". Docker Desktop's own "Docker Desktop Backend" rule allows incoming TCP for `com.docker.backend.exe` on Public, so port 8000 should be reachable from the same network, but no second device on `192.168.1.x` was available to prove it. If blocked, add an inbound allow rule for TCP 8000 (needs administrator).
 - `viewer.html` loads MapLibre from `unpkg.com`, which breaks the offline rule on a closed network. It is a test page only; the app and dashboard bundle their own copy.
 - Tile size was 44,726 bytes (notes said ~26 KB); not investigated.
 
