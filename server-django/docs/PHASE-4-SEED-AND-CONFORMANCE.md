@@ -79,7 +79,7 @@ The browser console showed only the expected "not signed in" (401) answers of th
 
 ## 5. Not checked (honestly)
 
-- The **Android app** was not pointed at Django (needs a phone or emulator); only its file format (fixture) is tested.
+- The **Android app itself** was not run against Django (needs a phone or emulator). Its requests were checked by reading its code and replaying them (section 9).
 - The dashboard's **file-picker upload button** was not clicked (the browser tool cannot choose files); the same upload was sent
   to Django with a real PNG request and the dashboard then displayed it.
 - Dashboard pages not clicked: password reset and disable-user buttons, creating a user from the form, the "presentation demo" page,
@@ -104,3 +104,22 @@ The browser console showed only the expected "not signed in" (401) answers of th
 ## 8. Next: milestone B4 (not started)
 PostgreSQL: settings from environment variables, docker-compose, the whole suite on PostgreSQL, audit-log and plan-code concurrency
 under PostgreSQL, and an operations note.
+
+## 9. Follow-up checks (added after B3)
+
+**The Android app's requests.** I read `app/.../data/remote/ServerClient.kt`. The app makes five calls: `POST /api/auth/token`,
+`POST /api/auth/logout`, `POST /api/plans`, `POST /api/plans/<id>/versions` and `GET /api/plans`, always with a Bearer token and
+`Content-Type: application/json; charset=utf-8`. (It has no image upload; images are added from the dashboard.) It builds the layout with
+Android's `org.json`, which writes JSON a little differently from a browser: no spaces, `1.0E-7` for tiny numbers, `\/` for slashes,
+`\uXXXX` escapes, and extra fields such as `scale` and the anchor's `label`. Three requests written in exactly that style were added to
+`scripts/compare_servers.py` (submit, new version, list). **Node and Django gave identical answers, including identical content hashes.**
+The reply fields the app reads (`token`, `user.{id,username,name,rank,role}`, `id`, `code`, `versions[].layout.id`, `status`, `error`) are
+the ones both servers send.
+To reach Django from a phone on the LAN: start it on all addresses (`manage.py runserver 0.0.0.0:4001`) and add the PC's address to
+`ALLOWED_HOSTS` (for example `ALLOWED_HOSTS=192.168.1.214`); the app's server address is then `http://<that address>:4001`.
+
+**Request size limit.** Node refuses a JSON body of more than exactly 2 MB (answer `500`). Django's default was 2.5 MB, so a body between the two
+was accepted by Django only. `DATA_UPLOAD_MAX_MEMORY_SIZE` is now exactly 2 MB (it does not apply to the file part of an image
+upload). Tested (`BodySizeTests`) and compared: exactly 2 MB accepted, 1 byte more refused, 3 MB refused, on both servers.
+
+Result after these changes: **235 requests identical to Node**, **202 tests pass**, seed comparison identical and 13/13 end-to-end tests on both servers.

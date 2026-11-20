@@ -570,3 +570,19 @@ class AuditRouteTests(PlanTestCase):
         self.decide(plan_id, version=2)
         # six sign-ins from setUp + submit, review, comment, changes, resubmit, approve
         self.assertEqual(self.req("get", "/api/audit/verify", "aud").json(), {"ok": True, "entries": 12})
+
+
+class BodySizeTests(PlanTestCase):
+    """Node refuses a JSON body over exactly 2 MB (as a 500); the Django limit is set to the same size."""
+
+    def padded(self, total_bytes):
+        base = json.dumps({"layout": layout(), "pad": ""})
+        return json.dumps({"layout": layout(), "pad": "x" * (total_bytes - len(base.encode()))})
+
+    def test_exactly_two_megabytes_is_accepted_and_one_byte_more_is_not(self):
+        two_mb = 2 * 1024 * 1024
+        ok = self.call(Client(), "post", "/api/plans", raw=self.padded(two_mb), headers=self.who["pat"])
+        self.assertEqual(ok.status_code, 201)
+        too_big = self.call(Client(), "post", "/api/plans", raw=self.padded(two_mb + 1), headers=self.who["pat"])
+        self.assertError(too_big, 500, "Something went wrong on the server")
+        self.assertEqual(Plan.objects.count(), 1)

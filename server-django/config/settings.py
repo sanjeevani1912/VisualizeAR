@@ -99,6 +99,10 @@ DATABASES = {
 # Django's default PBKDF2 hasher. Argon2 can be added later (pip install argon2-cffi).
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.PBKDF2PasswordHasher"]
 
+# The Node server refuses a JSON body over exactly 2 MB (express.json limit '2mb'). Django's default is 2.5 MB.
+# This limit does not apply to the file part of an image upload, only to the rest of a request.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
+
 X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "no-referrer"

@@ -300,6 +300,27 @@ def build_script():
     g("show A2 after delete", "A2", "rex")
     add("signed out delete", None, "DELETE", "/api/attachments/{A3}")
 
+    # --- exactly what the Android app sends (OkHttp + org.json: no spaces, 1.0E-7, escaped slashes, \\u escapes)
+    app_layout = (
+        '{"version":2,"id":"b6c7f3a2-0000-4000-8000-aaaaaaaaaaaa","name":"Phone \\/ plan \\u00e9 \\ud83d\\ude80","createdAtEpochMs":1761900000000,'
+        '"updatedAtEpochMs":1761900500000,"regionBounds":{"southLatitude":28.6115,"northLatitude":28.6165,"westLongitude":77.2075,"eastLongitude":77.2125},'
+        '"anchor":{"id":"anchor-1","label":"Origin Anchor","x":0,"z":0,"description":"Primary deployment reference datum","longitude":77.21,"latitude":28.614,'
+        '"horizontalAccuracyMeters":4.199999809265137,"headingDegrees":12.5},"objects":['
+        '{"scale":1,"id":"o1","assetType":"GUNSHIP","name":"Gunship 1","x":1.0E-7,"z":-12.5,"rotationDegrees":359.99999999999994,"widthMeters":27.037078857421875,"lengthMeters":39.400001525878906,"heightMeters":12.101274490356445},'
+        '{"scale":1,"id":"o2","assetType":"K131_TAKEOFF","name":"K-131 \\/ Take-Off","x":-20,"z":3.0E-5,"rotationDegrees":-30.0,"widthMeters":6.619999885559082,"lengthMeters":12.479999542236328,"heightMeters":7.079999923706055}]}'
+    )
+    add("app-style: submit plan (org.json formatting)", "pat", "POST", plans, raw='{"layout":' + app_layout + ',"note":"sent by app"}', save=("P7", "id"))
+    add("app-style: new version after the plan is open", "pat", "POST", "/api/plans/{P7}/versions", raw='{"layout":' + app_layout + ',"note":"again"}')
+    add("app-style: list plans as the planner", "pat", "GET", plans)
+
+    # --- request size limit (Node: express.json limit 2 MB)
+    def padded(extra_bytes):
+        base = json.dumps({"layout": L(), "pad": ""})
+        return json.dumps({"layout": L(), "pad": "x" * (2 * 1024 * 1024 + extra_bytes - len(base.encode()))})
+    add("JSON body of exactly 2 MB", "pia", "POST", plans, raw=padded(0))
+    add("JSON body 1 byte over 2 MB", "pia", "POST", plans, raw=padded(1))
+    add("JSON body of 3 MB", "pia", "POST", plans, raw=padded(1024 * 1024))
+
     # --- final reads
     for u in USERS:
         add(f"final list plans as {u}", u, "GET", plans)
