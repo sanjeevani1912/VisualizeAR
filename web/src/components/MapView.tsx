@@ -1,11 +1,17 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { ASSET_DEFAULTS, dim, footprintRing, gridFeatures, offsetToLatLng } from '../geo'
 import { ASSET_TYPES, assetIconSvg, assetIconUrl, SELECTION_RING_SVG, svgDataUrl, UPRIGHT_TYPES } from '../assetIcons'
 import type { LayoutData } from '../types'
 
-const STYLE_URL = import.meta.env.VITE_MAP_STYLE_URL as string | undefined
+// Optional basemap. May be absolute (http://host:8000/map/style.json) or relative (/map/style.json, same origin as the
+// dashboard, e.g. behind Nginx). A relative address is made absolute here so every part of the map can use it.
+// Nothing is hard-coded: with no value the map is offline.
+const RAW_STYLE_URL = (import.meta.env.VITE_MAP_STYLE_URL as string | undefined)?.trim() || undefined
+const STYLE_URL = RAW_STYLE_URL ? new URL(RAW_STYLE_URL, window.location.href).href : undefined
+// The overlay sources this file adds; a load error from any other source means the basemap is struggling.
+const OVERLAY_SOURCES = new Set(['mask', 'region', 'grid', 'footprints', 'points', 'origin'])
 
 // Offline style: no network access and no third-party tiles. The region, grid and assets are drawn
 // as vector overlays on a plain background. Set VITE_MAP_STYLE_URL to use the map server's basemap.
@@ -166,6 +172,35 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView({ layout, h
   const layoutRef = useRef(layout)
   layoutRef.current = layout
 
+  // Which style to draw on: the basemap (once its style.json is confirmed reachable) or the offline background.
+  // null = still checking. If the basemap cannot be reached the plan is still shown, with a small notice.
+  const [style, setStyle] = useState<maplibregl.StyleSpecification | string | null>(STYLE_URL ? null : OFFLINE_STYLE)
+  const [basemapIssue, setBasemapIssue] = useState(false)
+  useEffect(() => {
+    if (!STYLE_URL) return
+    let cancelled = false
+    const ctl = new AbortController()
+    const timer = window.setTimeout(() => ctl.abort(), 8000)
+    fetch(STYLE_URL, { signal: ctl.signal })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`style.json answered ${r.status}`)
+        const j = (await r.json()) as { version?: number; layers?: unknown }
+        if (j.version !== 8 || !Array.isArray(j.layers)) throw new Error('not a map style')
+        if (!cancelled) setStyle(STYLE_URL)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setBasemapIssue(true)
+        setStyle(OFFLINE_STYLE)
+      })
+      .finally(() => window.clearTimeout(timer))
+    return () => {
+      cancelled = true
+      ctl.abort()
+      window.clearTimeout(timer)
+    }
+  }, [])
+
   useImperativeHandle(ref, () => {
     const fit = (box: maplibregl.LngLatBoundsLike) => mapRef.current?.fitBounds(box, { padding: FIT_PADDING, duration: 500 })
     const regionBox = (): maplibregl.LngLatBoundsLike => {
@@ -179,12 +214,13 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView({ layout, h
   }, [])
 
   useEffect(() => {
-    if (!el.current) return
+    if (!el.current || !style) return
+    const usingBasemap = typeof style === 'string'
     const layout = layoutRef.current
     const b = layout.regionBounds
     const map = new maplibregl.Map({
       container: el.current,
-      style: STYLE_URL || OFFLINE_STYLE,
+      style,
       // Open on the assets (so footprints and icons are visible); with no assets, open on the whole region.
       bounds:
         layout.objects.length > 0
@@ -206,15 +242,53 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView({ layout, h
     map.addControl(
       new maplibregl.AttributionControl({
         compact: true,
-        customAttribution: STYLE_URL
-          ? '© OpenStreetMap contributors · Boundaries: Survey of India via DataMeet (CC BY 4.0)'
-          : 'Offline view · region, grid and assets only',
+        // With the basemap, its own tile description already carries "© OpenStreetMap contributors" and the
+        // Survey of India / DataMeet credit, and MapLibre shows it; repeating it here would print it twice.
+        customAttribution: usingBasemap ? undefined : 'Offline view · region, grid and assets only',
       }),
       'bottom-right',
     )
 
     const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10 })
     let removed = false
+
+    // Printing: a WebGL map does not redraw itself to the page's print size, so the printed map would be cut off.
+    // Instead, just before printing, swap in a picture of exactly what is on screen (plus the map credit as text);
+    // the print stylesheet hides the live map and shows the picture. Removed again afterwards.
+    let printEls: HTMLElement[] = []
+    const clearPrint = () => {
+      printEls.forEach((n) => n.remove())
+      printEls = []
+    }
+    const beforePrint = () => {
+      clearPrint()
+      try {
+        map.triggerRepaint()
+        const img = document.createElement('img')
+        img.className = 'map-print-img'
+        img.alt = ''
+        img.src = map.getCanvas().toDataURL('image/png')
+        const credit = document.createElement('p')
+        credit.className = 'map-print-credit'
+        credit.textContent = map.getContainer().querySelector('.maplibregl-ctrl-attrib-inner')?.textContent ?? ''
+        const host = map.getContainer()
+        host.after(img, credit)
+        printEls = [img, credit]
+      } catch {
+        clearPrint() // keep the live map visible in print if a picture cannot be taken
+      }
+    }
+    window.addEventListener('beforeprint', beforePrint)
+    window.addEventListener('afterprint', clearPrint)
+
+    // Basemap trouble after the style loaded (server went away, tiles failing): keep the plan, tell the user.
+    // A plain 404 for one tile is normal at the edge of the data and is ignored.
+    map.on('error', (e) => {
+      const sourceId = (e as unknown as { sourceId?: string }).sourceId
+      if (!usingBasemap || (sourceId && OVERLAY_SOURCES.has(sourceId))) return
+      const status = (e.error as { status?: number } | undefined)?.status
+      if (status === undefined || status === 0 || status >= 500) setBasemapIssue(true)
+    })
 
     map.on('load', async () => {
       try {
@@ -307,11 +381,14 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView({ layout, h
     })
     return () => {
       removed = true
+      window.removeEventListener('beforeprint', beforePrint)
+      window.removeEventListener('afterprint', clearPrint)
+      clearPrint()
       popup.remove()
       map.remove()
       mapRef.current = null
     }
-  }, [layoutKey])
+  }, [layoutKey, style])
 
   const highlightRef = useRef<string | null>(highlightId)
   highlightRef.current = highlightId
@@ -321,7 +398,12 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView({ layout, h
     if (map) applyHighlight(map, highlightId)
   }, [highlightId, layoutKey])
 
-  return <div ref={el} className="map" role="img" aria-label={`Map of ${layout.name}: region, grid and ${layout.objects.length} assets`} />
+  return (
+    <>
+      <div ref={el} className="map" role="img" aria-label={`Map of ${layout.name}: region, grid and ${layout.objects.length} assets`} />
+      {basemapIssue && <p className="map-notice" role="status">Basemap unavailable: showing the plan only</p>}
+    </>
+  )
 })
 
 function applyHighlight(map: maplibregl.Map, id: string | null) {

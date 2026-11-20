@@ -198,3 +198,29 @@ Checked by stopping the private API while a plan was open (notice appeared after
 Try again (notice cleared). Screenshot: `screenshots-c3/after-error-notice.jpg`. Not checked: the full "Could not load this plan" card
 (hard to trigger: it needs the sign-in check to succeed and the plan list to fail right after); other pages still ignore load errors.
 This closes gap (1) in the C3 audit above.
+
+---
+
+# Milestone C4 update: basemap-ready map (2026-11-20)
+
+Details, how to switch it on and what was not checked: `docs/BASEMAP.md`. Screenshots: `docs/screenshots-c4/`.
+
+| Change | Where |
+|---|---|
+| `VITE_MAP_STYLE_URL` accepts a **relative** address (`/map/style.json`) or an absolute one; it is resolved against the page address; nothing is hard-coded; unset = offline map | `src/components/MapView.tsx` |
+| The style is checked first (8 s limit). If the map server cannot be reached, the map uses the offline background and shows the notice **"Basemap unavailable: showing the plan only"**; the same notice appears if tiles fail later (not for a single 404) | `MapView.tsx`, `styles.css` (`.map-notice`) |
+| Attribution: with the basemap the map server's own text (OpenStreetMap contributors, Survey of India via DataMeet, CC BY 4.0) is shown once; without it "Offline view" | `MapView.tsx` |
+| `npm run dev` forwards `/map` to Nginx (default `http://localhost:8000`, `DEV_MAP_PROXY` to change) and keeps the browser's Host header so Nginx writes the right addresses into `style.json` | `vite.config.ts` |
+| `.env.example` rewritten; new `docs/BASEMAP.md` | `web/` |
+
+Readability on the basemap: the region tint, grid, footprints and icons were looked at on the real Delhi basemap (roads and labels) and
+on the Goa sample (plain land cover). Both stay readable; the opacities were left as they are.
+Checked: real basemap (dev server), fallback notice, typecheck, build. Not checked: see `BASEMAP.md` ("Not checked").
+
+## C4 follow-up checks (2026-11-20, owner asked to verify what could be)
+Done: production build behind a temporary Nginx (port 8010) opened by this PC's network address; map server lost mid-session (simulated
+on the temporary Nginx only); print simulation with basemap. **Found and fixed:** a WebGL map is not redrawn to the printed page size, so
+printing cut the map off; the page now swaps in a picture of the on-screen map plus the credit text just before printing
+(`MapView.tsx`, `styles.css`). **Found and documented:** Git Bash rewrites `/map/style.json` to a Windows path when used as an environment
+value (build from PowerShell). Still not checked: real phone/other PC, HTTPS, firewall, real print dialog. Details and screenshots:
+`docs/BASEMAP.md`, `docs/screenshots-c4/`.
