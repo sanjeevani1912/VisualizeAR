@@ -1,0 +1,4 @@
+# Pins Meilisearch to the exact version that built work/meili (floating tag v1.54 now gives 1.54.3 and refuses the index).
+services:
+  search:
+    image: getmeili/meilisearch:v1.54.2
