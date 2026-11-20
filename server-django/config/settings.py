@@ -8,6 +8,8 @@ import os
 import secrets
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -84,8 +86,28 @@ WSGI_APPLICATION = "config.wsgi.application"
 AUTH_USER_MODEL = "api.User"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-DATABASES = {
-    "default": {
+def _database() -> dict:
+    """SQLite by default (nothing to set up). PostgreSQL when DB_ENGINE=postgres, configured from DB_* variables:
+    DB_NAME (default dhruvar), DB_USER (default dhruvar), DB_PASSWORD (required), DB_HOST (default 127.0.0.1),
+    DB_PORT (default 5432). The password is only ever read from the environment, never from a file in the repository."""
+    engine = os.environ.get("DB_ENGINE", "sqlite").strip().lower()
+    if engine == "postgres":
+        password = os.environ.get("DB_PASSWORD")
+        if not password:
+            raise ImproperlyConfigured("DB_ENGINE=postgres needs the DB_PASSWORD environment variable")
+        return {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("DB_NAME", "dhruvar"),
+            "USER": os.environ.get("DB_USER", "dhruvar"),
+            "PASSWORD": password,
+            "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
+            "PORT": os.environ.get("DB_PORT", "5432"),
+            "CONN_MAX_AGE": int(_num("DB_CONN_MAX_AGE", 0)),  # 0 = close after every request (safe with servers that start a thread per request; see docs/POSTGRESQL-OPERATIONS.md)
+            # No SQLite OPTIONS here: transaction_mode and timeout would be refused by PostgreSQL.
+        }
+    if engine != "sqlite":
+        raise ImproperlyConfigured(f"DB_ENGINE must be 'sqlite' or 'postgres', not {engine!r}")
+    return {
         "ENGINE": "django.db.backends.sqlite3",
         # A different file from the Node server's dhruvar.db, so the two never touch each other.
         "NAME": DATA_DIR / "dhruvar-django.db",
@@ -94,7 +116,9 @@ DATABASES = {
             "timeout": 5,
         },
     }
-}
+
+
+DATABASES = {"default": _database()}
 
 # Django's default PBKDF2 hasher. Argon2 can be added later (pip install argon2-cffi).
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.PBKDF2PasswordHasher"]

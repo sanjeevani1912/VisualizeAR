@@ -12,6 +12,17 @@ TMP_DJ="$SCRATCH/tmp-django-data"
 mkdir -p "$TMP_NODE" "$TMP_DJ"
 export COMPARE_PASSWORD="Cmp-$(python -c 'import secrets;print(secrets.token_hex(6))')-Aa1"
 
+# Optional: run Django on a throwaway PostgreSQL database (needs `docker compose -f compose.postgres.yml up -d` and .env.postgres).
+#   USE_POSTGRES=1 bash server-django/scripts/<this script>
+PGDB=""
+if [ "${USE_POSTGRES:-}" = "1" ]; then
+  set -a; . "$DJ_DIR/.env.postgres"; set +a
+  PGDB="cmp_$(python -c 'import secrets;print(secrets.token_hex(4))')"
+  docker exec dhruvar-postgres psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE $PGDB" >/dev/null || { echo "cannot create the throwaway PostgreSQL database"; exit 2; }
+  export DB_ENGINE=postgres DB_NAME="$PGDB" DB_USER="$POSTGRES_USER" DB_PASSWORD="$POSTGRES_PASSWORD" DB_PORT="$POSTGRES_PORT"
+  echo "Django will use PostgreSQL (throwaway database $PGDB)"
+fi
+
 cleanup() {
   echo "--- stopping servers"
   [ -n "${NODE_PID:-}" ] && taskkill //PID "$NODE_PID" //T //F >/dev/null 2>&1
@@ -22,6 +33,7 @@ cleanup() {
     [ -n "$pid" ] && taskkill //PID "$pid" //T //F >/dev/null 2>&1
   done
   sleep 1
+  [ -n "$PGDB" ] && docker exec dhruvar-postgres psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS $PGDB WITH (FORCE)" >/dev/null 2>&1 && echo "--- throwaway PostgreSQL database dropped"
   rm -rf "$SCRATCH"
   echo "--- temp folders removed: $( [ -e "$SCRATCH" ] && echo NO || echo yes )"
   echo "--- ports still listening: $(netstat -ano | grep -E ':(4100|4101) ' | grep -c LISTENING)"

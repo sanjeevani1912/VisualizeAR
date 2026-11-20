@@ -14,7 +14,7 @@ from django.db.models import Max
 from django.db.models.functions import Length
 
 from . import layout as layout_checks
-from .audit import audit, verify_chain
+from .audit import PLAN_CODE_LOCK, advisory_lock, audit, verify_chain
 from .http import AnyField, ApiError, EnumField, JsResponse, NumField, StrField, endpoint, json_body, validate
 from .jsutil import db_text
 from .models import Attachment, AuditEntry, Comment, Decision, Plan, PlanVersion, new_id, now_ms
@@ -187,6 +187,7 @@ def _create_plan(request):
     for attempt in range(CODE_ATTEMPTS):
         try:
             with transaction.atomic():
+                advisory_lock(PLAN_CODE_LOCK)  # PostgreSQL: submissions take turns choosing a number (SQLite already does)
                 code = _next_code()
                 plan = Plan.objects.create(id=plan_id, code=code, name=name, owner_id=user.id, status="SUBMITTED", created_at=now, updated_at=now)
                 _add_version(plan, 1, layout, note, user.id, now)

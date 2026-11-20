@@ -164,7 +164,7 @@ after phase 4, when all routes exist). Real multi-process behaviour of the throt
 
 ## 7. Known limits and notes for later phases
 
-- **PostgreSQL:** no change needed for phase 1. `LoginThrottle` updates use `select_for_update`, which PostgreSQL honours and SQLite ignores.
+- **PostgreSQL:** no change needed for phase 1 (the audit-writer lock mentioned below was added in the PostgreSQL milestone, see `docs/PHASE-5-POSTGRESQL.md`). `LoginThrottle` updates use `select_for_update`, which PostgreSQL honours and SQLite ignores.
 - **The audit writer** (`api/audit.py`) is still the phase 0 version. Before PostgreSQL goes live it needs a row lock so two simultaneous writes cannot chain to the same previous entry (listed in `docs/prompts/demo-and-deployment/REAL-DATA-AND-POSTGRES.md`, Task D2).
 - **Throttle rows** are never deleted (Node's in-memory entries also lived until restart). A small clean-up can be added with the other housekeeping.
 - **Case-insensitive username lookups** use `iexact`; the database-level unique rule `Lower(username)` from phase 0 backs it up.

@@ -18,17 +18,35 @@ import secrets
 from pathlib import Path
 
 from django.conf import settings
-from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.core.management.color import no_style
+from django.db import connection, transaction
 
 from api import layout as layout_checks
 from api.audit import audit
 from api.auth import hash_password
-from api.models import Comment, Decision, Plan, PlanVersion, User, now_ms
+from api.models import Attachment, AuditEntry, AuthSession, Comment, Decision, LoginThrottle, Plan, PlanVersion, User, now_ms
 from api.rules import password_error
 
 DATA_FILE = Path(__file__).resolve().parent.parent.parent / "seed_data" / "sample_data.json"
+
+
+def wipe_everything() -> None:
+    """Deletes every row (children before parents) and restarts the audit counter at 1.
+
+    Plain DELETEs rather than Django's `flush`, because `flush` uses TRUNCATE, which PostgreSQL refuses while a
+    transaction still has pending foreign-key checks.
+    """
+    with transaction.atomic():
+        for model in (Comment, Decision, Attachment, PlanVersion, Plan, AuthSession, LoginThrottle, AuditEntry, User):
+            model.objects.all().delete()
+        table = AuditEntry._meta.db_table
+        with connection.cursor() as cursor:
+            if connection.vendor == "sqlite":
+                cursor.execute("DELETE FROM sqlite_sequence WHERE name = %s", [table])
+            else:  # PostgreSQL: setval(..., 1, false) makes the next number 1 again (the table is empty now)
+                for sql in connection.ops.sequence_reset_by_name_sql(no_style(), [{"table": table, "column": "seq"}]):
+                    cursor.execute(sql)
 
 
 def new_password(username: str) -> str:
@@ -52,7 +70,7 @@ class Command(BaseCommand):
         shift = now - data["baseTime"]  # moves every sample time so the newest is "just now"
 
         if opts["reset"]:
-            call_command("flush", interactive=False, verbosity=0)  # empties every table and restarts the id counters
+            wipe_everything()
             uploads = settings.DATA_DIR / "uploads"
             for leftover in uploads.iterdir() if uploads.exists() else []:
                 if leftover.is_file():
