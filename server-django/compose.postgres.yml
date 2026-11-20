@@ -1,0 +1,33 @@
+# PostgreSQL for the DhruvAR Django server (development and the first production setup).
+#
+#   cp .env.postgres.example .env.postgres      # then put a long random password in .env.postgres
+#   docker compose -f compose.postgres.yml --env-file .env.postgres up -d
+#
+# What is what (plain words):
+#   * a "container" is a small, sealed program running with its own files, started from an "image" (postgres:16);
+#   * a "volume" is a folder Docker keeps outside the container, so the data survives stopping, removing and upgrading it;
+#   * the password comes from .env.postgres, which is git-ignored and never committed.
+# The database is published on 127.0.0.1 only (this PC), never on the network. Port 5433 avoids a clash with any
+# PostgreSQL already installed on 5432.
+services:
+  postgres:
+    image: postgres:16
+    container_name: dhruvar-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dhruvar}
+      POSTGRES_USER: ${POSTGRES_USER:-dhruvar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.postgres}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - dhruvar_pgdata:/var/lib/postgresql/data
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dhruvar} -d ${POSTGRES_DB:-dhruvar}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  dhruvar_pgdata:
