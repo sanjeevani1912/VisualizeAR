@@ -22,3 +22,10 @@ deploy/.env
 web/dist/
 deploy/*credentials*.txt
 deploy/demo-passwords.txt
+
+# More local files that must not be committed
+*.apk
+.venv/
+venv/
+__pycache__/
+*.pmtiles
