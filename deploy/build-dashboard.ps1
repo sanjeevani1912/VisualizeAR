@@ -1,5 +1,5 @@
 # Builds the dashboard into web/dist with the map basemap switched on (use PowerShell, not Git Bash: Git Bash rewrites /map/style.json).
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Continue'  # npm writes warnings to stderr; failures are caught by the exit-code checks below
 Set-Location (Join-Path $PSScriptRoot '..\web')
 npm ci
 if ($LASTEXITCODE) { exit 1 }
