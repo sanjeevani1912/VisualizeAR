@@ -100,8 +100,9 @@ class HeadingReviewTest {
     }
 
     /**
-     * Candidate fix, shown here only (NOT applied to app code): yaw = target - live - forwardAngle.
-     * With target = saved heading it agrees with the map for every live heading and camera yaw.
+     * Candidate yaw fix, shown here only (NOT applied to app code): yaw = target - live - forwardAngle.
+     * With target = saved heading the planning +Z AXIS agrees with the map for every live heading and camera yaw.
+     * This checks the axis only; points off the axis also need the x mirror (see objectAtXZ_mapVersusAr_table).
      */
     @Test
     fun candidateFix_agreesWithMapForAllSamples() {
@@ -117,6 +118,46 @@ class HeadingReviewTest {
                 }
             }
         }
+    }
+
+    /**
+     * Full table for an object at planning (x, z): where it lands on the map (east, north metres from the origin)
+     * versus in AR (same frame), for several saved headings and camera yaws. Prints the table; asserts that the
+     * current call disagrees somewhere and that the candidate fix agrees everywhere.
+     */
+    @Test
+    fun objectAtXZ_mapVersusAr_table() {
+        val px = 3f
+        val pz = 4f
+        val live = 60f
+        var currentDisagree = 0
+        var fixDisagree = 0
+        val sb = StringBuilder("\nHEADING-REVIEW table: object (x=$px, z=$pz), live compass=$live\n")
+        sb.append("saved  camYaw | map E,N       | AR(current) E,N | AR(fix) E,N\n")
+        fun arEastNorth(yaw: Float, fx: Float, fz: Float, planX: Float = px): Pair<Double, Double> {
+            val p = ARCoordinateTransformer.computeWorldPositionPure(0f, 0f, 0f, yaw, planX, pz)
+            val dist = Math.hypot(p[0].toDouble(), p[2].toDouble())
+            val b = Math.toRadians(norm(live + clockwiseDeg(fx.toDouble(), fz.toDouble(), p[0].toDouble(), p[2].toDouble())))
+            return dist * sin(b) to dist * cos(b)
+        }
+        for (saved in listOf(0f, 90f, 180f, 270f, 45f)) {
+            val (me, mn) = GeographicCoordinateConverter.planningToEastNorth(px.toDouble(), pz.toDouble(), saved)
+            for (cam in listOf(0.0, 90.0, 200.0)) {
+                val (fx, fz) = forward(cam)
+                val fa = Math.toDegrees(atan2(fx.toDouble(), fz.toDouble()))
+                val cur = arEastNorth(ARCoordinateTransformer.originYawDegreesForMagneticNorth(fx, fz, saved), fx, fz)
+                // Candidate: corrected yaw AND mirrored x (right-handed world: plan +X is counter-clockwise of +Z).
+                val fix = arEastNorth(norm(saved - live - fa).toFloat(), fx, fz, planX = -px)
+                if (Math.hypot(cur.first - me, cur.second - mn) > 0.1) currentDisagree++
+                if (Math.hypot(fix.first - me, fix.second - mn) > 0.1) fixDisagree++
+                sb.append(String.format("%5.0f %6.0f | %5.1f,%5.1f | %5.1f,%5.1f | %5.1f,%5.1f\n",
+                    saved, cam, me, mn, cur.first, cur.second, fix.first, fix.second))
+            }
+        }
+        println(sb)
+        println("HEADING-REVIEW table result: current disagrees in $currentDisagree of 15 rows; candidate fix disagrees in $fixDisagree")
+        assertNotEquals(0, currentDisagree)
+        assertEquals(0, fixDisagree)
     }
 
     /** Different degree-to-metre constants: RegionDraftGeometry vs the converter. */
