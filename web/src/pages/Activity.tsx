@@ -24,7 +24,7 @@ export function Activity() {
           <p className="muted">Append-only record of submissions, decisions and comments. Entries cannot be edited.</p>
         </div>
       </header>
-      {mode === 'live' && (user?.role === 'admin' || user?.role === 'auditor') && <AuditVerify />}
+      {mode === 'live' && (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'auditor') && <AuditVerify />}
       <section className="card filters">
         <label className="field grow">
           <span>Search</span>

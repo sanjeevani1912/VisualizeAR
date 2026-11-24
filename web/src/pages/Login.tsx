@@ -8,6 +8,7 @@ const DESC = {
   admin: 'View everything. Cannot approve unless also a reviewer.',
   auditor: 'Read-only access to plans and the full audit log.',
   planner: '',
+  superadmin: 'Manage administrators as well as users.',
 } as const
 
 function Mark() {

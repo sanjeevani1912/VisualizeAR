@@ -251,10 +251,14 @@ fun PlanningModeContext(
     onClearRegion: () -> Unit,
     modifier: Modifier = Modifier,
     guidedSetup: Boolean = false,
-    onCancelAnchorTap: (() -> Unit)? = null
+    onCancelAnchorTap: (() -> Unit)? = null,
+    isMoveMapMode: Boolean = false,
+    onToggleMoveMap: (() -> Unit)? = null
 ) {
     when {
         tools.showRegionTools -> RegionTools(
+            isMoveMapMode = isMoveMapMode,
+            onToggleMoveMap = onToggleMoveMap,
             hasRegion = hasRegion,
             draftLabel = regionDraftLabel,
             isDraftActive = isRegionDraftActive,
@@ -292,9 +296,13 @@ private fun RegionTools(
     onConfirmViewportRegion: () -> Unit,
     onClearRegion: () -> Unit,
     modifier: Modifier = Modifier,
-    guidedSetup: Boolean = false
+    guidedSetup: Boolean = false,
+    isMoveMapMode: Boolean = false,
+    onToggleMoveMap: (() -> Unit)? = null
 ) {
-    val hint = draftLabel ?: when {
+    val hint = if (isMoveMapMode) {
+        "Drag and zoom the map to the place, then tap Use visible area or Draw box."
+    } else draftLabel ?: when {
         guidedSetup && hasRegion -> "Region set · drag a new box to replace it"
         guidedSetup -> "Drag a box on the map, or use the visible area."
         hasRegion -> "Region set · drag a new box to replace it"
@@ -337,6 +345,14 @@ private fun RegionTools(
                 if (isDraftActive) {
                     TextButton(onClick = onCancelDraft) {
                         Text("Cancel")
+                    }
+                }
+                if (onToggleMoveMap != null && !isDraftActive) {
+                    TextButton(onClick = onToggleMoveMap) {
+                        Text(
+                            text = if (isMoveMapMode) "Draw box" else "Move map",
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
                 TextButton(onClick = onConfirmViewportRegion) {

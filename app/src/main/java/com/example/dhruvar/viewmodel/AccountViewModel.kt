@@ -76,6 +76,10 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val result = ServerClient.signIn(base, username.trim(), password)
                 session.serverUrl = base
+                ServerUrl.mapBaseFor(base)?.let { map ->
+                    session.mapUrl = map
+                    com.example.dhruvar.data.map.MapBasemapConfig.runtimeMapBase = map
+                }
                 session.saveSession(result)
                 _uiState.update {
                     it.copy(serverUrl = base, user = result.user, isSigningIn = false, signInError = null)

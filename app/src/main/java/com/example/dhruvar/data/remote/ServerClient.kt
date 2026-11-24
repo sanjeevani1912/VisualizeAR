@@ -58,6 +58,9 @@ object ServerClient {
             .build()
     }
 
+    /** The one HTTP client, shared with the picture uploader so timeouts and settings stay the same. */
+    internal val httpClient: OkHttpClient get() = client
+
     suspend fun signIn(baseUrl: String, username: String, password: String): TokenSession {
         val body = JSONObject().put("username", username).put("password", password)
         val json = call(post("$baseUrl/api/auth/token", body, token = null))

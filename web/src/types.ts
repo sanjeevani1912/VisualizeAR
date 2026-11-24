@@ -50,13 +50,16 @@ export interface LayoutData {
   objects: LayoutObject[]
 }
 
-export type Role = 'planner' | 'reviewer' | 'admin' | 'auditor'
+export type Role = 'planner' | 'reviewer' | 'admin' | 'auditor' | 'superadmin'
 
 export interface User {
   id: string
   name: string
   rank: string
+  appointment?: string
   role: Role
+  /** Present (true) when the person must replace a password someone else set. */
+  mustChangePassword?: boolean
   username?: string
   active?: boolean
 }

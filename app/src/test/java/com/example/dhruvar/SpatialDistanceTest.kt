@@ -118,6 +118,7 @@ class SpatialDistanceTest {
         viewModel.clearLayout()
         viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(9.0f, 12.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
 
         val tent = viewModel.uiState.value.selectedObject!!
         val baselineDist = SpatialDistanceCalculator.calculateDistanceToAnchor(tent)

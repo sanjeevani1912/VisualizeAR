@@ -25,7 +25,7 @@ export const canAttach = (a: Actor, p: PlanRef) => {
   if (a.role === 'planner') return p.ownerId === a.id
   return a.role === 'reviewer'
 }
-export const canRemoveAttachment = (a: Actor, uploaderId: string) => a.role === 'admin' || uploaderId === a.id
+export const canRemoveAttachment = (a: Actor, uploaderId: string) => a.role === 'admin' || a.role === 'superadmin' || uploaderId === a.id
 
 export const reasonError = (kind: DecisionKind, reason: string): string | null =>
   kind !== 'approve' && reason.trim().length < MIN_REASON ? `A reason of at least ${MIN_REASON} characters is required` : null

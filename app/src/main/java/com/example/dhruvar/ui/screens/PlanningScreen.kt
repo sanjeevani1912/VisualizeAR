@@ -121,6 +121,9 @@ fun PlanningScreen(
     var isPropertyEditorMinimized by remember { mutableStateOf(true) }
     // Transient: a dragged box is not part of the layout until Confirm.
     var regionDraft by remember { mutableStateOf<RegionDraft?>(null) }
+    // Region step: false = one finger draws a box; true = the overlay is off so the map can be
+    // dragged and zoomed to the right place first. Reset whenever the step changes.
+    var regionMoveMap by remember { mutableStateOf(false) }
     var confirmChangeRegion by remember { mutableStateOf(false) }
     var confirmChangeOrigin by remember { mutableStateOf(false) }
     val compassState by rememberCompassState()
@@ -171,14 +174,9 @@ fun PlanningScreen(
         context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
     }
 
-    // Opening Find location locates the device on its own, no Detect tap needed. Detect stays as a retry.
-    LaunchedEffect(uiState.currentLayout.id, uiState.setupStep) {
-        if (uiState.setupStep == PlanningSetupStep.FIND_LOCATION &&
-            uiState.currentLayout.regionBounds == null
-        ) {
-            detectCurrentLocation(replaceChosenLocation = true)
-        }
-    }
+    // Manual region by default: opening Find location does NOT start the GPS or draw a region by
+    // itself. The planner searches a place or taps "Detect location" (which calls
+    // detectCurrentLocation) when they want the 250 m box around their own position.
 
     fun openAppLocationSettings() {
         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -230,6 +228,7 @@ fun PlanningScreen(
         )
         if (!regionOverlayActive) {
             regionDraft = null
+            regionMoveMap = false
             MapViewportBoundsBridge.setGesturesEnabled(true)
         }
     }
@@ -248,8 +247,9 @@ fun PlanningScreen(
 
     // Reset minimized flag when selection changes / clears
     LaunchedEffect(uiState.selectedObjectId) {
+        // Touching an asset opens its card straight away (no leftover minimized strip).
         if (uiState.selectedObjectId != null) {
-            isPropertyEditorMinimized = true
+            isPropertyEditorMinimized = false
         }
     }
 
@@ -597,7 +597,7 @@ fun PlanningScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                if (showsRegionDraftOverlay(
+                if (!regionMoveMap && showsRegionDraftOverlay(
                         step = uiState.setupStep,
                         mode = uiState.mapInteractionMode,
                         surface = uiState.planningSurface
@@ -887,6 +887,12 @@ fun PlanningScreen(
                             }
                         },
                         onClearRegion = { viewModel.clearRegionBounds() },
+                        isMoveMapMode = regionMoveMap,
+                        onToggleMoveMap = {
+                            regionMoveMap = !regionMoveMap
+                            regionDraft = null
+                            MapViewportBoundsBridge.setGesturesEnabled(true)
+                        },
                         onCancelAnchorTap = {
                             viewModel.setMapInteractionMode(MapInteractionMode.NAVIGATE)
                         },
@@ -962,7 +968,10 @@ fun PlanningScreen(
                 SelectedObjectEditorOverlay(
                     selectedObject = uiState.selectedObject,
                     isMinimized = isPropertyEditorMinimized,
-                    onMinimizedChange = { isPropertyEditorMinimized = it },
+                    // The collapse arrow now closes the card instead of leaving a strip behind.
+                    onMinimizedChange = { minimize ->
+                        if (minimize) viewModel.deselectObject() else isPropertyEditorMinimized = false
+                    },
                     viewportWidthPx = viewportWidthPx,
                     viewportHeightPx = viewportHeightPx,
                     panOffset = uiState.panOffset,

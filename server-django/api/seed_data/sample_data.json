@@ -1,0 +1,2649 @@
+{
+ "baseTime": 1800000000000,
+ "users": [
+  {
+   "id": "u-rev1",
+   "username": "menon",
+   "name": "A. Menon",
+   "rank": "Brigadier",
+   "role": "reviewer"
+  },
+  {
+   "id": "u-rev2",
+   "username": "sharma",
+   "name": "R. Sharma",
+   "rank": "Colonel",
+   "role": "reviewer"
+  },
+  {
+   "id": "u-adm",
+   "username": "iyer",
+   "name": "S. Iyer",
+   "rank": "Lt Col",
+   "role": "admin"
+  },
+  {
+   "id": "u-aud",
+   "username": "nair",
+   "name": "P. Nair",
+   "rank": "Major",
+   "role": "auditor"
+  },
+  {
+   "id": "u-p1",
+   "username": "singh",
+   "name": "V. Singh",
+   "rank": "Major",
+   "role": "planner"
+  },
+  {
+   "id": "u-p2",
+   "username": "rao",
+   "name": "K. Rao",
+   "rank": "Captain",
+   "role": "planner"
+  },
+  {
+   "id": "u-p3",
+   "username": "bose",
+   "name": "D. Bose",
+   "rank": "Captain",
+   "role": "planner"
+  },
+  {
+   "id": "u-p4",
+   "username": "khan",
+   "name": "M. Khan",
+   "rank": "Lieutenant",
+   "role": "planner"
+  }
+ ],
+ "plans": [
+  {
+   "id": "plan-142",
+   "code": "TP-2026-0142",
+   "name": "Staging Area Alpha",
+   "ownerId": "u-p1",
+   "status": "SUBMITTED",
+   "createdAt": 1799982000000,
+   "updatedAt": 1799982000000,
+   "versions": [
+    {
+     "version": 1,
+     "submittedAt": 1799982000000,
+     "submittedBy": "u-p1",
+     "note": "Initial staging layout for the exercise area.",
+     "contentHash": "c86a167f0985",
+     "layout": {
+      "version": 2,
+      "id": "L142",
+      "name": "Staging Area Alpha",
+      "regionBounds": {
+       "northLatitude": 28.615248980551645,
+       "southLatitude": 28.612551019448357,
+       "eastLongitude": 77.2111513203738,
+       "westLongitude": 77.2068486796262
+      },
+      "anchor": {
+       "latitude": 28.6139,
+       "longitude": 77.209,
+       "headingDegrees": 0,
+       "horizontalAccuracyMeters": 4.2
+      },
+      "objects": [
+       {
+        "id": "L142-tent-1",
+        "assetType": "TENT",
+        "name": "Tent 1",
+        "x": 49.9,
+        "z": 25.1,
+        "rotationDegrees": 160,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L142-tent-2",
+        "assetType": "TENT",
+        "name": "Tent 2",
+        "x": 101.6,
+        "z": 78.9,
+        "rotationDegrees": 80,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L142-tent-3",
+        "assetType": "TENT",
+        "name": "Tent 3",
+        "x": 41.8,
+        "z": 45.8,
+        "rotationDegrees": 260,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L142-tent-4",
+        "assetType": "TENT",
+        "name": "Tent 4",
+        "x": 108.5,
+        "z": 96.5,
+        "rotationDegrees": 310,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L142-tent-5",
+        "assetType": "TENT",
+        "name": "Tent 5",
+        "x": -144.5,
+        "z": 100.4,
+        "rotationDegrees": 280,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L142-tent-6",
+        "assetType": "TENT",
+        "name": "Tent 6",
+        "x": -90.3,
+        "z": 105.3,
+        "rotationDegrees": 120,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L142-truck-1",
+        "assetType": "TRUCK",
+        "name": "Truck 1",
+        "x": 70.4,
+        "z": 43.1,
+        "rotationDegrees": 210,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L142-truck-2",
+        "assetType": "TRUCK",
+        "name": "Truck 2",
+        "x": -152.5,
+        "z": -63.2,
+        "rotationDegrees": 280,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L142-truck-3",
+        "assetType": "TRUCK",
+        "name": "Truck 3",
+        "x": -4.4,
+        "z": 108,
+        "rotationDegrees": 330,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L142-truck-4",
+        "assetType": "TRUCK",
+        "name": "Truck 4",
+        "x": -158.7,
+        "z": 17.3,
+        "rotationDegrees": 290,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L142-car-1",
+        "assetType": "CAR",
+        "name": "Car 1",
+        "x": 159.1,
+        "z": 113.9,
+        "rotationDegrees": 100,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L142-car-2",
+        "assetType": "CAR",
+        "name": "Car 2",
+        "x": -153.8,
+        "z": 87.7,
+        "rotationDegrees": 340,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L142-car-3",
+        "assetType": "CAR",
+        "name": "Car 3",
+        "x": 47.1,
+        "z": 72.6,
+        "rotationDegrees": 30,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L142-antenna-1",
+        "assetType": "ANTENNA",
+        "name": "Antenna 1",
+        "x": 93.6,
+        "z": -21.2,
+        "rotationDegrees": 130,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       }
+      ]
+     }
+    }
+   ],
+   "decisions": [],
+   "comments": []
+  },
+  {
+   "id": "plan-141",
+   "code": "TP-2026-0141",
+   "name": "Comms Node Bravo",
+   "ownerId": "u-p2",
+   "status": "SUBMITTED",
+   "createdAt": 1799892000000,
+   "updatedAt": 1799892000000,
+   "versions": [
+    {
+     "version": 1,
+     "submittedAt": 1799892000000,
+     "submittedBy": "u-p2",
+     "note": "Communication node and support vehicles.",
+     "contentHash": "89b48000069b",
+     "layout": {
+      "version": 2,
+      "id": "L141",
+      "name": "Comms Node Bravo",
+      "regionBounds": {
+       "northLatitude": 26.91338925240454,
+       "southLatitude": 26.911410747595465,
+       "eastLongitude": 75.78861111025284,
+       "westLongitude": 75.78598888974716
+      },
+      "anchor": {
+       "latitude": 26.9124,
+       "longitude": 75.7873,
+       "headingDegrees": 12,
+       "horizontalAccuracyMeters": 6.8
+      },
+      "objects": [
+       {
+        "id": "L141-tent-1",
+        "assetType": "TENT",
+        "name": "Tent 1",
+        "x": 58.9,
+        "z": -56.9,
+        "rotationDegrees": 100,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L141-tent-2",
+        "assetType": "TENT",
+        "name": "Tent 2",
+        "x": 5.8,
+        "z": 52.8,
+        "rotationDegrees": 90,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L141-antenna-1",
+        "assetType": "ANTENNA",
+        "name": "Antenna 1",
+        "x": 5,
+        "z": 47.8,
+        "rotationDegrees": 250,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       },
+       {
+        "id": "L141-antenna-2",
+        "assetType": "ANTENNA",
+        "name": "Antenna 2",
+        "x": 55.6,
+        "z": 19.6,
+        "rotationDegrees": 50,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       },
+       {
+        "id": "L141-antenna-3",
+        "assetType": "ANTENNA",
+        "name": "Antenna 3",
+        "x": -36.8,
+        "z": -12.7,
+        "rotationDegrees": 70,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       },
+       {
+        "id": "L141-truck-1",
+        "assetType": "TRUCK",
+        "name": "Truck 1",
+        "x": -50.2,
+        "z": -83.1,
+        "rotationDegrees": 360,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L141-truck-2",
+        "assetType": "TRUCK",
+        "name": "Truck 2",
+        "x": -71,
+        "z": -26.4,
+        "rotationDegrees": 20,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L141-car-1",
+        "assetType": "CAR",
+        "name": "Car 1",
+        "x": -94.6,
+        "z": -51.4,
+        "rotationDegrees": 220,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L141-car-2",
+        "assetType": "CAR",
+        "name": "Car 2",
+        "x": 3,
+        "z": 44.8,
+        "rotationDegrees": 210,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       }
+      ]
+     }
+    }
+   ],
+   "decisions": [],
+   "comments": []
+  },
+  {
+   "id": "plan-140",
+   "code": "TP-2026-0140",
+   "name": "Defensive Works Charlie",
+   "ownerId": "u-p3",
+   "status": "UNDER_REVIEW",
+   "createdAt": 1799640000000,
+   "updatedAt": 1799812800000,
+   "versions": [
+    {
+     "version": 1,
+     "submittedAt": 1799640000000,
+     "submittedBy": "u-p3",
+     "note": "Earlier revision.",
+     "contentHash": "945cc440088c",
+     "layout": {
+      "version": 2,
+      "id": "L140",
+      "name": "Defensive Works Charlie",
+      "regionBounds": {
+       "northLatitude": 30.318208708698748,
+       "southLatitude": 30.314791291301255,
+       "eastLongitude": 78.03490863869888,
+       "westLongitude": 78.02949136130113
+      },
+      "anchor": {
+       "latitude": 30.3165,
+       "longitude": 78.0322,
+       "headingDegrees": 340,
+       "horizontalAccuracyMeters": 3.1
+      },
+      "objects": [
+       {
+        "id": "L140-trench-1",
+        "assetType": "TRENCH",
+        "name": "Trench 1",
+        "x": -111.8,
+        "z": -97.7,
+        "rotationDegrees": 90,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L140-trench-2",
+        "assetType": "TRENCH",
+        "name": "Trench 2",
+        "x": 151.3,
+        "z": -4.8,
+        "rotationDegrees": 330,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L140-trench-3",
+        "assetType": "TRENCH",
+        "name": "Trench 3",
+        "x": -148.6,
+        "z": -93.3,
+        "rotationDegrees": 50,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L140-trench-4",
+        "assetType": "TRENCH",
+        "name": "Trench 4",
+        "x": 180.1,
+        "z": 80,
+        "rotationDegrees": 190,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L140-trench-5",
+        "assetType": "TRENCH",
+        "name": "Trench 5",
+        "x": -130.8,
+        "z": -5.7,
+        "rotationDegrees": 280,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L140-trench-6",
+        "assetType": "TRENCH",
+        "name": "Trench 6",
+        "x": 77.6,
+        "z": -105.8,
+        "rotationDegrees": 210,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L140-tent-1",
+        "assetType": "TENT",
+        "name": "Tent 1",
+        "x": 15.6,
+        "z": 101.4,
+        "rotationDegrees": 110,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L140-tent-2",
+        "assetType": "TENT",
+        "name": "Tent 2",
+        "x": -168.5,
+        "z": 57.5,
+        "rotationDegrees": 150,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L140-tent-3",
+        "assetType": "TENT",
+        "name": "Tent 3",
+        "x": 90.6,
+        "z": 117.6,
+        "rotationDegrees": 360,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L140-car-1",
+        "assetType": "CAR",
+        "name": "Car 1",
+        "x": -71.3,
+        "z": -51.1,
+        "rotationDegrees": 280,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L140-car-2",
+        "assetType": "CAR",
+        "name": "Car 2",
+        "x": 135.8,
+        "z": -132.4,
+        "rotationDegrees": 210,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L140-antenna-1",
+        "assetType": "ANTENNA",
+        "name": "Antenna 1",
+        "x": -55.6,
+        "z": 29.3,
+        "rotationDegrees": 290,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       }
+      ]
+     }
+    },
+    {
+     "version": 2,
+     "submittedAt": 1799812800000,
+     "submittedBy": "u-p3",
+     "note": "Revised after earlier comments: trench line extended.",
+     "contentHash": "4479844e091e",
+     "layout": {
+      "version": 2,
+      "id": "L140",
+      "name": "Defensive Works Charlie",
+      "regionBounds": {
+       "northLatitude": 30.318208708698748,
+       "southLatitude": 30.314791291301255,
+       "eastLongitude": 78.03490863869888,
+       "westLongitude": 78.02949136130113
+      },
+      "anchor": {
+       "latitude": 30.3165,
+       "longitude": 78.0322,
+       "headingDegrees": 340,
+       "horizontalAccuracyMeters": 3.1
+      },
+      "objects": [
+       {
+        "id": "L140-trench-1",
+        "assetType": "TRENCH",
+        "name": "Trench 1",
+        "x": -7.2,
+        "z": -55.9,
+        "rotationDegrees": 350,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L140-trench-2",
+        "assetType": "TRENCH",
+        "name": "Trench 2",
+        "x": -38.6,
+        "z": -65.8,
+        "rotationDegrees": 30,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L140-trench-3",
+        "assetType": "TRENCH",
+        "name": "Trench 3",
+        "x": -170.4,
+        "z": 124.5,
+        "rotationDegrees": 50,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L140-trench-4",
+        "assetType": "TRENCH",
+        "name": "Trench 4",
+        "x": -67.9,
+        "z": 130.9,
+        "rotationDegrees": 0,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L140-trench-5",
+        "assetType": "TRENCH",
+        "name": "Trench 5",
+        "x": 136.4,
+        "z": 123.6,
+        "rotationDegrees": 310,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L140-trench-6",
+        "assetType": "TRENCH",
+        "name": "Trench 6",
+        "x": -41.8,
+        "z": 82.3,
+        "rotationDegrees": 110,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L140-tent-1",
+        "assetType": "TENT",
+        "name": "Tent 1",
+        "x": 120.7,
+        "z": -146.5,
+        "rotationDegrees": 60,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L140-tent-2",
+        "assetType": "TENT",
+        "name": "Tent 2",
+        "x": -91.7,
+        "z": -80.7,
+        "rotationDegrees": 90,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L140-tent-3",
+        "assetType": "TENT",
+        "name": "Tent 3",
+        "x": 148.7,
+        "z": -131.5,
+        "rotationDegrees": 140,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L140-tent-4",
+        "assetType": "TENT",
+        "name": "Tent 4",
+        "x": 149.2,
+        "z": -102.3,
+        "rotationDegrees": 230,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L140-car-1",
+        "assetType": "CAR",
+        "name": "Car 1",
+        "x": 190.2,
+        "z": 90.8,
+        "rotationDegrees": 250,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L140-car-2",
+        "assetType": "CAR",
+        "name": "Car 2",
+        "x": -140,
+        "z": 55.3,
+        "rotationDegrees": 30,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L140-antenna-1",
+        "assetType": "ANTENNA",
+        "name": "Antenna 1",
+        "x": 24.9,
+        "z": -37.7,
+        "rotationDegrees": 50,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       }
+      ]
+     }
+    }
+   ],
+   "decisions": [],
+   "comments": [
+    {
+     "id": "c-140-0",
+     "planId": "plan-140",
+     "version": 2,
+     "authorId": "u-rev2",
+     "text": "Please confirm the trench spacing against the latest site survey.",
+     "createdAt": 1799928000000
+    }
+   ]
+  },
+  {
+   "id": "plan-139",
+   "code": "TP-2026-0139",
+   "name": "Logistics Point Delta",
+   "ownerId": "u-p1",
+   "status": "SUBMITTED",
+   "createdAt": 1799712000000,
+   "updatedAt": 1799712000000,
+   "versions": [
+    {
+     "version": 1,
+     "submittedAt": 1799712000000,
+     "submittedBy": "u-p1",
+     "note": "Logistics dump layout, vehicle-heavy.",
+     "contentHash": "c4030e130b64",
+     "layout": {
+      "version": 2,
+      "id": "L139",
+      "name": "Logistics Point Delta",
+      "regionBounds": {
+       "northLatitude": 18.522423470827462,
+       "southLatitude": 18.518376529172535,
+       "eastLongitude": 73.85954531837896,
+       "westLongitude": 73.85385468162104
+      },
+      "anchor": {
+       "latitude": 18.5204,
+       "longitude": 73.8567,
+       "headingDegrees": 0,
+       "horizontalAccuracyMeters": 8.5
+      },
+      "objects": [
+       {
+        "id": "L139-truck-1",
+        "assetType": "TRUCK",
+        "name": "Truck 1",
+        "x": -20.7,
+        "z": -78.4,
+        "rotationDegrees": 280,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L139-truck-2",
+        "assetType": "TRUCK",
+        "name": "Truck 2",
+        "x": -131.3,
+        "z": 45.4,
+        "rotationDegrees": 300,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L139-truck-3",
+        "assetType": "TRUCK",
+        "name": "Truck 3",
+        "x": 75.5,
+        "z": -165.4,
+        "rotationDegrees": 300,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L139-truck-4",
+        "assetType": "TRUCK",
+        "name": "Truck 4",
+        "x": 119.1,
+        "z": -68.1,
+        "rotationDegrees": 40,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L139-truck-5",
+        "assetType": "TRUCK",
+        "name": "Truck 5",
+        "x": -142.1,
+        "z": -24.2,
+        "rotationDegrees": 270,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L139-truck-6",
+        "assetType": "TRUCK",
+        "name": "Truck 6",
+        "x": -69.7,
+        "z": -9.3,
+        "rotationDegrees": 280,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L139-truck-7",
+        "assetType": "TRUCK",
+        "name": "Truck 7",
+        "x": 179.9,
+        "z": -26.6,
+        "rotationDegrees": 120,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L139-truck-8",
+        "assetType": "TRUCK",
+        "name": "Truck 8",
+        "x": 215.3,
+        "z": -125.9,
+        "rotationDegrees": 80,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L139-truck-9",
+        "assetType": "TRUCK",
+        "name": "Truck 9",
+        "x": -35.2,
+        "z": 121,
+        "rotationDegrees": 320,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L139-tent-1",
+        "assetType": "TENT",
+        "name": "Tent 1",
+        "x": -146.1,
+        "z": -159.3,
+        "rotationDegrees": 280,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L139-tent-2",
+        "assetType": "TENT",
+        "name": "Tent 2",
+        "x": 83.5,
+        "z": -6.5,
+        "rotationDegrees": 100,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L139-tent-3",
+        "assetType": "TENT",
+        "name": "Tent 3",
+        "x": -103.9,
+        "z": -25.2,
+        "rotationDegrees": 180,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L139-tent-4",
+        "assetType": "TENT",
+        "name": "Tent 4",
+        "x": 80,
+        "z": -90.9,
+        "rotationDegrees": 260,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L139-car-1",
+        "assetType": "CAR",
+        "name": "Car 1",
+        "x": 134.4,
+        "z": -49.9,
+        "rotationDegrees": 280,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L139-car-2",
+        "assetType": "CAR",
+        "name": "Car 2",
+        "x": -165.8,
+        "z": 49.4,
+        "rotationDegrees": 250,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L139-car-3",
+        "assetType": "CAR",
+        "name": "Car 3",
+        "x": 57.6,
+        "z": 114.2,
+        "rotationDegrees": 310,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L139-car-4",
+        "assetType": "CAR",
+        "name": "Car 4",
+        "x": -167.3,
+        "z": 102.5,
+        "rotationDegrees": 60,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       }
+      ]
+     }
+    }
+   ],
+   "decisions": [],
+   "comments": []
+  },
+  {
+   "id": "plan-138",
+   "code": "TP-2026-0138",
+   "name": "Aid Post Echo",
+   "ownerId": "u-p4",
+   "status": "APPROVED",
+   "createdAt": 1799568000000,
+   "updatedAt": 1799654400000,
+   "versions": [
+    {
+     "version": 1,
+     "submittedAt": 1799568000000,
+     "submittedBy": "u-p4",
+     "note": "Medical aid post layout.",
+     "contentHash": "cb7fa30c0672",
+     "layout": {
+      "version": 2,
+      "id": "L138",
+      "name": "Aid Post Echo",
+      "regionBounds": {
+       "northLatitude": 26.14517449027582,
+       "southLatitude": 26.14382550972418,
+       "eastLongitude": 91.7371016389657,
+       "westLongitude": 91.7352983610343
+      },
+      "anchor": {
+       "latitude": 26.1445,
+       "longitude": 91.7362,
+       "headingDegrees": 20,
+       "horizontalAccuracyMeters": 2.9
+      },
+      "objects": [
+       {
+        "id": "L138-tent-1",
+        "assetType": "TENT",
+        "name": "Tent 1",
+        "x": -50.4,
+        "z": 34.5,
+        "rotationDegrees": 290,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L138-tent-2",
+        "assetType": "TENT",
+        "name": "Tent 2",
+        "x": 9.6,
+        "z": 56,
+        "rotationDegrees": 250,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L138-tent-3",
+        "assetType": "TENT",
+        "name": "Tent 3",
+        "x": -20.5,
+        "z": -45.6,
+        "rotationDegrees": 270,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L138-tent-4",
+        "assetType": "TENT",
+        "name": "Tent 4",
+        "x": 47.1,
+        "z": -31.2,
+        "rotationDegrees": 50,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L138-tent-5",
+        "assetType": "TENT",
+        "name": "Tent 5",
+        "x": 61.2,
+        "z": -0.4,
+        "rotationDegrees": 120,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L138-car-1",
+        "assetType": "CAR",
+        "name": "Car 1",
+        "x": -22,
+        "z": 8.6,
+        "rotationDegrees": 30,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L138-car-2",
+        "assetType": "CAR",
+        "name": "Car 2",
+        "x": -8.3,
+        "z": -25.1,
+        "rotationDegrees": 280,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L138-car-3",
+        "assetType": "CAR",
+        "name": "Car 3",
+        "x": -63.8,
+        "z": -43.4,
+        "rotationDegrees": 250,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L138-truck-1",
+        "assetType": "TRUCK",
+        "name": "Truck 1",
+        "x": 52.4,
+        "z": 0.8,
+        "rotationDegrees": 50,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       }
+      ]
+     }
+    }
+   ],
+   "decisions": [
+    {
+     "id": "d-138",
+     "planId": "plan-138",
+     "version": 1,
+     "reviewerId": "u-rev1",
+     "decision": "approve",
+     "reason": "Layout is clear and within the approved footprint.",
+     "decidedAt": 1799654400000
+    }
+   ],
+   "comments": []
+  },
+  {
+   "id": "plan-137",
+   "code": "TP-2026-0137",
+   "name": "Observation Cluster Foxtrot",
+   "ownerId": "u-p2",
+   "status": "REJECTED",
+   "createdAt": 1799388000000,
+   "updatedAt": 1799496000000,
+   "versions": [
+    {
+     "version": 1,
+     "submittedAt": 1799388000000,
+     "submittedBy": "u-p2",
+     "note": "Forward observation cluster.",
+     "contentHash": "f40eea1306ca",
+     "layout": {
+      "version": 2,
+      "id": "L137",
+      "name": "Observation Cluster Foxtrot",
+      "regionBounds": {
+       "northLatitude": 32.72812884462519,
+       "southLatitude": 32.725071155374806,
+       "eastLongitude": 74.85881732739246,
+       "westLongitude": 74.85518267260754
+      },
+      "anchor": {
+       "latitude": 32.7266,
+       "longitude": 74.857,
+       "headingDegrees": 0,
+       "horizontalAccuracyMeters": 12.4
+      },
+      "objects": [
+       {
+        "id": "L137-antenna-1",
+        "assetType": "ANTENNA",
+        "name": "Antenna 1",
+        "x": 62.2,
+        "z": -42.6,
+        "rotationDegrees": 30,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       },
+       {
+        "id": "L137-antenna-2",
+        "assetType": "ANTENNA",
+        "name": "Antenna 2",
+        "x": -90.2,
+        "z": 24.6,
+        "rotationDegrees": 80,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       },
+       {
+        "id": "L137-antenna-3",
+        "assetType": "ANTENNA",
+        "name": "Antenna 3",
+        "x": -0.9,
+        "z": -5,
+        "rotationDegrees": 150,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       },
+       {
+        "id": "L137-antenna-4",
+        "assetType": "ANTENNA",
+        "name": "Antenna 4",
+        "x": -95.2,
+        "z": 111.2,
+        "rotationDegrees": 150,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       },
+       {
+        "id": "L137-tent-1",
+        "assetType": "TENT",
+        "name": "Tent 1",
+        "x": 110.2,
+        "z": -56.8,
+        "rotationDegrees": 100,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L137-tent-2",
+        "assetType": "TENT",
+        "name": "Tent 2",
+        "x": 57.3,
+        "z": -16.6,
+        "rotationDegrees": 120,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L137-trench-1",
+        "assetType": "TRENCH",
+        "name": "Trench 1",
+        "x": -67.6,
+        "z": 84.6,
+        "rotationDegrees": 100,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L137-trench-2",
+        "assetType": "TRENCH",
+        "name": "Trench 2",
+        "x": 131.8,
+        "z": -34.6,
+        "rotationDegrees": 40,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L137-trench-3",
+        "assetType": "TRENCH",
+        "name": "Trench 3",
+        "x": -129.4,
+        "z": -59.8,
+        "rotationDegrees": 60,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       }
+      ]
+     }
+    }
+   ],
+   "decisions": [
+    {
+     "id": "d-137",
+     "planId": "plan-137",
+     "version": 1,
+     "reviewerId": "u-rev2",
+     "decision": "reject",
+     "reason": "Antenna spacing too tight and origin accuracy is poor. Re-stamp the origin and revise the mast positions.",
+     "decidedAt": 1799496000000
+    }
+   ],
+   "comments": []
+  },
+  {
+   "id": "plan-136",
+   "code": "TP-2026-0136",
+   "name": "Vehicle Park Golf",
+   "ownerId": "u-p3",
+   "status": "CHANGES_REQUESTED",
+   "createdAt": 1799640000000,
+   "updatedAt": 1799748000000,
+   "versions": [
+    {
+     "version": 1,
+     "submittedAt": 1799640000000,
+     "submittedBy": "u-p3",
+     "note": "Vehicle park layout.",
+     "contentHash": "761cc0c508ea",
+     "layout": {
+      "version": 2,
+      "id": "L136",
+      "name": "Vehicle Park Golf",
+      "regionBounds": {
+       "northLatitude": 23.261069116478087,
+       "southLatitude": 23.25873088352191,
+       "eastLongitude": 77.41406832131875,
+       "westLongitude": 77.41113167868124
+      },
+      "anchor": {
+       "latitude": 23.2599,
+       "longitude": 77.4126,
+       "headingDegrees": 5,
+       "horizontalAccuracyMeters": 5.5
+      },
+      "objects": [
+       {
+        "id": "L136-truck-1",
+        "assetType": "TRUCK",
+        "name": "Truck 1",
+        "x": -30.3,
+        "z": 47.3,
+        "rotationDegrees": 180,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L136-truck-2",
+        "assetType": "TRUCK",
+        "name": "Truck 2",
+        "x": -21.4,
+        "z": 92.9,
+        "rotationDegrees": 270,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L136-truck-3",
+        "assetType": "TRUCK",
+        "name": "Truck 3",
+        "x": -62.5,
+        "z": 81.2,
+        "rotationDegrees": 0,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L136-truck-4",
+        "assetType": "TRUCK",
+        "name": "Truck 4",
+        "x": 33.7,
+        "z": 76.2,
+        "rotationDegrees": 340,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L136-truck-5",
+        "assetType": "TRUCK",
+        "name": "Truck 5",
+        "x": 78.1,
+        "z": -3,
+        "rotationDegrees": 340,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L136-truck-6",
+        "assetType": "TRUCK",
+        "name": "Truck 6",
+        "x": 67,
+        "z": -18.4,
+        "rotationDegrees": 90,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L136-truck-7",
+        "assetType": "TRUCK",
+        "name": "Truck 7",
+        "x": 115.5,
+        "z": -9,
+        "rotationDegrees": 360,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L136-car-1",
+        "assetType": "CAR",
+        "name": "Car 1",
+        "x": 7.4,
+        "z": 77.8,
+        "rotationDegrees": 130,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L136-car-2",
+        "assetType": "CAR",
+        "name": "Car 2",
+        "x": -31.4,
+        "z": -25.6,
+        "rotationDegrees": 250,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L136-car-3",
+        "assetType": "CAR",
+        "name": "Car 3",
+        "x": 20.9,
+        "z": 56.9,
+        "rotationDegrees": 250,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L136-car-4",
+        "assetType": "CAR",
+        "name": "Car 4",
+        "x": -1.1,
+        "z": 63.2,
+        "rotationDegrees": 20,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L136-car-5",
+        "assetType": "CAR",
+        "name": "Car 5",
+        "x": -39.9,
+        "z": -78.3,
+        "rotationDegrees": 320,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L136-tent-1",
+        "assetType": "TENT",
+        "name": "Tent 1",
+        "x": -28.3,
+        "z": -83.7,
+        "rotationDegrees": 320,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       }
+      ]
+     }
+    }
+   ],
+   "decisions": [
+    {
+     "id": "d-136",
+     "planId": "plan-136",
+     "version": 1,
+     "reviewerId": "u-rev1",
+     "decision": "changes",
+     "reason": "Provide a separate access lane for the trucks and mark it in the plan.",
+     "decidedAt": 1799748000000
+    }
+   ],
+   "comments": []
+  },
+  {
+   "id": "plan-135",
+   "code": "TP-2026-0135",
+   "name": "Training Ground Hotel",
+   "ownerId": "u-p4",
+   "status": "APPROVED",
+   "createdAt": 1798891200000,
+   "updatedAt": 1799280000000,
+   "versions": [
+    {
+     "version": 1,
+     "submittedAt": 1798891200000,
+     "submittedBy": "u-p4",
+     "note": "Earlier revision.",
+     "contentHash": "a45fb2090d36",
+     "layout": {
+      "version": 2,
+      "id": "L135",
+      "name": "Training Ground Hotel",
+      "regionBounds": {
+       "northLatitude": 15.301638232956181,
+       "southLatitude": 15.29696176704382,
+       "eastLongitude": 74.12726326946118,
+       "westLongitude": 74.12073673053881
+      },
+      "anchor": {
+       "latitude": 15.2993,
+       "longitude": 74.124,
+       "headingDegrees": 0,
+       "horizontalAccuracyMeters": 3.6
+      },
+      "objects": [
+       {
+        "id": "L135-tent-1",
+        "assetType": "TENT",
+        "name": "Tent 1",
+        "x": -209.8,
+        "z": 89.2,
+        "rotationDegrees": 290,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-tent-2",
+        "assetType": "TENT",
+        "name": "Tent 2",
+        "x": -27.3,
+        "z": -194.6,
+        "rotationDegrees": 320,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-tent-3",
+        "assetType": "TENT",
+        "name": "Tent 3",
+        "x": -184.9,
+        "z": 145.9,
+        "rotationDegrees": 350,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-tent-4",
+        "assetType": "TENT",
+        "name": "Tent 4",
+        "x": -0.3,
+        "z": -111.7,
+        "rotationDegrees": 200,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-tent-5",
+        "assetType": "TENT",
+        "name": "Tent 5",
+        "x": 146.9,
+        "z": -121.8,
+        "rotationDegrees": 280,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-tent-6",
+        "assetType": "TENT",
+        "name": "Tent 6",
+        "x": -247,
+        "z": -46.3,
+        "rotationDegrees": 10,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-tent-7",
+        "assetType": "TENT",
+        "name": "Tent 7",
+        "x": -113.8,
+        "z": 72.7,
+        "rotationDegrees": 70,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-tent-8",
+        "assetType": "TENT",
+        "name": "Tent 8",
+        "x": -77.6,
+        "z": 50.1,
+        "rotationDegrees": 130,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-trench-1",
+        "assetType": "TRENCH",
+        "name": "Trench 1",
+        "x": -159,
+        "z": 150.5,
+        "rotationDegrees": 40,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L135-trench-2",
+        "assetType": "TRENCH",
+        "name": "Trench 2",
+        "x": -177,
+        "z": 50.7,
+        "rotationDegrees": 310,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L135-trench-3",
+        "assetType": "TRENCH",
+        "name": "Trench 3",
+        "x": -265,
+        "z": 48.9,
+        "rotationDegrees": 60,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L135-trench-4",
+        "assetType": "TRENCH",
+        "name": "Trench 4",
+        "x": -78.2,
+        "z": 110.4,
+        "rotationDegrees": 210,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L135-car-1",
+        "assetType": "CAR",
+        "name": "Car 1",
+        "x": 50.6,
+        "z": -55,
+        "rotationDegrees": 70,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L135-car-2",
+        "assetType": "CAR",
+        "name": "Car 2",
+        "x": 94.9,
+        "z": 154.3,
+        "rotationDegrees": 130,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L135-car-3",
+        "assetType": "CAR",
+        "name": "Car 3",
+        "x": -24.2,
+        "z": -119.3,
+        "rotationDegrees": 310,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L135-truck-1",
+        "assetType": "TRUCK",
+        "name": "Truck 1",
+        "x": 45.4,
+        "z": -31.1,
+        "rotationDegrees": 350,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L135-truck-2",
+        "assetType": "TRUCK",
+        "name": "Truck 2",
+        "x": -98.3,
+        "z": 10.4,
+        "rotationDegrees": 200,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L135-truck-3",
+        "assetType": "TRUCK",
+        "name": "Truck 3",
+        "x": 143.4,
+        "z": 51.5,
+        "rotationDegrees": 10,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L135-antenna-1",
+        "assetType": "ANTENNA",
+        "name": "Antenna 1",
+        "x": -145.5,
+        "z": 176.2,
+        "rotationDegrees": 50,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       },
+       {
+        "id": "L135-antenna-2",
+        "assetType": "ANTENNA",
+        "name": "Antenna 2",
+        "x": -15.8,
+        "z": -102.3,
+        "rotationDegrees": 320,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       }
+      ]
+     }
+    },
+    {
+     "version": 2,
+     "submittedAt": 1799064000000,
+     "submittedBy": "u-p4",
+     "note": "Training ground layout, second revision.",
+     "contentHash": "41f8aa560dca",
+     "layout": {
+      "version": 2,
+      "id": "L135",
+      "name": "Training Ground Hotel",
+      "regionBounds": {
+       "northLatitude": 15.301638232956181,
+       "southLatitude": 15.29696176704382,
+       "eastLongitude": 74.12726326946118,
+       "westLongitude": 74.12073673053881
+      },
+      "anchor": {
+       "latitude": 15.2993,
+       "longitude": 74.124,
+       "headingDegrees": 0,
+       "horizontalAccuracyMeters": 3.6
+      },
+      "objects": [
+       {
+        "id": "L135-tent-1",
+        "assetType": "TENT",
+        "name": "Tent 1",
+        "x": -49.6,
+        "z": 126.4,
+        "rotationDegrees": 80,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-tent-2",
+        "assetType": "TENT",
+        "name": "Tent 2",
+        "x": -104.9,
+        "z": 158.3,
+        "rotationDegrees": 190,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-tent-3",
+        "assetType": "TENT",
+        "name": "Tent 3",
+        "x": 105.9,
+        "z": 64.2,
+        "rotationDegrees": 320,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-tent-4",
+        "assetType": "TENT",
+        "name": "Tent 4",
+        "x": -15.2,
+        "z": -116.4,
+        "rotationDegrees": 90,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-tent-5",
+        "assetType": "TENT",
+        "name": "Tent 5",
+        "x": 45.6,
+        "z": 79.3,
+        "rotationDegrees": 160,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-tent-6",
+        "assetType": "TENT",
+        "name": "Tent 6",
+        "x": -7.9,
+        "z": 198,
+        "rotationDegrees": 300,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-tent-7",
+        "assetType": "TENT",
+        "name": "Tent 7",
+        "x": -106.6,
+        "z": 182.4,
+        "rotationDegrees": 30,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-tent-8",
+        "assetType": "TENT",
+        "name": "Tent 8",
+        "x": -186.8,
+        "z": 57.9,
+        "rotationDegrees": 340,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-tent-9",
+        "assetType": "TENT",
+        "name": "Tent 9",
+        "x": -145.7,
+        "z": -63.1,
+        "rotationDegrees": 180,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L135-trench-1",
+        "assetType": "TRENCH",
+        "name": "Trench 1",
+        "x": -159.8,
+        "z": 121.1,
+        "rotationDegrees": 200,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L135-trench-2",
+        "assetType": "TRENCH",
+        "name": "Trench 2",
+        "x": 216.6,
+        "z": -5.4,
+        "rotationDegrees": 260,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L135-trench-3",
+        "assetType": "TRENCH",
+        "name": "Trench 3",
+        "x": 39.2,
+        "z": 129.6,
+        "rotationDegrees": 200,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L135-trench-4",
+        "assetType": "TRENCH",
+        "name": "Trench 4",
+        "x": -177.4,
+        "z": 92.5,
+        "rotationDegrees": 60,
+        "widthMeters": 1.2,
+        "lengthMeters": 10,
+        "heightMeters": 1.8
+       },
+       {
+        "id": "L135-car-1",
+        "assetType": "CAR",
+        "name": "Car 1",
+        "x": -20.3,
+        "z": 43,
+        "rotationDegrees": 280,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L135-car-2",
+        "assetType": "CAR",
+        "name": "Car 2",
+        "x": 22.3,
+        "z": 94.4,
+        "rotationDegrees": 30,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L135-car-3",
+        "assetType": "CAR",
+        "name": "Car 3",
+        "x": 61.7,
+        "z": -102.3,
+        "rotationDegrees": 80,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L135-truck-1",
+        "assetType": "TRUCK",
+        "name": "Truck 1",
+        "x": -52.6,
+        "z": 117.4,
+        "rotationDegrees": 290,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L135-truck-2",
+        "assetType": "TRUCK",
+        "name": "Truck 2",
+        "x": -92.8,
+        "z": 137.4,
+        "rotationDegrees": 80,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L135-truck-3",
+        "assetType": "TRUCK",
+        "name": "Truck 3",
+        "x": -124.7,
+        "z": -91.1,
+        "rotationDegrees": 200,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L135-antenna-1",
+        "assetType": "ANTENNA",
+        "name": "Antenna 1",
+        "x": 154.8,
+        "z": -26.2,
+        "rotationDegrees": 70,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       },
+       {
+        "id": "L135-antenna-2",
+        "assetType": "ANTENNA",
+        "name": "Antenna 2",
+        "x": 23.4,
+        "z": 158.4,
+        "rotationDegrees": 90,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       }
+      ]
+     }
+    }
+   ],
+   "decisions": [
+    {
+     "id": "d-135",
+     "planId": "plan-135",
+     "version": 2,
+     "reviewerId": "u-rev2",
+     "decision": "approve",
+     "reason": "Approved. Version 2 resolves the earlier spacing concerns.",
+     "decidedAt": 1799280000000
+    }
+   ],
+   "comments": []
+  },
+  {
+   "id": "plan-134",
+   "code": "TP-2026-0134",
+   "name": "Staging Area (old)",
+   "ownerId": "u-p1",
+   "status": "WITHDRAWN",
+   "createdAt": 1798920000000,
+   "updatedAt": 1798920000000,
+   "versions": [
+    {
+     "version": 1,
+     "submittedAt": 1798920000000,
+     "submittedBy": "u-p1",
+     "note": "Superseded by TP-2026-0142.",
+     "contentHash": "aa71388804c5",
+     "layout": {
+      "version": 2,
+      "id": "L134",
+      "name": "Staging Area (old)",
+      "regionBounds": {
+       "northLatitude": 28.705359048514868,
+       "southLatitude": 28.702840951485133,
+       "eastLongitude": 77.1044481082159,
+       "westLongitude": 77.10055189178411
+      },
+      "anchor": {
+       "latitude": 28.7041,
+       "longitude": 77.1025,
+       "headingDegrees": 0,
+       "horizontalAccuracyMeters": 7
+      },
+      "objects": [
+       {
+        "id": "L134-tent-1",
+        "assetType": "TENT",
+        "name": "Tent 1",
+        "x": 37.4,
+        "z": 39.4,
+        "rotationDegrees": 260,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L134-tent-2",
+        "assetType": "TENT",
+        "name": "Tent 2",
+        "x": 96.1,
+        "z": -105.8,
+        "rotationDegrees": 300,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L134-tent-3",
+        "assetType": "TENT",
+        "name": "Tent 3",
+        "x": -107.3,
+        "z": -81.4,
+        "rotationDegrees": 320,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L134-tent-4",
+        "assetType": "TENT",
+        "name": "Tent 4",
+        "x": -9.6,
+        "z": 42.3,
+        "rotationDegrees": 300,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L134-truck-1",
+        "assetType": "TRUCK",
+        "name": "Truck 1",
+        "x": -38.7,
+        "z": -22.3,
+        "rotationDegrees": 10,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L134-truck-2",
+        "assetType": "TRUCK",
+        "name": "Truck 2",
+        "x": 66.3,
+        "z": 34.1,
+        "rotationDegrees": 240,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       }
+      ]
+     }
+    }
+   ],
+   "decisions": [],
+   "comments": []
+  },
+  {
+   "id": "plan-133",
+   "code": "TP-2026-0133",
+   "name": "Relay Site India",
+   "ownerId": "u-p2",
+   "status": "APPROVED",
+   "createdAt": 1798776000000,
+   "updatedAt": 1798884000000,
+   "versions": [
+    {
+     "version": 1,
+     "submittedAt": 1798776000000,
+     "submittedBy": "u-p2",
+     "note": "Relay site, minimal footprint.",
+     "contentHash": "678b9436039e",
+     "layout": {
+      "version": 2,
+      "id": "L133",
+      "name": "Relay Site India",
+      "regionBounds": {
+       "northLatitude": 27.331939592220657,
+       "southLatitude": 27.33086040777934,
+       "eastLongitude": 88.6144073987255,
+       "westLongitude": 88.61319260127449
+      },
+      "anchor": {
+       "latitude": 27.3314,
+       "longitude": 88.6138,
+       "headingDegrees": 0,
+       "horizontalAccuracyMeters": 4
+      },
+      "objects": [
+       {
+        "id": "L133-antenna-1",
+        "assetType": "ANTENNA",
+        "name": "Antenna 1",
+        "x": 6.9,
+        "z": 39.2,
+        "rotationDegrees": 280,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       },
+       {
+        "id": "L133-antenna-2",
+        "assetType": "ANTENNA",
+        "name": "Antenna 2",
+        "x": 32,
+        "z": 33.7,
+        "rotationDegrees": 200,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       },
+       {
+        "id": "L133-tent-1",
+        "assetType": "TENT",
+        "name": "Tent 1",
+        "x": 0.3,
+        "z": -6.9,
+        "rotationDegrees": 180,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L133-car-1",
+        "assetType": "CAR",
+        "name": "Car 1",
+        "x": -44.9,
+        "z": 14.3,
+        "rotationDegrees": 220,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       }
+      ]
+     }
+    }
+   ],
+   "decisions": [
+    {
+     "id": "d-133",
+     "planId": "plan-133",
+     "version": 1,
+     "reviewerId": "u-rev1",
+     "decision": "approve",
+     "reason": "Approved as submitted.",
+     "decidedAt": 1798884000000
+    }
+   ],
+   "comments": []
+  },
+  {
+   "id": "plan-132",
+   "code": "TP-2026-0132",
+   "name": "Command Post Juliet",
+   "ownerId": "u-p3",
+   "status": "SUBMITTED",
+   "createdAt": 1799971200000,
+   "updatedAt": 1799971200000,
+   "versions": [
+    {
+     "version": 1,
+     "submittedAt": 1799971200000,
+     "submittedBy": "u-p3",
+     "note": "Compact command post.",
+     "contentHash": "8790e51204c1",
+     "layout": {
+      "version": 2,
+      "id": "L132",
+      "name": "Command Post Juliet",
+      "regionBounds": {
+       "northLatitude": 19.076584558239045,
+       "southLatitude": 19.075415441760956,
+       "eastLongitude": 72.87841368145492,
+       "westLongitude": 72.8769863185451
+      },
+      "anchor": {
+       "latitude": 19.076,
+       "longitude": 72.8777,
+       "headingDegrees": 0,
+       "horizontalAccuracyMeters": 9.9
+      },
+      "objects": [
+       {
+        "id": "L132-tent-1",
+        "assetType": "TENT",
+        "name": "Tent 1",
+        "x": -17.6,
+        "z": -3.9,
+        "rotationDegrees": 250,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L132-tent-2",
+        "assetType": "TENT",
+        "name": "Tent 2",
+        "x": 35.4,
+        "z": 24.8,
+        "rotationDegrees": 330,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L132-tent-3",
+        "assetType": "TENT",
+        "name": "Tent 3",
+        "x": -4.6,
+        "z": 10.2,
+        "rotationDegrees": 20,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L132-car-1",
+        "assetType": "CAR",
+        "name": "Car 1",
+        "x": 36.8,
+        "z": 6.3,
+        "rotationDegrees": 210,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L132-car-2",
+        "assetType": "CAR",
+        "name": "Car 2",
+        "x": 53.5,
+        "z": 24.5,
+        "rotationDegrees": 90,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L132-antenna-1",
+        "assetType": "ANTENNA",
+        "name": "Antenna 1",
+        "x": -26.4,
+        "z": 41,
+        "rotationDegrees": 210,
+        "widthMeters": 1.5,
+        "lengthMeters": 1.5,
+        "heightMeters": 8
+       }
+      ]
+     }
+    }
+   ],
+   "decisions": [],
+   "comments": []
+  },
+  {
+   "id": "plan-131",
+   "code": "TP-2026-0131",
+   "name": "Assembly Area Kilo",
+   "ownerId": "u-p4",
+   "status": "UNDER_REVIEW",
+   "createdAt": 1799856000000,
+   "updatedAt": 1799856000000,
+   "versions": [
+    {
+     "version": 1,
+     "submittedAt": 1799856000000,
+     "submittedBy": "u-p4",
+     "note": "Assembly area, new site.",
+     "contentHash": "edda3f200982",
+     "layout": {
+      "version": 2,
+      "id": "L131",
+      "name": "Assembly Area Kilo",
+      "regionBounds": {
+       "northLatitude": 22.574218776661972,
+       "southLatitude": 22.57098122333803,
+       "eastLongitude": 88.36623743032911,
+       "westLongitude": 88.3615625696709
+      },
+      "anchor": {
+       "latitude": 22.5726,
+       "longitude": 88.3639,
+       "headingDegrees": 8,
+       "horizontalAccuracyMeters": 6.1
+      },
+      "objects": [
+       {
+        "id": "L131-tent-1",
+        "assetType": "TENT",
+        "name": "Tent 1",
+        "x": -115,
+        "z": 135.1,
+        "rotationDegrees": 40,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L131-tent-2",
+        "assetType": "TENT",
+        "name": "Tent 2",
+        "x": -164.4,
+        "z": -70.5,
+        "rotationDegrees": 320,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L131-tent-3",
+        "assetType": "TENT",
+        "name": "Tent 3",
+        "x": -166.5,
+        "z": -31.8,
+        "rotationDegrees": 40,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L131-tent-4",
+        "assetType": "TENT",
+        "name": "Tent 4",
+        "x": 105.7,
+        "z": -121.1,
+        "rotationDegrees": 230,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L131-tent-5",
+        "assetType": "TENT",
+        "name": "Tent 5",
+        "x": 98.7,
+        "z": -31.8,
+        "rotationDegrees": 230,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L131-tent-6",
+        "assetType": "TENT",
+        "name": "Tent 6",
+        "x": 65.7,
+        "z": -113.6,
+        "rotationDegrees": 180,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L131-tent-7",
+        "assetType": "TENT",
+        "name": "Tent 7",
+        "x": -84.3,
+        "z": 41.2,
+        "rotationDegrees": 20,
+        "widthMeters": 4,
+        "lengthMeters": 6,
+        "heightMeters": 2.5
+       },
+       {
+        "id": "L131-truck-1",
+        "assetType": "TRUCK",
+        "name": "Truck 1",
+        "x": -67.4,
+        "z": -4.9,
+        "rotationDegrees": 50,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L131-truck-2",
+        "assetType": "TRUCK",
+        "name": "Truck 2",
+        "x": -120.2,
+        "z": 66.5,
+        "rotationDegrees": 10,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L131-truck-3",
+        "assetType": "TRUCK",
+        "name": "Truck 3",
+        "x": -164,
+        "z": -30.2,
+        "rotationDegrees": 310,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L131-truck-4",
+        "assetType": "TRUCK",
+        "name": "Truck 4",
+        "x": 104.6,
+        "z": 60.9,
+        "rotationDegrees": 220,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L131-truck-5",
+        "assetType": "TRUCK",
+        "name": "Truck 5",
+        "x": 186.5,
+        "z": -129.1,
+        "rotationDegrees": 280,
+        "widthMeters": 2.5,
+        "lengthMeters": 8,
+        "heightMeters": 3.2
+       },
+       {
+        "id": "L131-car-1",
+        "assetType": "CAR",
+        "name": "Car 1",
+        "x": 165.5,
+        "z": -15.5,
+        "rotationDegrees": 20,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       },
+       {
+        "id": "L131-car-2",
+        "assetType": "CAR",
+        "name": "Car 2",
+        "x": 56.4,
+        "z": 52.7,
+        "rotationDegrees": 20,
+        "widthMeters": 1.8,
+        "lengthMeters": 4.5,
+        "heightMeters": 1.5
+       }
+      ]
+     }
+    }
+   ],
+   "decisions": [],
+   "comments": []
+  }
+ ],
+ "audit": [
+  {
+   "id": "a1",
+   "at": 1799982000000,
+   "actorId": "u-p1",
+   "action": "Submitted",
+   "planId": "plan-142",
+   "detail": "TP-2026-0142 version 1 submitted for approval"
+  },
+  {
+   "id": "a20",
+   "at": 1799971200000,
+   "actorId": "u-p3",
+   "action": "Submitted",
+   "planId": "plan-132",
+   "detail": "TP-2026-0132 version 1 submitted for approval"
+  },
+  {
+   "id": "a5",
+   "at": 1799928000000,
+   "actorId": "u-rev2",
+   "action": "Commented",
+   "planId": "plan-140",
+   "detail": "Please confirm the trench spacing against the latest site survey."
+  },
+  {
+   "id": "a2",
+   "at": 1799892000000,
+   "actorId": "u-p2",
+   "action": "Submitted",
+   "planId": "plan-141",
+   "detail": "TP-2026-0141 version 1 submitted for approval"
+  },
+  {
+   "id": "a21",
+   "at": 1799856000000,
+   "actorId": "u-p4",
+   "action": "Submitted",
+   "planId": "plan-131",
+   "detail": "TP-2026-0131 version 1 submitted for approval"
+  },
+  {
+   "id": "a4",
+   "at": 1799812800000,
+   "actorId": "u-p3",
+   "action": "Submitted",
+   "planId": "plan-140",
+   "detail": "TP-2026-0140 version 2 submitted for approval"
+  },
+  {
+   "id": "a12",
+   "at": 1799748000000,
+   "actorId": "u-rev1",
+   "action": "Changes requested",
+   "planId": "plan-136",
+   "detail": "TP-2026-0136 version 1: Provide a separate access lane for the trucks and mark it in the plan."
+  },
+  {
+   "id": "a6",
+   "at": 1799712000000,
+   "actorId": "u-p1",
+   "action": "Submitted",
+   "planId": "plan-139",
+   "detail": "TP-2026-0139 version 1 submitted for approval"
+  },
+  {
+   "id": "a8",
+   "at": 1799654400000,
+   "actorId": "u-rev1",
+   "action": "Approved",
+   "planId": "plan-138",
+   "detail": "TP-2026-0138 version 1: Layout is clear and within the approved footprint."
+  },
+  {
+   "id": "a3",
+   "at": 1799640000000,
+   "actorId": "u-p3",
+   "action": "Submitted",
+   "planId": "plan-140",
+   "detail": "TP-2026-0140 version 1 submitted for approval"
+  },
+  {
+   "id": "a11",
+   "at": 1799640000000,
+   "actorId": "u-p3",
+   "action": "Submitted",
+   "planId": "plan-136",
+   "detail": "TP-2026-0136 version 1 submitted for approval"
+  },
+  {
+   "id": "a7",
+   "at": 1799568000000,
+   "actorId": "u-p4",
+   "action": "Submitted",
+   "planId": "plan-138",
+   "detail": "TP-2026-0138 version 1 submitted for approval"
+  },
+  {
+   "id": "a10",
+   "at": 1799496000000,
+   "actorId": "u-rev2",
+   "action": "Rejected",
+   "planId": "plan-137",
+   "detail": "TP-2026-0137 version 1: Antenna spacing too tight and origin accuracy is poor. Re-stamp the origin and revise the mast positions."
+  },
+  {
+   "id": "a9",
+   "at": 1799388000000,
+   "actorId": "u-p2",
+   "action": "Submitted",
+   "planId": "plan-137",
+   "detail": "TP-2026-0137 version 1 submitted for approval"
+  },
+  {
+   "id": "a15",
+   "at": 1799280000000,
+   "actorId": "u-rev2",
+   "action": "Approved",
+   "planId": "plan-135",
+   "detail": "TP-2026-0135 version 2: Approved. Version 2 resolves the earlier spacing concerns."
+  },
+  {
+   "id": "a14",
+   "at": 1799064000000,
+   "actorId": "u-p4",
+   "action": "Submitted",
+   "planId": "plan-135",
+   "detail": "TP-2026-0135 version 2 submitted for approval"
+  },
+  {
+   "id": "a17",
+   "at": 1798941600000,
+   "actorId": "u-p1",
+   "action": "Withdrawn",
+   "planId": "plan-134",
+   "detail": "TP-2026-0134 withdrawn by planner"
+  },
+  {
+   "id": "a16",
+   "at": 1798920000000,
+   "actorId": "u-p1",
+   "action": "Submitted",
+   "planId": "plan-134",
+   "detail": "TP-2026-0134 version 1 submitted for approval"
+  },
+  {
+   "id": "a13",
+   "at": 1798891200000,
+   "actorId": "u-p4",
+   "action": "Submitted",
+   "planId": "plan-135",
+   "detail": "TP-2026-0135 version 1 submitted for approval"
+  },
+  {
+   "id": "a19",
+   "at": 1798884000000,
+   "actorId": "u-rev1",
+   "action": "Approved",
+   "planId": "plan-133",
+   "detail": "TP-2026-0133 version 1: Approved as submitted."
+  },
+  {
+   "id": "a18",
+   "at": 1798776000000,
+   "actorId": "u-p2",
+   "action": "Submitted",
+   "planId": "plan-133",
+   "detail": "TP-2026-0133 version 1 submitted for approval"
+  }
+ ]
+}

@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useStore } from '../storeContext'
 import { OPEN_STATUSES } from '../util'
 
-const ROLE_LABEL = { planner: 'Planner', reviewer: 'Reviewer', admin: 'Administrator', auditor: 'Auditor' } as const
+const ROLE_LABEL = { planner: 'Planner', reviewer: 'Reviewer', admin: 'Administrator', auditor: 'Auditor', superadmin: 'Super administrator' } as const
 const CLASSIFICATION = (import.meta.env.VITE_CLASSIFICATION_BANNER as string | undefined) ?? 'RESTRICTED'
 
 export function Layout() {
@@ -40,7 +40,7 @@ export function Layout() {
           </NavLink>
           {mode === 'live' && planner && <NavLink to="/plans/new">Submit a plan</NavLink>}
           <NavLink to={`${base}/activity`}>Activity log</NavLink>
-          {mode === 'live' && user.role === 'admin' && <NavLink to="/users">Users</NavLink>}
+          {mode === 'live' && (user.role === 'admin' || user.role === 'superadmin') && <NavLink to="/users">Users</NavLink>}
           {mode === 'live' && <NavLink to="/account">My account</NavLink>}
         </nav>
         <div className="sidebar-foot">

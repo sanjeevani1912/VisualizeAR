@@ -65,6 +65,7 @@ class PlanningRotationAndPropertiesTest {
         viewModel.clearLayout()
         viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(2.0f, 2.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
 
         val tent = viewModel.uiState.value.selectedObject!!
         assertEquals(0.0f, tent.rotationDegrees, 0.001f)
@@ -93,6 +94,7 @@ class PlanningRotationAndPropertiesTest {
         viewModel.clearLayout()
         viewModel.selectAssetType(AssetType.OFFROAD_VEHICLE)
         viewModel.addAssetAt(0.0f, 0.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
 
         // Set 45°
         viewModel.setSelectedObjectRotation(45.0f)
@@ -118,6 +120,7 @@ class PlanningRotationAndPropertiesTest {
         viewModel.clearLayout()
         viewModel.selectAssetType(AssetType.STR_MGS)
         viewModel.addAssetAt(1.0f, 1.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
 
         val truckId = viewModel.uiState.value.selectedObjectId!!
 
@@ -144,6 +147,7 @@ class PlanningRotationAndPropertiesTest {
         viewModel.clearLayout()
         viewModel.selectAssetType(AssetType.K131)
         viewModel.addAssetAt(5.0f, 5.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
 
         // Rotate antenna to 67.5°
         viewModel.setSelectedObjectRotation(67.5f)
@@ -167,6 +171,7 @@ class PlanningRotationAndPropertiesTest {
         viewModel.clearLayout()
         viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(3.0f, 4.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
 
         // Set rotation to 135°
         viewModel.setSelectedObjectRotation(135.0f)
@@ -196,12 +201,14 @@ class PlanningRotationAndPropertiesTest {
         // Place object 1 (rotated 45°)
         viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(2.0f, 2.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
         viewModel.setSelectedObjectRotation(45.0f)
         val obj1Id = viewModel.uiState.value.selectedObjectId!!
 
         // Place object 2 (rotated 90°)
         viewModel.selectAssetType(AssetType.STR_MGS)
         viewModel.addAssetAt(10.0f, 10.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
         viewModel.setSelectedObjectRotation(90.0f)
         val obj2Id = viewModel.uiState.value.selectedObjectId!!
 
@@ -273,6 +280,7 @@ class PlanningRotationAndPropertiesTest {
         viewModel.clearLayout()
         viewModel.selectAssetType(AssetType.GUNSHIP)
         viewModel.addAssetAt(8.5f, -12.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
         viewModel.setSelectedObjectRotation(75.0f)
 
         val originalObj = viewModel.uiState.value.selectedObject!!

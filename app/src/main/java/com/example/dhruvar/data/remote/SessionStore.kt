@@ -29,6 +29,13 @@ class SessionStore(context: Context) {
             prefs.edit().putString(KEY_URL, value).apply()
         }
 
+    /** Map address chosen at sign-in (`<server>/map`). Empty = use the build-time default. */
+    var mapUrl: String
+        get() = prefs.getString(KEY_MAP_URL, "").orEmpty()
+        set(value) {
+            prefs.edit().putString(KEY_MAP_URL, value).apply()
+        }
+
     fun saveSession(session: TokenSession) {
         val user = JSONObject()
             .put("id", session.user.id)
@@ -107,6 +114,7 @@ class SessionStore(context: Context) {
     private companion object {
         const val PREFS_NAME = "dhruvar_session"
         const val KEY_URL = "server_url"
+        const val KEY_MAP_URL = "map_url"
         const val KEY_TOKEN = "token"
         const val KEY_USER = "user"
         const val ANDROID_KEYSTORE = "AndroidKeyStore"

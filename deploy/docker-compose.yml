@@ -1,0 +1,66 @@
+# The whole DhruvAR stack. One address: http://localhost:8000
+#   nginx (8000) -> /      dashboard files (web/dist, build with deploy/build-dashboard.ps1)
+#                -> /api/  django (gunicorn) -> postgres
+#                -> /map/  the separate map server on host port 8088 (not part of this file)
+# Start:  docker compose up -d --build        (run inside deploy/; needs deploy/.env, see make-env.ps1)
+# Stop:   docker compose down                 (data stays)     Reset: docker compose down -v   (DELETES all data)
+name: dhruvar
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dhruvar}
+      POSTGRES_USER: ${POSTGRES_USER:-dhruvar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run deploy/make-env.ps1 to create deploy/.env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../server-django/backups:/backups      # where pg_dump writes backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    # No "ports:": only Django (inside this compose network) can reach the database.
+
+  django:
+    build:
+      context: ../server-django
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_ENGINE: postgres
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${POSTGRES_DB:-dhruvar}
+      DB_USER: ${POSTGRES_USER:-dhruvar}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?run deploy/make-env.ps1}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?run deploy/make-env.ps1}
+      DATA_DIR: /data
+      # Django's "Host check": it refuses a request whose Host header is not listed here (answers 400 DisallowedHost).
+      ALLOWED_HOSTS: localhost,127.0.0.1,[::1],${LAN_HOST:-localhost}
+      # Nginx is the one proxy in front of Django, so trust the X-Forwarded-* headers it sets.
+      TRUST_PROXY: "true"
+      # false because we use plain http. When HTTPS is put in front, set it to "true" (cookies then travel only over HTTPS).
+      COOKIE_SECURE: "false"
+    volumes:
+      - djangodata:/data      # uploads (field images), seed-credentials.txt
+    # No "ports:": reached only through Nginx.
+
+  nginx:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    depends_on: [django]
+    ports: ["8000:80"]
+    volumes:
+      - ${NGINX_CONF:-./nginx/stack.conf}:/etc/nginx/conf.d/default.conf:ro
+      - ../web/dist:/usr/share/nginx/html:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"     # lets Nginx reach the map server (and the Node fallback) on this PC
+
+volumes:
+  pgdata:
+  djangodata:

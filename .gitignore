@@ -16,3 +16,9 @@ captures/
 # OS files
 .DS_Store
 Thumbs.db
+
+# local secrets and build output
+deploy/.env
+web/dist/
+deploy/*credentials*.txt
+deploy/demo-passwords.txt
