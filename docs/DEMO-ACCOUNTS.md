@@ -49,3 +49,12 @@ python server-django\scripts\demo_data.py           # safe to repeat: existing p
 
 Needs Python 3.10+, Pillow (`pip install pillow`) and the stack running. It never wipes anything. After a database restore from an older backup,
 run it again (it re-sets the demo passwords and re-creates missing plans).
+
+## Update 2026-11-24 (later): simpler demo accounts
+
+The owner asked for simple demo logins. Five demo accounts were **renamed in the database** (their plans, comments and decisions stayed with them):
+`iyer` -> `admin`, `singh` -> `planner1`, `bose` -> `planner2`, `menon` -> `reviewer1`, `sharma` -> `reviewer2`. Their passwords were replaced (written in the
+git-ignored `deploy/demo-passwords.txt`) and nobody is forced to change them. `khan`, `rao` (planners), `nair` (auditor) and `stackadmin` (super admin) are unchanged.
+Old audit lines still show the old usernames in their text; the audit chain still verifies.
+The passwords follow the server's rules (10+ characters, capital, small letter, digit) because the server refuses shorter ones such as `admin123`.
+**Do not run `demo_data.py` again without reading it:** it still knows the old usernames and would re-create them.
