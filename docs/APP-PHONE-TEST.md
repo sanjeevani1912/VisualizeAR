@@ -27,7 +27,7 @@ The app was **built and unit-tested, and its requests were reproduced with curl 
 
 ```powershell
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
-cd C:\Users\itcell\AndroidStudioProjects\DhruvAR-app
+cd C:\Users\itcell\AndroidStudioProjects\DhruvAR-integration   # NOT DhruvAR-app: only this folder also has the panorama feature
 .\gradlew.bat assembleDebug
 ```
 The APK appears at `app\build\outputs\apk\debug\app-debug.apk`. Plug in the phone, accept the "Allow USB debugging?" prompt on it, then:
@@ -51,18 +51,16 @@ Run it again whenever the cable is replugged or adb restarts. Sanity check on th
 Then in the app:
 1. Open the app; open **Sign in** (person icon on Home, or tap *Send for approval*, which asks you to sign in).
 2. *Server address*: `http://localhost:8000` (already filled in the debug build).
-3. Sign in as a sample **planner**: `rao`, `bose`, `singh` or `khan`. Passwords are in the git-ignored file in the Django container; show it **only** when you need it:
-   ```powershell
-   docker exec dhruvar-django-1 cat /data/seed-credentials.txt
-   ```
-   (Do not paste it into chats or commit it.)
+3. Sign in as a demo **planner**: `rao`, `bose`, `singh` or `khan`. Their passwords (changed on 2026-11-24) are in the git-ignored file
+   `deploy\demo-passwords.txt` (see `docs/DEMO-ACCOUNTS.md`). Open that file yourself; do not paste it into chats or commit it.
+   (The old `seed-credentials.txt` passwords no longer work for these users.)
 4. Plan: open the map, search a place (e.g. "Delhi"), set a **region** (box), set the **origin** (a point inside the box), add a few assets
    (use at least three different types, e.g. a vehicle, a gunship, a K131), move or rotate one.
 5. **Send for approval**. Expect a "sent" message and a plan code like `TP-2026-01xx`.
 
 ## 5. What to look at on the dashboard
 
-On the PC open `http://localhost:8000`, sign in as a reviewer (`menon` or `sharma`; same password file). Open the new plan (its code is on the phone).
+On the PC open `http://localhost:8000`, sign in as a reviewer (`menon` or `sharma`; password in `deploy\demo-passwords.txt`). Open the new plan (its code is on the phone).
 - Status **Submitted**, planner name = the phone user, your note shown.
 - The **basemap** is visible (streets, not a plain beige square) and the **region box** sits where you drew it.
 - The **origin** marker is where you set it, inside the box.
