@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -27,6 +28,7 @@ import com.example.dhruvar.ui.ar.render.PanoramaStitcher
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -66,6 +68,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -110,6 +113,14 @@ import com.example.dhruvar.domain.spatial.GeographicCoordinateConverter
 import com.example.dhruvar.domain.spatial.SpatialDistanceCalculator
 import com.example.dhruvar.ui.ar.capture.ARCaptureManager
 import com.example.dhruvar.ui.ar.capture.CaptureMetadata
+import com.example.dhruvar.ui.ar.capture.SavedImage
+import com.example.dhruvar.ui.ar.capture.SavedImageSupport
+import com.example.dhruvar.data.remote.AttachmentUploader
+import com.example.dhruvar.data.remote.SendEligibility
+import com.example.dhruvar.data.remote.SentPlanStore
+import com.example.dhruvar.data.remote.SessionStore
+import com.example.dhruvar.data.remote.UploadResult
+import com.example.dhruvar.ui.ar.capture.buildViewImageIntent
 import com.example.dhruvar.ui.ar.render.ARDistanceLineLabelProjection
 import com.example.dhruvar.ui.ar.render.ARObjectLabelProjection
 import com.example.dhruvar.ui.ar.render.AROriginLabelProjection
@@ -217,6 +228,14 @@ fun ARVisualizationScreen(
     var showPreviewDialog by remember { mutableStateOf(false) }
     var isSavingImage by remember { mutableStateOf(false) }
     var captureFeedbackMessage by remember { mutableStateOf<String?>(null) }
+    // The last picture saved to the gallery; the banner offers "Open" only while its own message is showing.
+    var lastSavedImage by remember { mutableStateOf<SavedImage?>(null) }
+    // Sending the picture to the plan on the dashboard server (optional; the gallery copy never depends on it).
+    val sessionStore = remember { SessionStore(context) }
+    val sentPlanStore = remember { SentPlanStore(context) }
+    var isSendingImage by remember { mutableStateOf(false) }
+    var sendError by remember { mutableStateOf<String?>(null) }
+    var savedForBitmap by remember { mutableStateOf<Pair<Bitmap, SavedImage>?>(null) }
 
     // Panorama: hold the button and sweep the phone; shots are stitched on release.
     val panoramaScope = rememberCoroutineScope()
@@ -229,7 +248,7 @@ fun ARVisualizationScreen(
 
     LaunchedEffect(captureFeedbackMessage) {
         if (captureFeedbackMessage != null) {
-            kotlinx.coroutines.delay(4000)
+            kotlinx.coroutines.delay(if (lastSavedImage?.message == captureFeedbackMessage) 8000 else 4000)
             captureFeedbackMessage = null
         }
     }
@@ -1191,6 +1210,24 @@ fun ARVisualizationScreen(
                                 color = Coal
                             )
                         )
+                        val saved = lastSavedImage
+                        if (saved != null && saved.message == msg) {
+                            Spacer(modifier = Modifier.width(12.dp))
+                            TextButton(
+                                onClick = {
+                                    try {
+                                        context.startActivity(buildViewImageIntent(saved.uri))
+                                    } catch (_: ActivityNotFoundException) {
+                                        captureFeedbackMessage = "No app on this phone can open pictures"
+                                    } catch (_: SecurityException) {
+                                        captureFeedbackMessage = "Could not open the picture"
+                                    }
+                                },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            ) {
+                                Text("Open", fontWeight = FontWeight.Bold, color = Moss)
+                            }
+                        }
                     }
                 }
             }
@@ -1289,6 +1326,96 @@ fun ARVisualizationScreen(
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
+                                // Send to plan: offered only when signed in and the plan has a server id.
+                                val sendOption = remember(showPreviewDialog, capturedBitmap, uiState.currentLayout.id) {
+                                    AttachmentUploader.eligibility(
+                                        signedIn = sessionStore.token() != null,
+                                        sent = sentPlanStore.all()[uiState.currentLayout.id]
+                                    )
+                                }
+                                val sendHint = when {
+                                    sendError != null -> sendError
+                                    sendOption is SendEligibility.Blocked -> sendOption.reason
+                                    else -> null
+                                }
+                                if (sendHint != null) {
+                                    Text(
+                                        text = sendHint,
+                                        style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = if (sendError != null) FieldAnchor else OverlayMuted)
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+                                Button(
+                                    onClick = {
+                                        val bmp = capturedBitmap ?: return@Button
+                                        val ready = sendOption as? SendEligibility.Ready ?: return@Button
+                                        val token = sessionStore.token()
+                                        if (token == null) {
+                                            sendError = "Not signed in. Sign in again, then retry."
+                                            return@Button
+                                        }
+                                        val base = sessionStore.serverUrl.ifBlank { com.example.dhruvar.BuildConfig.DEFAULT_SERVER_URL }
+                                        val isPano = capturedIsPanorama
+                                        val metadata = CaptureMetadata(
+                                            layoutName = uiState.currentLayout.name,
+                                            objectCount = uiState.currentLayout.objects.size,
+                                            isCalibrated = isOriginCalibrated
+                                        )
+                                        isSendingImage = true
+                                        sendError = null
+                                        panoramaScope.launch {
+                                            // Save first, so a failed upload never loses the picture.
+                                            var saved = savedForBitmap?.takeIf { it.first === bmp }?.second
+                                            var saveNote = ""
+                                            if (saved == null) {
+                                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                                    ARCaptureManager.saveImageToGallery(context, bmp, metadata)
+                                                }.onSuccess {
+                                                    saved = it
+                                                    savedForBitmap = bmp to it
+                                                    lastSavedImage = it
+                                                }.onFailure { saveNote = " (a gallery copy could not be saved)" }
+                                            }
+                                            val result = AttachmentUploader.sendBitmap(
+                                                baseUrl = base,
+                                                token = token,
+                                                planId = ready.planId,
+                                                bitmap = bmp,
+                                                caption = AttachmentUploader.defaultCaption(isPano, metadata.timestampMillis),
+                                                fileName = saved?.fileName ?: ARCaptureManager.buildImageFileName(metadata)
+                                            )
+                                            isSendingImage = false
+                                            when (result) {
+                                                is UploadResult.Success -> {
+                                                    captureFeedbackMessage = "Sent to plan ${ready.planCode} as field image" +
+                                                        (saved?.let { ". Saved as ${it.fileName}" } ?: saveNote)
+                                                    showPreviewDialog = false
+                                                    capturedBitmap = null
+                                                }
+                                                is UploadResult.Failure -> {
+                                                    sendError = result.message +
+                                                        (saved?.let { " The picture is saved in ${SavedImageSupport.FOLDER}." } ?: "")
+                                                }
+                                            }
+                                        }
+                                    },
+                                    enabled = sendOption is SendEligibility.Ready && !isSendingImage && !isSavingImage,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Coal, contentColor = Mist)
+                                ) {
+                                    if (isSendingImage) {
+                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Mist)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Sending...", fontWeight = FontWeight.Bold)
+                                    } else {
+                                        Text(if (sendError != null) "Retry send to plan" else "Send to plan", fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+
                                 // Action Buttons: Retake and Save
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1315,24 +1442,31 @@ fun ARVisualizationScreen(
 
                                     Button(
                                         onClick = {
+                                            val bitmapToSave = capturedBitmap ?: return@Button
                                             isSavingImage = true
                                             val metadata = CaptureMetadata(
                                                 layoutName = uiState.currentLayout.name,
                                                 objectCount = uiState.currentLayout.objects.size,
                                                 isCalibrated = isOriginCalibrated
                                             )
-                                            val saveResult = ARCaptureManager.saveImageToGallery(
-                                                context = context,
-                                                bitmap = capturedBitmap!!,
-                                                metadata = metadata
-                                            )
-                                            isSavingImage = false
-                                            saveResult.onSuccess {
-                                                captureFeedbackMessage = "Visualization saved to Pictures/DhruvAR"
-                                                showPreviewDialog = false
-                                                capturedBitmap = null
-                                            }.onFailure { err ->
-                                                captureFeedbackMessage = "Failed to save: ${err.localizedMessage ?: "Storage error"}"
+                                            // JPEG compression of a big panorama is slow: do it off the main thread.
+                                            panoramaScope.launch {
+                                                val saveResult = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                                    ARCaptureManager.saveImageToGallery(
+                                                        context = context,
+                                                        bitmap = bitmapToSave,
+                                                        metadata = metadata
+                                                    )
+                                                }
+                                                isSavingImage = false
+                                                saveResult.onSuccess { saved ->
+                                                    lastSavedImage = saved
+                                                    captureFeedbackMessage = saved.message
+                                                    showPreviewDialog = false
+                                                    capturedBitmap = null
+                                                }.onFailure { err ->
+                                                    captureFeedbackMessage = "Failed to save: ${err.localizedMessage ?: "Storage error"}"
+                                                }
                                             }
                                         },
                                         modifier = Modifier
@@ -1343,7 +1477,7 @@ fun ARVisualizationScreen(
                                             containerColor = Moss,
                                             contentColor = Mist
                                         ),
-                                        enabled = !isSavingImage
+                                        enabled = !isSavingImage && !isSendingImage
                                     ) {
                                         Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(6.dp))

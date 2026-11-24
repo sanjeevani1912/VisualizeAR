@@ -73,6 +73,9 @@ import com.example.dhruvar.ui.theme.Moss
 import com.example.dhruvar.ui.theme.Rust
 import java.util.Locale
 
+/** Height reserved for the bottom-left Navigate/Place/Edit rail. Not measured on a device. */
+private val MODE_RAIL_CLEARANCE = 72.dp
+
 /**
  * Floating translucent property editor overlaid on the planning canvas.
  * Only consumes touches within its own bounds; canvas remains interactive outside.
@@ -122,7 +125,13 @@ fun BoxScope.SelectedObjectEditorOverlay(
     val panelPadding = when (panelAlignment) {
         Alignment.TopEnd -> Modifier.padding(top = 108.dp, end = 12.dp, start = 12.dp, bottom = bottomInset)
         Alignment.TopStart -> Modifier.padding(top = 12.dp, end = 12.dp, start = 12.dp, bottom = bottomInset)
-        else -> Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = bottomInset)
+        // Bottom-aligned: sit above the Navigate/Place/Edit rail (bottom-left) so it never covers it.
+        else -> Modifier.padding(
+            start = 12.dp,
+            end = 12.dp,
+            top = 12.dp,
+            bottom = bottomInset + MODE_RAIL_CLEARANCE
+        )
     }
 
     val distanceLabel = SpatialDistanceCalculator.formatDistance(

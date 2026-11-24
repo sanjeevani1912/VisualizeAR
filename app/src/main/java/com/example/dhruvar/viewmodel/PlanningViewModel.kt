@@ -1092,15 +1092,9 @@ class PlanningViewModel(
                 PlanningSetupStep.PLACE_ASSETS -> state.placeSearch
             }
         )
-        if (step == PlanningSetupStep.SET_REGION) {
-            state.setupSession.chosenLocation?.let { location ->
-                MapCameraBridge.moveTo(
-                    latitude = location.latitude,
-                    longitude = location.longitude,
-                    zoom = location.zoom ?: MapBasemapConfig.SEARCH_RESULT_ZOOM
-                )
-            }
-        }
+        // No camera move here: the map already flew to the chosen place when it was picked (search
+        // hit or GNSS fix). Moving it again on every step change threw away wherever the planner
+        // had dragged the map to before tapping Continue.
         return withStep
     }
 
@@ -1498,7 +1492,8 @@ class PlanningViewModel(
                     objects = updatedList,
                     updatedAtEpochMs = System.currentTimeMillis()
                 ),
-                selectedObjectId = newObj.id
+                // A newly placed asset is not selected: the properties card opens only on touch.
+                selectedObjectId = null
             )
         }
     }
@@ -1603,7 +1598,8 @@ class PlanningViewModel(
                     objects = updatedList,
                     updatedAtEpochMs = System.currentTimeMillis()
                 ),
-                selectedObjectId = newObj.id
+                // Not selected on placement: the card opens only when the user touches an asset.
+                selectedObjectId = null
             )
         }
     }

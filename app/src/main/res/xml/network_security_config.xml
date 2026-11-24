@@ -19,9 +19,13 @@
         </trust-anchors>
     </base-config>
 
-    <!-- LAN map server host. Keep in sync with BuildConfig.MAP_SERVER_BASE. -->
+    <!-- Hosts allowed plain HTTP. localhost = a phone on USB with `adb reverse tcp:8000 tcp:8000`
+         (traffic stays on the cable). For a Wi-Fi/LAN PC address Android takes no wildcards:
+         add one <domain> line with that exact address and rebuild, or use the debug build.
+         See docs/APP-PHONE-TEST.md. -->
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">192.168.1.205</domain>
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
         <!-- Android emulator alias for a server running on the development machine itself -->
         <domain includeSubdomains="false">10.0.2.2</domain>
     </domain-config>

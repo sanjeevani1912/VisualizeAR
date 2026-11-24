@@ -106,6 +106,7 @@ class AssetSpecificationTest {
         viewModel.clearLayout()
         viewModel.selectAssetType(AssetType.OFFROAD_VEHICLE)
         viewModel.addAssetAt(5.0f, 5.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
 
         val initialObj = viewModel.uiState.value.selectedObject!!
         val initialW = initialObj.widthMeters
@@ -132,6 +133,7 @@ class AssetSpecificationTest {
         viewModel.clearLayout()
         viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(2.0f, 3.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
 
         val tent = viewModel.uiState.value.selectedObject!!
         val w = tent.widthMeters
@@ -155,6 +157,7 @@ class AssetSpecificationTest {
         viewModel.clearLayout()
         viewModel.selectAssetType(AssetType.STR_MGS)
         viewModel.addAssetAt(0.0f, 0.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
 
         // Custom dimension override
         viewModel.updateSelectedObjectDimensions(3.0f, 10.0f)
@@ -177,11 +180,13 @@ class AssetSpecificationTest {
 
         viewModel.selectAssetType(AssetType.K131)
         viewModel.addAssetAt(1.0f, 1.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
         val antennaId = viewModel.uiState.value.selectedObjectId!!
         val antennaBefore = viewModel.uiState.value.currentLayout.objects.first { it.id == antennaId }
 
         viewModel.selectAssetType(AssetType.GUNSHIP)
         viewModel.addAssetAt(10.0f, 10.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
         val trenchId = viewModel.uiState.value.selectedObjectId!!
 
         // Delete trench
@@ -227,6 +232,7 @@ class AssetSpecificationTest {
         viewModel.clearLayout()
         viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(4.0f, 4.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
 
         val initialObj = viewModel.uiState.value.selectedObject!!
         val initialW = initialObj.widthMeters
@@ -248,6 +254,7 @@ class AssetSpecificationTest {
         viewModel.clearLayout()
         viewModel.selectAssetType(AssetType.STR_MGS)
         viewModel.addAssetAt(2.0f, 2.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
 
         val initialObj = viewModel.uiState.value.selectedObject!!
         val initialW = initialObj.widthMeters
@@ -267,6 +274,7 @@ class AssetSpecificationTest {
         viewModel.clearLayout()
         viewModel.selectAssetType(AssetType.MILITARY_VEHICLE)
         viewModel.addAssetAt(0.0f, 0.0f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
 
         val initial = viewModel.uiState.value.selectedObject!!
         val initialW = initial.widthMeters
@@ -296,6 +304,7 @@ class AssetSpecificationTest {
         viewModel.clearLayout()
         viewModel.selectAssetType(AssetType.OFFROAD_VEHICLE)
         viewModel.addAssetAt(8.5f, -12.3f)
+        viewModel.selectObject(viewModel.uiState.value.currentLayout.objects.last().id) // placing no longer selects; touching does
         viewModel.setSelectedObjectRotation(45.0f)
 
         viewModel.updateSelectedObjectDimensions(2.2f, 5.2f)

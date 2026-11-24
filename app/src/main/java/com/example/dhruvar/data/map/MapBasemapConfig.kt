@@ -29,7 +29,17 @@ object MapBasemapConfig {
         "Boundaries: Survey of India via DataMeet (CC BY 4.0)"
 
     /** Map server base URL without a trailing slash, or empty when unconfigured. */
-    fun serverBase(): String = BuildConfig.MAP_SERVER_BASE.trim().trimEnd('/')
+    fun serverBase(): String =
+        (runtimeMapBase?.takeIf { it.isNotBlank() } ?: BuildConfig.MAP_SERVER_BASE).trim().trimEnd('/')
+
+    /**
+     * Map address chosen on this phone (the saved sign-in address plus `/map`; set in
+     * `AccountViewModel` at sign-in and in `MainActivity` at start). Null or blank = the
+     * build-time default. Read on every call, so a change applies to the next map load
+     * without a rebuild.
+     */
+    @Volatile
+    var runtimeMapBase: String? = null
 
     fun isServerConfigured(): Boolean = serverBase().isNotEmpty()
 

@@ -288,7 +288,7 @@ object ARCaptureManager {
         context: Context,
         bitmap: Bitmap,
         metadata: CaptureMetadata
-    ): Result<Uri> {
+    ): Result<SavedImage> {
         return try {
             val fileName = buildImageFileName(metadata)
             val resolver = context.contentResolver
@@ -321,7 +321,7 @@ object ARCaptureManager {
                 resolver.update(imageUri, values, null, null)
             }
 
-            Result.success(imageUri)
+            Result.success(SavedImage(imageUri, fileName))
         } catch (e: Exception) {
             Result.failure(e)
         }
