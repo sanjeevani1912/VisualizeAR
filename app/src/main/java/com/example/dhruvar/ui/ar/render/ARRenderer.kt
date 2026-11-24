@@ -8,7 +8,11 @@ import android.os.Handler
 import android.os.Looper
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import com.example.dhruvar.BuildConfig
 import com.example.dhruvar.domain.ar.ArAssetSize
+import com.example.dhruvar.domain.ar.FloorPlaneSample
+import com.example.dhruvar.domain.ar.FloorTracker
+import com.example.dhruvar.domain.ar.GroundFloor
 import com.example.dhruvar.domain.model.AssetType
 import com.example.dhruvar.domain.model.Layout
 import com.example.dhruvar.domain.spatial.ARCoordinateTransformer
@@ -158,6 +162,20 @@ class ARRenderer(
 
     private val snappedGroundY = HashMap<String, Float>()
 
+    // Ground fix (see GROUND_FIX_ENABLED): one steady floor height + contact shadows.
+    private val contactShadowRenderer = ContactShadowRenderer()
+    private val floorTracker = FloorTracker()
+    private var lastGroundDebug = ""
+    private var lastGroundDebugNs = 0L
+
+    /** Debug builds only: one line describing the floor height, set by the screen to show it. */
+    var onGroundDebug: ((String) -> Unit)? = null
+
+    /** True when the origin was last set on a surface clearly above the floor (e.g. a table). */
+    @Volatile
+    var originOnRaisedSurface: Boolean = false
+        private set
+
     private val panoramaLock = Any()
     private val panoramaShots = ArrayList<PanoramaShot>()
 
@@ -178,6 +196,12 @@ class ARRenderer(
     private var lastReportedCanSetOrigin = false
 
     private companion object {
+        /**
+         * Master switch for the ground fix (one steady floor height, contact shadows, raised-origin
+         * hint, debug line). Set to false to restore the old per-asset snapping exactly.
+         */
+        const val GROUND_FIX_ENABLED = true
+
         const val MIN_GROUND_AREA_M2 = 0.8f
         const val GROUND_SNAP_RANGE_M = 1.5f
         const val PANORAMA_STEP_DEG = 9f
@@ -198,6 +222,7 @@ class ARRenderer(
         originMarkerRenderer.createOnGlThread()
         arObjectRenderer.createOnGlThread()
         arDistanceLineRenderer.createOnGlThread()
+        contactShadowRenderer.createOnGlThread()
 
         session?.let { ses ->
             ses.setCameraTextureName(backgroundRenderer.textureId)
@@ -294,6 +319,7 @@ class ARRenderer(
                         val layout = currentLayout
                         val vizScale = visualizationScale
                         if (layout != null && layout.objects.isNotEmpty()) {
+                            if (GROUND_FIX_ENABLED) updateFloor(anchor.pose.ty(), horizontalPlanes.size)
                             val groundedPoses = HashMap<String, Pose>(layout.objects.size)
                             for (obj in layout.objects) {
                                 groundedPoses[obj.id] = groundedObjectPose(obj, anchor.pose, vizScale)
@@ -308,6 +334,22 @@ class ARRenderer(
                                 assetSizeFactor = assetSizeFactor,
                                 poseOverride = { groundedPoses[it.id] }
                             )
+
+                            if (GROUND_FIX_ENABLED) {
+                                for (obj in layout.objects) {
+                                    val p = groundedPoses[obj.id] ?: continue
+                                    contactShadowRenderer.draw(
+                                        x = p.tx(),
+                                        groundY = p.ty(),
+                                        z = p.tz(),
+                                        radius = GroundFloor.shadowRadius(
+                                            obj.widthMeters, obj.lengthMeters, vizScale, assetSizeFactor
+                                        ),
+                                        viewMatrix = viewMatrix,
+                                        projectionMatrix = projectionMatrix
+                                    )
+                                }
+                            }
 
                             // 5. Draw 3D distance line if an object is selected
                             val selectedObj = layout.objects.firstOrNull { it.id == selectedObjectId }
@@ -502,6 +544,39 @@ class ARRenderer(
         }
     }
 
+    private fun floorSamples(): List<FloorPlaneSample> =
+        latestHorizontalPlanes.map { FloorPlaneSample(it.centerPose.ty(), planeArea(it)) }
+
+    /** Once per frame: pick the floor near the origin, smooth it, keep the last good one if none. */
+    private fun updateFloor(originY: Float, planeCount: Int) {
+        val candidate = GroundFloor.chooseFloor(floorSamples(), originY)
+        floorTracker.update(candidate)
+        if (BuildConfig.DEBUG) {
+            val sink = onGroundDebug ?: return
+            val now = System.nanoTime()
+            if (now - lastGroundDebugNs < 500_000_000L) return
+            val floor = floorTracker.height
+            val state = when {
+                floor == null -> "NO FLOOR YET (origin height used)"
+                floorTracker.foundThisFrame -> "floor FOUND"
+                else -> "floor KEPT (last value)"
+            }
+            val text = "floor=${floor?.let { "%.2f".format(it) } ?: "-"} " +
+                "origin=${"%.2f".format(originY)} planes=$planeCount $state"
+            lastGroundDebugNs = now
+            if (text != lastGroundDebug) {
+                lastGroundDebug = text
+                mainHandler.post { sink(text) }
+            }
+        }
+    }
+
+    /** Raised-origin hint: is [originY] more than ~0.3 m above the lowest large plane near it? */
+    private fun refreshOriginRaised(originY: Float) {
+        val floor = GroundFloor.chooseFloor(floorSamples(), originY)
+        originOnRaisedSurface = GROUND_FIX_ENABLED && GroundFloor.isOriginRaised(originY, floor)
+    }
+
     /** Planning pose for [obj] with its height snapped to the ground plane beneath it. */
     private fun groundedObjectPose(
         obj: com.example.dhruvar.domain.model.LayoutObject,
@@ -516,6 +591,10 @@ class ARRenderer(
             visualizationScale = vizScale
         )
         val t = base.translation
+        if (GROUND_FIX_ENABLED) {
+            // One steady floor height for every asset; before any floor is found, the origin's height.
+            return Pose(floatArrayOf(t[0], floorTracker.height ?: t[1], t[2]), base.rotationQuaternion)
+        }
         val target = groundHeightAt(t[0], t[2], t[1])
         val previous = snappedGroundY[obj.id]
         val y = if (previous == null || abs(target - previous) > 0.4f) target
@@ -693,6 +772,7 @@ class ARRenderer(
             if (groundHit != null) {
                 val plane = groundHit.trackable as? Plane
                 if (plane != null) {
+                    refreshOriginRaised(groundHit.hitPose.ty())
                     val newAnchor = plane.createAnchor(groundHit.hitPose)
                     originAnchor?.detach()
                     originAnchor = newAnchor
@@ -736,6 +816,7 @@ class ARRenderer(
         if (hit != null) {
             val plane = hit.trackable as? Plane
             if (plane != null) {
+                refreshOriginRaised(hit.hitPose.ty())
                 val newAnchor = plane.createAnchor(
                     northAlignedPose(hit.hitPose, magneticHeadingDegrees)
                 )
@@ -749,6 +830,7 @@ class ARRenderer(
         // Fallback: If center hit wasn't strictly acquired but ground planes exist, anchor to nearest plane center
         val fallbackPlane = bestGroundPlane(latestHorizontalPlanes)
         if (fallbackPlane != null) {
+            refreshOriginRaised(fallbackPlane.centerPose.ty())
             val newAnchor = fallbackPlane.createAnchor(
                 northAlignedPose(fallbackPlane.centerPose, magneticHeadingDegrees)
             )
@@ -778,6 +860,8 @@ class ARRenderer(
         originAnchor = null
         currentCenterHit = null
         snappedGroundY.clear()
+        floorTracker.reset()
+        originOnRaisedSurface = false
         lastReportedCanSetOrigin = false
         lastProjectedLabels = emptyList()
         mainHandler.post {

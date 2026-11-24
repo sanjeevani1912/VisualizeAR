@@ -197,6 +197,7 @@ fun ARVisualizationScreen(
     var briefingExpanded by rememberSaveable { mutableStateOf(true) }
     var activePanel by rememberSaveable { mutableIntStateOf(AR_PANEL_NONE) }
     var calibrationFeedback by remember { mutableStateOf<String?>(null) }
+    var groundDebugLine by remember { mutableStateOf("") }
     var visualizationScaleMode by remember { mutableStateOf(ArVisualizationScale.FULL) }
     var assetSize by remember { mutableStateOf(ArAssetSize.DEFAULT) }
 
@@ -343,6 +344,7 @@ fun ARVisualizationScreen(
                 }
             }
         ).apply {
+            onGroundDebug = { line -> groundDebugLine = line }
             onPanoramaProgress = { shots, swept, tooFast ->
                 panoramaShotCount = shots
                 panoramaSweptDegrees = swept
@@ -374,7 +376,11 @@ fun ARVisualizationScreen(
         briefingExpanded = !isOriginCalibrated
         if (isOriginCalibrated) {
             val n = uiState.currentLayout.objects.size
-            calibrationFeedback = "Origin calibrated — rendering $n object${if (n == 1) "" else "s"}"
+            calibrationFeedback = if (arRenderer.originOnRaisedSurface) {
+                "Origin is on a raised surface; aim at the floor and set it again"
+            } else {
+                "Origin calibrated — rendering $n object${if (n == 1) "" else "s"}"
+            }
         }
     }
 
@@ -883,6 +889,10 @@ fun ARVisualizationScreen(
                                 }
                             }
 
+                            if (com.example.dhruvar.BuildConfig.DEBUG && isOriginCalibrated && groundDebugLine.isNotEmpty()) {
+                                HudNote(text = groundDebugLine, color = FieldAnchor)
+                            }
+
                             calibrationFeedback?.let { msg ->
                                 HudNote(text = msg, color = Moss)
                             }
@@ -1057,8 +1067,11 @@ fun ARVisualizationScreen(
                                             val ok = arRenderer.setOriginAtCenterHit(heading)
                                             if (ok) {
                                                 val n = uiState.currentLayout.objects.size
-                                                calibrationFeedback =
+                                                calibrationFeedback = if (arRenderer.originOnRaisedSurface) {
+                                                    "Origin is on a raised surface; aim at the floor and set it again"
+                                                } else {
                                                     "Origin calibrated — rendering $n object${if (n == 1) "" else "s"}"
+                                                }
                                             }
                                         },
                                         enabled = canSetOrigin,
