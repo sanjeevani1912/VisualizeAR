@@ -43,18 +43,21 @@ object ARCoordinateTransformer {
         planXMeters: Float,
         planZMeters: Float,
         planRotationDegrees: Float = 0.0f,
-        visualizationScale: Float = 1.0f
+        visualizationScale: Float = 1.0f,
+        headingFix: Boolean = ArHeadingFix.ENABLED
     ): Pose {
         val s = visualizationScale.coerceAtLeast(0.001f)
+        // Heading fix part 2: ARCore's world is right-handed, the map is not, so planning x is negated (see ArHeadingFix).
+        val sideSign = if (headingFix) -1.0f else 1.0f
         // Translation in horizontal ground plane (Y = 0.0)
         val translationOffset = Pose.makeTranslation(
-            planXMeters * METERS_PER_PLANNING_UNIT * s,
+            sideSign * planXMeters * METERS_PER_PLANNING_UNIT * s,
             0.0f,
             planZMeters * METERS_PER_PLANNING_UNIT * s
         )
 
         // Rotation around vertical axis (Y in ARCore right-handed system)
-        val yawRad = Math.toRadians(-planRotationDegrees.toDouble()).toFloat()
+        val yawRad = Math.toRadians((-sideSign * planRotationDegrees).toDouble()).toFloat()  // fix off: -rotation (as before); fix on: +rotation (mirrored with x)
         val rotationOffset = Pose.makeRotation(
             0.0f,
             sin(yawRad / 2.0f),
@@ -72,11 +75,13 @@ object ARCoordinateTransformer {
         originPose: Pose,
         planXMeters: Float,
         planZMeters: Float,
-        visualizationScale: Float = 1.0f
+        visualizationScale: Float = 1.0f,
+        headingFix: Boolean = ArHeadingFix.ENABLED
     ): FloatArray {
         val s = visualizationScale.coerceAtLeast(0.001f)
+        val sideSign = if (headingFix) -1.0f else 1.0f
         val localPoint = floatArrayOf(
-            planXMeters * METERS_PER_PLANNING_UNIT * s,
+            sideSign * planXMeters * METERS_PER_PLANNING_UNIT * s,
             0.0f,
             planZMeters * METERS_PER_PLANNING_UNIT * s
         )
@@ -140,6 +145,28 @@ object ARCoordinateTransformer {
         ).toFloat()
         var yaw = magneticHeadingDegrees - forwardAngleDeg
         yaw %= 360f
+        if (yaw < 0f) yaw += 360f
+        return if (yaw >= 360f) 0f else yaw
+    }
+
+    /**
+     * Heading fix (part 1, see [ArHeadingFix]): yaw to apply to the planning origin so plan +Z points at the plan's
+     * SAVED heading [savedHeadingDegrees] (clockwise from north), given the phone's LIVE compass heading
+     * [liveHeadingDegrees] at the moment the origin is set. yaw = saved - live - camera forward angle.
+     * Used only when [ArHeadingFix.ENABLED]; [originYawDegreesForMagneticNorth] is the unchanged original.
+     */
+    fun originYawDegreesForPlanHeading(
+        cameraForwardX: Float,
+        cameraForwardZ: Float,
+        savedHeadingDegrees: Float,
+        liveHeadingDegrees: Float
+    ): Float {
+        val magSq = cameraForwardX * cameraForwardX + cameraForwardZ * cameraForwardZ
+        if (magSq < 1e-6f) return 0f
+        val forwardAngleDeg = Math.toDegrees(
+            atan2(cameraForwardX.toDouble(), cameraForwardZ.toDouble())
+        ).toFloat()
+        var yaw = (savedHeadingDegrees - liveHeadingDegrees - forwardAngleDeg) % 360f
         if (yaw < 0f) yaw += 360f
         return if (yaw >= 360f) 0f else yaw
     }
