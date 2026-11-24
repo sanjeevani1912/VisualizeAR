@@ -14,6 +14,7 @@ urlpatterns = [
     path("auth/me", views_auth.me),
     path("auth/change-password", views_auth.change_password),
     path("users", views_users.user_names),
+    path("ranks", views_users.rank_list),
     path("admin/users", views_users.admin_users),
     path("admin/users/<str:user_id>", views_users.admin_user),
     path("admin/users/<str:user_id>/password", views_users.admin_user_password),

@@ -236,6 +236,6 @@ def not_found(request, *args, **kwargs):
     under /api/admin needs the admin role before it can even be reported missing."""
     if request.api_user is None:
         raise ApiError(401, "Not signed in")
-    if request.path_info.startswith("/api/admin/") and request.api_user.role != "admin":
+    if request.path_info.startswith("/api/admin/") and request.api_user.role not in ("admin", "superadmin"):
         raise ApiError(403, "Your role is not allowed to do this")
     raise ApiError(404, "Not found")

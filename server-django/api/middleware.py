@@ -6,7 +6,7 @@ view. Every API answer is `Cache-Control: no-store`, and every error is `{ "erro
 
 import logging
 
-from .auth import csrf_guard, load_user
+from .auth import csrf_guard, forced_change_guard, load_user
 from .http import ApiError, error_response
 
 log = logging.getLogger("dhruvar.api")
@@ -28,6 +28,7 @@ class ApiMiddleware:
         try:
             load_user(request)
             csrf_guard(request)
+            forced_change_guard(request)
             response = self.get_response(request)
         except ApiError as e:
             response = error_response(e.status, e.message)

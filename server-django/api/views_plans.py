@@ -320,6 +320,6 @@ def audit_list(request):
     return JsResponse(rows)
 
 
-@endpoint("GET", roles=("admin", "auditor"))
+@endpoint("GET", roles=("admin", "superadmin", "auditor"))
 def audit_verify(request):
     return JsResponse(verify_chain())

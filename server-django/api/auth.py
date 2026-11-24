@@ -30,13 +30,20 @@ class SessionUser:
     name: str
     rank: str
     role: str
+    must_change_password: bool = False
 
     def as_dict(self) -> dict:
-        return {"id": self.id, "username": self.username, "name": self.name, "rank": self.rank, "role": self.role}
+        data = {"id": self.id, "username": self.username, "name": self.name, "rank": self.rank, "role": self.role}
+        if self.must_change_password:  # only present when true, so the normal reply keeps its old shape
+            data["mustChangePassword"] = True
+        return data
 
 
 def _session_user(user: User) -> SessionUser:
-    return SessionUser(id=user.id, username=user.username, name=user.name, rank=user.rank, role=user.role)
+    return SessionUser(
+        id=user.id, username=user.username, name=user.name, rank=user.rank, role=user.role,
+        must_change_password=user.must_change_password,
+    )
 
 
 # ---------- passwords ----------
@@ -205,5 +212,20 @@ def csrf_guard(request) -> None:
         raise ApiError(403, "Missing request header")
 
 
+FORCED_CHANGE_ALLOWED = ("/api/auth/me", "/api/auth/change-password", "/api/auth/logout", "/api/health")
+
+
+def forced_change_guard(request) -> None:
+    """Until a person has replaced the password someone else set for them, the only things they may do are
+    see who they are, change the password and sign out."""
+    user = request.api_user
+    if user and user.must_change_password and request.path_info not in FORCED_CHANGE_ALLOWED:
+        raise ApiError(403, "Password change required")
+
+
 def active_admin_count() -> int:
-    return User.objects.filter(role="admin", active=True).count()
+    return User.objects.filter(role__in=("admin", "superadmin"), active=True).count()
+
+
+def active_superadmin_count() -> int:
+    return User.objects.filter(role="superadmin", active=True).count()

@@ -98,8 +98,10 @@ def change_password(request):
     problem = password_error(data["next"], me_.username)
     if problem:
         raise ApiError(400, problem)
+    if data["next"] == data["current"]:
+        raise ApiError(400, "The new password must be different from the current one")
     with transaction.atomic():
-        User.objects.filter(pk=me_.id).update(password=hash_password(data["next"]))
+        User.objects.filter(pk=me_.id).update(password=hash_password(data["next"]), must_change_password=False)
         audit(me_.id, "Password changed", None, f"{me_.username} changed their password")
     # Other sessions are ended; this one continues on a new token.
     destroy_user_sessions(me_.id)

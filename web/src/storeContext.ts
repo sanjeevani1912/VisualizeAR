@@ -21,6 +21,8 @@ export interface Ctx {
   login: (a: string, b?: string) => Promise<string | null>
   logout: () => Promise<void>
   refresh: () => Promise<void>
+  /** Live mode: call after the password was changed so the forced-change screen goes away. */
+  passwordChanged?: () => Promise<void>
   decide: (planId: string, kind: DecisionKind, reason: string) => Promise<string | null>
   comment: (planId: string, text: string) => Promise<string | null>
   markReviewing: (planId: string) => void

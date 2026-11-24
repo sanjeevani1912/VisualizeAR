@@ -5,6 +5,9 @@ from api.models import AuditEntry, AuthSession, User
 
 from .helpers import PASSWORD, ApiTestCase
 
+from api.ranks import RANKS
+
+RANK_ERROR = "rank: Invalid option: expected one of " + "|".join(f'"{r}"' for r in RANKS)
 NEW_USER = {"username": "khan", "name": "M. Khan", "rank": "Lieutenant", "role": "planner", "password": "Brand-New-Pass-9"}
 
 
@@ -22,7 +25,7 @@ class UserListTests(ApiTestCase):
         _, who = self.app_login("singh")
         rows = Client().get("/api/users", headers=who).json()
         self.assertEqual([r["name"] for r in rows], ["K. Rao", "S. Iyer", "V. Singh"])
-        self.assertEqual(set(rows[0]), {"id", "name", "rank", "role", "active"})  # no username, no password
+        self.assertEqual(set(rows[0]), {"id", "name", "rank", "appointment", "role", "active"})  # no username, no password
         self.assertIs(rows[0]["active"], False)
         self.assertIs(rows[1]["active"], True)
 
@@ -36,7 +39,7 @@ class UserListTests(ApiTestCase):
         rows = Client().get("/api/admin/users", headers=admin).json()
         self.assertEqual(len(rows), 3)
         iyer = next(r for r in rows if r["username"] == "iyer")
-        self.assertEqual(set(iyer), {"id", "username", "name", "rank", "role", "active", "createdAt", "lastLoginAt"})
+        self.assertEqual(set(iyer), {"id", "username", "name", "rank", "appointment", "role", "active", "mustChangePassword", "createdAt", "lastLoginAt"})
         self.assertIsInstance(iyer["createdAt"], int)
         self.assertIsInstance(iyer["lastLoginAt"], int)  # signed in a moment ago
         rao = next(r for r in rows if r["username"] == "rao")
@@ -94,10 +97,13 @@ class CreateUserTests(ApiTestCase):
             ({"username": None}, "username: Invalid input: expected string, received undefined"),
             ({"name": "   "}, "name: Too small: expected string to have >=1 characters"),
             ({"name": "n" * 81}, "name: Too big: expected string to have <=80 characters"),
-            ({"rank": "r" * 41}, "rank: Too big: expected string to have <=40 characters"),
-            ({"rank": True}, "rank: Invalid input: expected string, received boolean"),
-            ({"role": "boss"}, 'role: Invalid option: expected one of "planner"|"reviewer"|"admin"|"auditor"'),
-            ({"role": None}, 'role: Invalid option: expected one of "planner"|"reviewer"|"admin"|"auditor"'),
+            ({"rank": "r" * 41}, RANK_ERROR),
+            ({"rank": "Lt Col"}, RANK_ERROR),  # free text is no longer accepted for new accounts
+            ({"rank": True}, RANK_ERROR),
+            ({"appointment": "a" * 51}, "appointment: Too big: expected string to have <=50 characters"),
+            ({"appointment": 5}, "appointment: Invalid input: expected string, received number"),
+            ({"role": "boss"}, 'role: Invalid option: expected one of "planner"|"reviewer"|"admin"|"auditor"|"superadmin"'),
+            ({"role": None}, 'role: Invalid option: expected one of "planner"|"reviewer"|"admin"|"auditor"|"superadmin"'),
             ({"password": "p" * 201}, "password: Too big: expected string to have <=200 characters"),
             ({"password": None}, "password: Invalid input: expected string, received undefined"),
             ({"username": "ab", "role": "boss"}, "username: Too small: expected string to have >=3 characters"),  # first field wins
@@ -120,6 +126,24 @@ class CreateUserTests(ApiTestCase):
         ):
             res = self.create(password=password)
             self.assertEqual((res.status_code, res.json()), (400, {"error": message}), password)
+
+    def test_appointment_is_optional_trimmed_and_stored(self):
+        self.assertEqual(self.create().status_code, 201)
+        self.assertEqual(User.objects.get(username="khan").appointment, "")
+        self.create(username="rao", appointment="  CO  ")
+        self.assertEqual(User.objects.get(username="rao").appointment, "CO")
+        self.create(username="bose", appointment="")
+        self.assertEqual(User.objects.get(username="bose").appointment, "")
+
+    def test_every_listed_rank_is_accepted(self):
+        for i, rank in enumerate(RANKS):
+            self.assertEqual(self.create(username=f"user{i:02d}", rank=rank).status_code, 201, rank)
+
+    def test_the_rank_list_endpoint(self):
+        groups = Client().get("/api/ranks", headers=self.who).json()
+        self.assertEqual([g["group"] for g in groups], ["Officers", "JCOs", "Other Ranks"])
+        self.assertEqual([r for g in groups for r in g["ranks"]], RANKS)
+        self.assertEqual(Client().get("/api/ranks").status_code, 401)
 
     def test_names_are_trimmed(self):
         self.create(username="  khan  ", name="  M. Khan  ")
@@ -149,7 +173,7 @@ class UpdateUserTests(ApiTestCase):
 
     def test_validation_messages(self):
         for body, message in (
-            ({"role": "boss"}, 'role: Invalid option: expected one of "planner"|"reviewer"|"admin"|"auditor"'),
+            ({"role": "boss"}, 'role: Invalid option: expected one of "planner"|"reviewer"|"admin"|"auditor"|"superadmin"'),
             ({"active": "yes"}, "active: Invalid input: expected boolean, received string"),
             ({"active": None}, "active: Invalid input: expected boolean, received null"),
             ({"name": ""}, "name: Too small: expected string to have >=1 characters"),
@@ -160,12 +184,27 @@ class UpdateUserTests(ApiTestCase):
 
     def test_changing_a_name_or_rank_keeps_sessions(self):
         _, planner_who = self.app_login("singh")
-        res = self.patch_user(self.planner, {"name": "  Maj. V. Singh ", "rank": "Lt Col"})
+        res = self.patch_user(self.planner, {"name": "  Maj. V. Singh ", "rank": "Colonel", "appointment": " Adjt "})
         self.assertEqual(res.json(), {"ok": True})
         self.planner.refresh_from_db()
-        self.assertEqual((self.planner.name, self.planner.rank, self.planner.role), ("Maj. V. Singh", "Lt Col", "planner"))
+        self.assertEqual((self.planner.name, self.planner.rank, self.planner.appointment, self.planner.role), ("Maj. V. Singh", "Colonel", "Adjt", "planner"))
         self.assertEqual(Client().get("/api/auth/me", headers=planner_who).status_code, 200)
         self.assertEqual(AuditEntry.objects.get(action="User updated").detail, "singh")  # nothing sensitive changed
+
+    def test_a_new_rank_must_come_from_the_list_but_an_old_one_may_stay(self):
+        res = self.patch_user(self.planner, {"rank": "Lt Col"})  # singh is "Major"; "Lt Col" is not in the list
+        self.assertEqual((res.status_code, res.json()), (400, {"error": RANK_ERROR}))
+        User.objects.filter(pk=self.planner.pk).update(rank="Lt Col")  # an account made before the list existed
+        self.assertEqual(self.patch_user(self.planner, {"rank": "Lt Col", "appointment": "OC"}).status_code, 200)
+        self.assertEqual(self.patch_user(self.planner, {"rank": "Major"}).status_code, 200)
+
+    def test_appointment_can_be_cleared_and_changes_no_permission(self):
+        self.patch_user(self.planner, {"appointment": "CO"})
+        _, who = self.app_login("singh")
+        self.assertEqual(Client().get("/api/admin/users", headers=who).status_code, 403)  # still a planner
+        self.patch_user(self.planner, {"appointment": ""})
+        self.planner.refresh_from_db()
+        self.assertEqual(self.planner.appointment, "")
 
     def test_changing_the_role_ends_that_users_sessions_and_is_audited(self):
         _, planner_who = self.app_login("singh")
@@ -196,6 +235,7 @@ class UpdateUserTests(ApiTestCase):
     def test_an_admin_can_demote_another_admin_but_never_leave_zero(self):
         """The 'at least one active administrator' rule can only fire in a race, because a caller is always an
         active admin themselves. What can be tested through the API is that the last one stays an admin."""
+        User.objects.filter(pk=self.admin.pk).update(role="superadmin")  # only a super administrator may demote an administrator
         other = self.make_user("nair", "admin", name="P. Nair")
         _, nair_who = self.app_login("nair")
         self.assertEqual(self.patch_user(other, {"role": "auditor"}).status_code, 200)  # iyer demotes nair: two admins -> one

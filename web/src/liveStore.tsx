@@ -34,7 +34,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
         const me = await api<User>('GET', '/auth/me')
         if (cancelled) return
         setUser(me)
-        await load()
+        if (!me.mustChangePassword) await load()
       } catch {
         /* not signed in */
       } finally {
@@ -48,7 +48,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
 
   // Keep the screen fresh without a manual reload.
   useEffect(() => {
-    if (!user) return
+    if (!user || user.mustChangePassword) return
     const tick = () => {
       if (document.visibilityState === 'visible') void load()
     }
@@ -92,7 +92,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
         try {
           const me = await api<User>('POST', '/auth/login', { username, password })
           setUser(me)
-          await load()
+          if (!me.mustChangePassword) await load()
           return null
         } catch (e) {
           return errorText(e)
@@ -109,6 +109,14 @@ export function LiveProvider({ children }: { children: ReactNode }) {
         setAudit([])
       },
       refresh: load,
+      passwordChanged: async () => {
+        try {
+          setUser(await api<User>('GET', '/auth/me'))
+        } catch (e) {
+          if (e instanceof ApiError && e.status === 401) setUser(null)
+        }
+        await load()
+      },
       decide: (planId: string, kind: DecisionKind, reason: string) =>
         act(() => {
           const plan = plans.find((p) => p.id === planId)

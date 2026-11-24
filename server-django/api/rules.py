@@ -9,6 +9,8 @@ import re
 
 from .jsutil import js_len, js_trim
 
+# A super administrator may do everything an administrator may, and in addition manage the administrators.
+ADMIN_ROLES = ("admin", "superadmin")
 OPEN = ("SUBMITTED", "UNDER_REVIEW")
 MIN_REASON = 10
 
@@ -69,7 +71,7 @@ def can_attach(a: Actor, p: PlanRef) -> bool:
 
 
 def can_remove_attachment(a: Actor, uploader_id: str) -> bool:
-    return a.role == "admin" or uploader_id == a.id
+    return a.role in ADMIN_ROLES or uploader_id == a.id
 
 
 def reason_error(kind: str, reason: str) -> str | None:

@@ -1,7 +1,7 @@
 """Creates a user from the command line. Needed once to make the first administrator, because the
 API's own "create user" route is for administrators only.
 
-    python manage.py createuser --username iyer --name "S. Iyer" --rank "Lt Col" --role admin
+    python manage.py createuser --username iyer --name "S. Iyer" --rank "Lieutenant Colonel" --appointment "CO" --role admin
 
 The password is asked for twice without echo, or read from the DHRUVAR_PASSWORD environment variable
 (for scripts). It follows the same rules as the API and is never printed.
@@ -17,6 +17,7 @@ from django.db import transaction
 from api.audit import audit
 from api.auth import hash_password
 from api.models import ROLES, User, now_ms
+from api.ranks import APPOINTMENT_MAX, RANKS
 from api.rules import password_error
 
 
@@ -26,11 +27,17 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--username", required=True)
         parser.add_argument("--name", required=True)
-        parser.add_argument("--rank", required=True)
+        parser.add_argument("--rank", required=True, help="one of: " + ", ".join(RANKS))
+        parser.add_argument("--appointment", default="", help=f"optional label such as CO or Adjt (up to {APPOINTMENT_MAX} characters)")
         parser.add_argument("--role", required=True, choices=[r for r, _ in ROLES])
 
     def handle(self, *args, **opts):
         username, name, rank, role = opts["username"].strip(), opts["name"].strip(), opts["rank"].strip(), opts["role"]
+        appointment = opts["appointment"].strip()
+        if rank not in RANKS:
+            raise CommandError("rank must be one of: " + ", ".join(RANKS))
+        if len(appointment) > APPOINTMENT_MAX:
+            raise CommandError(f"appointment: at most {APPOINTMENT_MAX} characters")
         if not 3 <= len(username) <= 40 or not re.fullmatch(r"[A-Za-z0-9._-]+", username):
             raise CommandError("username: 3 to 40 characters, letters, digits, dot, dash or underscore only")
         if not 1 <= len(name) <= 80 or not 1 <= len(rank) <= 40:
@@ -49,7 +56,7 @@ class Command(BaseCommand):
 
         with transaction.atomic():
             user = User.objects.create(
-                username=username, name=name, rank=rank, role=role, password=hash_password(password), active=True, created_at=now_ms()
+                username=username, name=name, rank=rank, appointment=appointment, role=role, password=hash_password(password), must_change_password=True, active=True, created_at=now_ms()
             )
             audit(None, "User created", None, f"{username} created as {role}")
         self.stdout.write(self.style.SUCCESS(f"Created {role} {username} ({user.id})"))

@@ -12,7 +12,7 @@ from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.db import models
 from django.db.models.functions import Lower
 
-ROLES = [("planner", "planner"), ("reviewer", "reviewer"), ("admin", "admin"), ("auditor", "auditor")]
+ROLES = [("planner", "planner"), ("reviewer", "reviewer"), ("admin", "admin"), ("auditor", "auditor"), ("superadmin", "superadmin")]
 STATUSES = [
     ("SUBMITTED", "SUBMITTED"),
     ("UNDER_REVIEW", "UNDER_REVIEW"),
@@ -46,8 +46,13 @@ class User(AbstractBaseUser):
     username = models.CharField(max_length=40, unique=True)
     name = models.CharField(max_length=80)
     rank = models.CharField(max_length=40)
-    role = models.CharField(max_length=10, choices=ROLES)
+    # Optional label such as "CO" or "Adjt". Shown next to the name; it never changes what the user may do (the role does).
+    appointment = models.CharField(max_length=50, blank=True, default="")
+    role =models.CharField(max_length=10, choices=ROLES)
     active = models.BooleanField(default=True)
+    # True after an administrator or the command line set the password: the person must choose their own
+    # before anything else works (see auth.forced_change_guard). Cleared by POST /api/auth/change-password.
+    must_change_password = models.BooleanField(default=False)
     created_at = models.BigIntegerField(default=now_ms)
     last_login_at = models.BigIntegerField(null=True, blank=True)
 

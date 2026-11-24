@@ -65,11 +65,15 @@ First data (inside the Django container; passwords are random and not printed):
 ```powershell
 docker compose exec django python manage.py seed                      # 8 sample users + 12 fictional plans (refuses if users exist)
 docker compose exec django python manage.py seed --reset              # wipes ALL data and seeds again
-docker compose exec django python manage.py createuser --username iyer --name "S. Iyer" --rank "Lt Col" --role admin   # asks for a password
+docker compose exec django python manage.py createuser --username iyer --name "S. Iyer" --rank "Lieutenant Colonel" --appointment "CO" --role admin   # asks for a password; rank must be from the list
+docker compose exec django python manage.py listusers                 # who exists (no passwords)
+docker compose exec django python manage.py resetpassword --username iyer   # new password, asked twice; the person must change it at next sign-in
+docker compose exec django python manage.py setrole --username iyer --role superadmin   # promote (the dashboard cannot make a super admin)
 docker compose exec django cat /data/seed-credentials.txt             # shows the sample users' passwords (run it only when you need them)
 ```
 `seed` is for demos. For real use, create real users with `createuser`/the dashboard's admin page and do not seed.
-`stackadmin` (admin) was created with `createuser`; its password is in `deploy/admin-credentials.txt`.
+`stackadmin` (promoted to **super admin** on 2026-11-24 with `setrole`) was created with `createuser`; its password is in `deploy/admin-credentials.txt`.
+Users, roles, forced password change and everything about accounts: `docs/USERS-HOWTO.md` (how to) and `docs/USERS-AND-ROLES-PLAN.md` (why).
 `seed --reset` deletes `stackadmin` too; recreate it with `createuser` (password via the `DHRUVAR_PASSWORD` variable).
 
 After editing an Nginx file: `docker compose restart nginx`. After changing Django code: `docker compose up -d --build django`.

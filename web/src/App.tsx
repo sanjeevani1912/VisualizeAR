@@ -18,6 +18,8 @@ function Protected() {
   const { user, ready, base } = useStore()
   if (!ready) return <div className="login-wrap"><p className="muted">Loading…</p></div>
   if (!user) return <Navigate to={`${base}/login`} replace />
+  // A password someone else set must be replaced before anything else is shown.
+  if (user.mustChangePassword) return <Account forced />
   return <Layout />
 }
 
@@ -43,7 +45,7 @@ function AppRoutes() {
         <Route path="plans/new" element={<RoleGate roles={['planner']}><NewPlan /></RoleGate>} />
         <Route path="plans/:id" element={<PlanDetail />} />
         <Route path="activity" element={<Activity />} />
-        <Route path="users" element={<RoleGate roles={['admin']}><Users /></RoleGate>} />
+        <Route path="users" element={<RoleGate roles={['admin', 'superadmin']}><Users /></RoleGate>} />
         <Route path="account" element={<Account />} />
       </Route>
       <Route path="*" element={<Fallback />} />
