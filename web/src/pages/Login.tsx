@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useStore } from '../storeContext'
+import { ARMY_LOGO, APP_LOGO_LARGE } from '../branding'
 import { DEMO_LOGINS, displayName } from '../data/mock'
 
 const DESC = {
@@ -11,13 +12,12 @@ const DESC = {
   superadmin: 'Manage administrators as well as users.',
 } as const
 
-function Mark() {
+function Logos() {
   return (
-    <div className="brand-mark big" aria-hidden="true">
-      <svg viewBox="0 0 32 32" width="30" height="30">
-        <path d="M16 5l10 5.5v11L16 27 6 21.5v-11z" fill="none" stroke="currentColor" strokeWidth="2" />
-        <circle cx="16" cy="16" r="2.6" fill="currentColor" />
-      </svg>
+    <div className="login-logos">
+      <img className="logo-army" src={ARMY_LOGO} alt="Army logo" width={96} height={72} />
+      <span className="topbar-sep tall" aria-hidden="true" />
+      <img className="logo-app" src={APP_LOGO_LARGE} alt="DhruvAR logo" width={72} height={72} />
     </div>
   )
 }
@@ -36,8 +36,9 @@ export function Login() {
     return (
       <div className="login-wrap">
         <div className="login-card">
-          <Mark />
-          <h1>DhruvAR Command Dashboard</h1>
+          <Logos />
+          <h1>DhruvAR</h1>
+          <p className="login-sub">Command Dashboard</p>
           <p className="muted">Tactical plan review and approval</p>
           <div className="banner-inline">RESTRICTED · PRESENTATION DEMO</div>
           <p className="small muted">Demo sign-in: choose an account. All data is fictional and nothing leaves this browser.</p>
@@ -81,8 +82,9 @@ export function Login() {
   return (
     <div className="login-wrap">
       <form className="login-card" onSubmit={submit}>
-        <Mark />
-        <h1>DhruvAR Command Dashboard</h1>
+        <Logos />
+        <h1>DhruvAR</h1>
+          <p className="login-sub">Command Dashboard</p>
         <p className="muted">Sign in to review and manage tactical plans</p>
         <label className="field left">
           <span>Username</span>

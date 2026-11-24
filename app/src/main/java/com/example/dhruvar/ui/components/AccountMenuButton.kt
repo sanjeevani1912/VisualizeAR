@@ -1,6 +1,12 @@
 package com.example.dhruvar.ui.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
@@ -18,6 +24,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.dhruvar.data.remote.SignedInUser
@@ -34,16 +42,35 @@ fun AccountMenuButton(
     onSignOut: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    IconButton(onClick = { if (user == null) onSignIn() else expanded = true }) {
-        Icon(
-            imageVector = Icons.Default.AccountCircle,
-            contentDescription = if (user == null) "Sign in" else "Account",
-            tint = if (user == null) {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            } else {
-                MaterialTheme.colorScheme.primary
+    IconButton(
+        onClick = { if (user == null) onSignIn() else expanded = true },
+        modifier = Modifier.semantics {
+            contentDescription = if (user == null) "Sign in" else "Account: ${user.name}"
+        }
+    ) {
+        if (user == null) {
+            Icon(
+                imageVector = Icons.Default.AccountCircle,
+                contentDescription = "Sign in",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            // Round avatar with the user's initials (no photo is stored for users).
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = userInitials(user.name, user.username),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
             }
-        )
+        }
     }
     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
         if (user != null) {
@@ -77,4 +104,16 @@ fun AccountMenuButton(
             )
         }
     }
+}
+
+/** "Sanjay Kumar" -> "SK", "sanjay" -> "S". Falls back to [fallback] (username), then "?". */
+fun userInitials(name: String, fallback: String = ""): String {
+    val words = name.trim().split(" ").filter { it.isNotEmpty() }
+        .ifEmpty { fallback.trim().split(" ").filter { it.isNotEmpty() } }
+    val letters = when {
+        words.isEmpty() -> ""
+        words.size == 1 -> words[0].take(1)
+        else -> words.first().take(1) + words.last().take(1)
+    }
+    return letters.uppercase().ifEmpty { "?" }
 }

@@ -49,3 +49,11 @@ export function fullDate(ts: number): string {
 export function shortDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
 }
+
+/** "Sanjay Kumar" -> "SK"; one word -> its first letter; blank -> "?". */
+export function initials(name: string): string {
+  const w = name.trim().split(/\s+/).filter(Boolean)
+  if (w.length === 0) return '?'
+  const s = w.length === 1 ? w[0][0] : w[0][0] + w[w.length - 1][0]
+  return s.toUpperCase()
+}

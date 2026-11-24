@@ -208,6 +208,7 @@ fun HomeScreen(
         topBar = {
             AppTopBar(
                 title = "DhruvAR",
+                showArmyLogo = true,
                 actions = {
                     AccountMenuButton(
                         user = account.user,

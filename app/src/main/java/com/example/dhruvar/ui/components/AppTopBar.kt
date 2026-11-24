@@ -1,6 +1,9 @@
 package com.example.dhruvar.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -13,6 +16,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import com.example.dhruvar.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 
@@ -23,6 +29,7 @@ fun AppTopBar(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     onNavigateBack: (() -> Unit)? = null,
+    showArmyLogo: Boolean = false,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     TopAppBar(
@@ -55,6 +62,13 @@ fun AppTopBar(
                         contentDescription = "Navigate back"
                     )
                 }
+            } else if (showArmyLogo) {
+                // Army logo, top left. Replace res/drawable-nodpi/army_logo.png to change it.
+                Image(
+                    painter = painterResource(R.drawable.army_logo),
+                    contentDescription = "Army logo",
+                    modifier = Modifier.padding(start = 12.dp, end = 4.dp).height(44.dp)
+                )
             }
         },
         actions = actions,

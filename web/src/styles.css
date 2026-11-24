@@ -47,9 +47,22 @@ a { color: inherit; }
 .empty { padding: 28px 18px; text-align: center; color: #6b5a47; margin: 0; }
 
 /* ---------- shell ---------- */
-.shell { min-height: 100%; display: grid; grid-template-columns: 252px 1fr; grid-template-rows: auto 1fr; }
+.shell { min-height: 100%; display: grid; grid-template-columns: 252px 1fr; grid-template-rows: auto auto 1fr; }
 .banner { grid-column: 1 / -1; background: var(--cacao); color: var(--sand); text-align: center; font-size: 0.74rem; letter-spacing: 0.12em; padding: 6px 12px; font-weight: 600; }
-.sidebar { background: var(--coal); color: var(--mist); display: flex; flex-direction: column; padding: 18px 14px; gap: 18px; position: sticky; top: 0; align-self: start; height: calc(100vh - 29px); }
+.sidebar { background: var(--coal); color: var(--mist); display: flex; flex-direction: column; padding: 18px 14px; gap: 18px; position: sticky; top: 0; align-self: start; height: calc(100vh - 29px - 64px); }
+.topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 8px 20px; min-height: 64px; background: var(--surface); border-bottom: 1px solid var(--line); box-shadow: var(--shadow); position: relative; z-index: 2; }
+.logo-army, .logo-app { display: block; object-fit: contain; flex: none; }
+.logo-app { border-radius: 10px; }
+.topbar-sep { width: 1px; height: 32px; background: var(--line); flex: none; }
+.topbar-sep.tall { height: 56px; }
+.topbar-title .brand-name { color: var(--coal); line-height: 1.15; }
+.topbar-title .brand-sub { color: #7a7058; }
+.topbar-user { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.topbar-user .user-name { color: var(--coal); }
+.topbar-user .user-role { color: #7a7058; }
+.topbar-user .btn-ghost { margin-left: 6px; }
+.login-logos { display: flex; align-items: center; justify-content: center; gap: 18px; margin-bottom: 14px; }
+.login-sub { margin: 2px 0 6px; font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; color: #7a7058; }
 .brand { display: flex; align-items: center; gap: 11px; padding: 4px 6px; }
 .brand-mark { width: 38px; height: 38px; border-radius: 9px; background: var(--moss); color: var(--mist); display: grid; place-items: center; flex: none; }
 .brand-mark.big { width: 56px; height: 56px; border-radius: 14px; margin: 0 auto 14px; }
@@ -235,6 +248,9 @@ textarea { resize: vertical; }
   .nav { flex-direction: row; flex: 1 1 100%; order: 3; overflow-x: auto; }
   .sidebar-foot { margin-top: 0; margin-left: auto; flex-direction: row; align-items: center; }
   .user-card { display: none; }
+  .topbar { padding: 8px 12px; gap: 8px; }
+  .topbar .user-meta, .topbar-title .brand-sub { display: none; }
+  .topbar-user { gap: 6px; }
   .page { padding: 18px 14px 48px; }
   .map { height: clamp(300px, 52vh, 420px); }
   .map-legend { max-width: calc(100% - 70px); }
@@ -321,7 +337,7 @@ textarea { resize: vertical; }
 @media print {
   @page { margin: 12mm; }
   body { background: #fff; font-size: 11pt; }
-  .banner, .sidebar, .no-print, .crumbs, .detail-side > :not(.summary-card), .tabs, .notice, .map-actions, .maplibregl-ctrl-top-right, .map-selected { display: none !important; }
+  .banner, .sidebar, .topbar, .no-print, .crumbs, .detail-side > :not(.summary-card), .tabs, .notice, .map-actions, .maplibregl-ctrl-top-right, .map-selected { display: none !important; }
   .shell { display: block; }
   .page { max-width: none; padding: 0; gap: 10px; }
   .card { box-shadow: none; break-inside: avoid; }
