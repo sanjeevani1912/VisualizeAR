@@ -26,7 +26,7 @@ functions, so the one switch covers all of it. The layout JSON and the API are u
 
 ## Field test (do this with the switch OFF first, then ON)
 Open ground, away from cars and metal. Use `docs/APP-PHONE-TEST.md` for the USB set-up.
-1. **Switch OFF.** Build and install (`gradlew installPlayDebug` or Run in Android Studio). On the plan screen stand at a point, put the origin there and face a landmark.
+1. **Switch OFF.** Build and install (`gradlew installDebug` or Run in Android Studio). On the plan screen stand at a point, put the origin there and face a landmark.
    On the map place two assets: **A** 20 m straight ahead (toward the landmark), **B** 20 m to your **right** of that line. Save.
 2. Open AR. Turn about 90 degrees away from the landmark. Tap "Set Planning Origin". Write down where A and B appear (compass direction and left/right).
    Repeat facing north and facing east. Expectation if the review is right: A is only correct when you face north; B may be on the wrong side.
