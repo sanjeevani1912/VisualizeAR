@@ -1,5 +1,7 @@
 # DhruvAR
 
+> **Documentation index:** see [docs/README.md](docs/README.md) for what each folder holds, how to run the whole stack, and one document per feature.
+
 Offline Android planning and AR visualization prototype.
 
 Create a 2D metric field layout, save it locally, then project the same plan onto a real horizontal surface with ARCore.
