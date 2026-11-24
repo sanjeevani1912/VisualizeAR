@@ -392,15 +392,15 @@ class PlanningSetupViewModelTest {
     }
 
     @Test
-    fun enteringSetRegion_fliesToChosenLocation() {
+    fun enteringSetRegion_doesNotMoveTheCamera() {
+        // The map already flew to the chosen place when it was picked. Moving it again on
+        // Continue threw away wherever the planner had dragged the map (Connaught Place bug).
+        MapCameraBridge.target.value?.let { MapCameraBridge.consumed(it) }
         viewModel.createNewLayout()
         viewModel.setChosenLocation(chosen)
         viewModel.advanceSetupStep()
-        val target = MapCameraBridge.target.value
-        assertEquals(chosen.latitude, target?.latitude)
-        assertEquals(chosen.longitude, target?.longitude)
-        assertEquals(chosen.zoom, target?.zoom)
-        target?.let { MapCameraBridge.consumed(it) }
+        assertEquals(PlanningSetupStep.SET_REGION, viewModel.uiState.value.setupStep)
+        assertEquals(null, MapCameraBridge.target.value)
     }
 
     @Test

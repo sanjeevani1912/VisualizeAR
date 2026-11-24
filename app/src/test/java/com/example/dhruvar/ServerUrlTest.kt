@@ -51,6 +51,29 @@ class ServerUrlTest {
     }
 
     @Test
+    fun `map address is the server address plus slash map`() {
+        assertEquals("http://localhost:8000/map", ServerUrl.mapBaseFor("http://localhost:8000"))
+        assertEquals("http://192.168.1.42:8000/map", ServerUrl.mapBaseFor("http://192.168.1.42:8000/"))
+        assertEquals(null, ServerUrl.mapBaseFor("  "))
+    }
+
+    @Test
+    fun `typed map address keeps its path and drops the trailing slash`() {
+        fun map(raw: String, cleartext: Boolean) =
+            (ServerUrl.normalizeMap(raw, cleartext) as ServerUrlCheck.Ok).baseUrl
+        assertEquals("http://localhost:8000/map", map("http://localhost:8000/map/", true))
+        assertEquals("http://192.168.1.42:8000/map", map("192.168.1.42:8000/map", true))
+        assertEquals("https://maps.example.org/map", map("maps.example.org/map", false))
+    }
+
+    @Test
+    fun `typed map address rejects empty, malformed and release http`() {
+        assertTrue(ServerUrl.normalizeMap("", true) is ServerUrlCheck.Bad)
+        assertTrue(ServerUrl.normalizeMap("ht tp://bad host", true) is ServerUrlCheck.Bad)
+        assertTrue(ServerUrl.normalizeMap("http://localhost:8000/map", false) is ServerUrlCheck.Bad)
+    }
+
+    @Test
     fun `empty and malformed addresses are rejected`() {
         bad("", cleartext = true)
         bad("   ", cleartext = true)

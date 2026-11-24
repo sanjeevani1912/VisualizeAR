@@ -20,6 +20,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         DefaultLayoutRepositoryProvider.init(filesDir.resolve("dhruvar_layouts"))
+        // Map address saved at the last sign-in (<server>/map); blank keeps the build-time default.
+        com.example.dhruvar.data.map.MapBasemapConfig.runtimeMapBase =
+            com.example.dhruvar.data.remote.SessionStore(applicationContext).mapUrl.ifBlank { null }
         DefaultDeviceLocationControllerProvider.init(applicationContext)
         AssetModelRegistry.install { fileName ->
             try {

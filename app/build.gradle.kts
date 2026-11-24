@@ -32,7 +32,7 @@ android {
         // Self-hosted India map server (tiles + glyphs + /search). Empty = fall back to
         // MAP_STYLE_URL above and disable place search. See docs/Map-Server-Configuration.md.
         // No trailing slash. Cleartext hosts must also be listed in res/xml/network_security_config.xml.
-        buildConfigField("String", "MAP_SERVER_BASE", "\"http://192.168.1.205:8088\"")
+        buildConfigField("String", "MAP_SERVER_BASE", "\"http://localhost:8000/map\"")
         // Dashboard server the app signs in to and sends plans for approval to. Empty = the user
         // types it on the sign-in screen. Release builds only accept https:// addresses.
         buildConfigField("String", "DEFAULT_SERVER_URL", "\"\"")
@@ -40,9 +40,10 @@ android {
 
     buildTypes {
         debug {
-            // Developer PC on the LAN. Plain HTTP is permitted for debug builds only: see
+            // USB test: `adb reverse tcp:8000 tcp:8000` makes the phone's localhost:8000 the PC's
+            // stack. Plain HTTP is permitted for debug builds only: see
             // src/debug/res/xml/network_security_config.xml.
-            buildConfigField("String", "DEFAULT_SERVER_URL", "\"http://192.168.1.214:4000\"")
+            buildConfigField("String", "DEFAULT_SERVER_URL", "\"http://localhost:8000\"")
         }
         release {
             isMinifyEnabled = false
