@@ -35,7 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -91,7 +90,7 @@ fun FieldGuideScreen(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "7 steps: find location, set region, origin, place assets, save, view in AR.",
+                        text = "7 quick steps from location to AR.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
                     )
@@ -102,58 +101,44 @@ fun FieldGuideScreen(
                 number = "1",
                 icon = Icons.Default.GpsFixed,
                 title = "Find a location",
-                body = "New Plan finds your position from GNSS satellites and centers the map on it. Tap Detect to retry, or search for another place. Continue is always available."
+                body = "Tap Detect to find your position, or search for a place."
             )
             GuideSection(
                 number = "2",
                 icon = Icons.Default.Crop,
                 title = "Set region",
-                body = "Drag a box or use the visible area, then confirm. The origin is placed at the center of that box."
+                body = "Drag a box over the area, then confirm."
             )
             GuideSection(
                 number = "3",
                 icon = Icons.Default.PinDrop,
                 title = "Origin at the center",
-                body = "Confirming the region places the origin at the center of the box. " +
-                    "Change origin to tap a different point or stamp GPS. A point you chose stays put while it is still inside the box. " +
-                    "If a new box leaves that point outside, the origin returns to the new center and assets stay on the same ground."
+                body = "The origin is the box center. Tap Change origin to move it."
             )
             GuideSection(
                 number = "4",
                 icon = Icons.Default.Edit,
                 title = "Place assets",
-                body = "Navigate, Place, and Edit. Taps store (x, z) meters from the origin. " +
-                    "Change region or Change origin does not delete assets."
+                body = "Tap the map to place assets. Edit or move them any time."
             )
             GuideSection(
                 number = "5",
                 icon = Icons.Default.Save,
                 title = "Save",
-                body = "Toolbar Save writes schema v2 JSON (region, origin, meters). An unfinished plan can be saved and reopened at the missing step."
+                body = "Tap Save. Unfinished plans can be reopened later."
             )
             GuideSection(
                 number = "6",
                 icon = Icons.Default.ViewInAr,
                 title = "On-site AR",
-                body = "AR opens only after region and origin are set. GEO BRIEFING shows distance and bearing. " +
-                    "Set Planning Origin on a detected plane. GPS does not drag meshes."
+                body = "Open AR, then set the Planning Origin on the ground."
             )
             GuideSection(
                 number = "7",
                 icon = Icons.Default.SquareFoot,
                 title = "GPS accuracy vs relative precision",
-                body = "Horizontal accuracy is uncertainty of the stamped WGS84 origin. " +
-                    "Distances between assets are planning meters and remain precise relative to that origin.",
+                body = "GPS can be off by a few meters. Distances between assets stay accurate.",
                 accentAmber = true
-            )
-
-            Text(
-                text = "Full markdown: docs/FieldGuide.md",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontFamily = FontFamily.Monospace,
-                    color = Moss
-                ),
-                modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 16.dp)
             )
         }
     }
