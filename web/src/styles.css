@@ -267,16 +267,21 @@ textarea { resize: vertical; }
 .images { padding: 4px 0 8px; }
 .thumbs { list-style: none; margin: 0; padding: 0 18px; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
 .thumb { display: block; width: 100%; aspect-ratio: 4 / 3; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; padding: 0; background: var(--line-soft); cursor: zoom-in; }
-.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumbs li.wide { grid-column: span 2; }
+.thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .thumb-cap { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; font-size: 0.86rem; }
 .upload { margin: 18px; padding: 14px; background: #faf5e6; border-radius: 10px; }
 .upload h4 { margin: 0 0 4px; }
 .upload-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
 .lightbox { position: fixed; inset: 0; background: rgba(35, 31, 32, 0.82); z-index: 50; display: grid; place-items: center; padding: 20px; }
-.lightbox figure { margin: 0; max-width: min(960px, 100%); background: #fff; border-radius: 12px; padding: 12px; position: relative; display: flex; flex-direction: column; gap: 8px; }
+.lightbox figure { margin: 0; width: min(1200px, 100%); max-height: 100%; background: #fff; border-radius: 12px; padding: 12px; position: relative; display: flex; flex-direction: column; gap: 8px; }
 .lightbox img { max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px; }
+.lightbox-scroll { overflow: auto; max-height: 72vh; border-radius: 8px; background: var(--line-soft); text-align: center; }
+.lightbox-scroll img { display: inline-block; vertical-align: top; }
 .lightbox figcaption { display: flex; flex-direction: column; }
-.lightbox-close { align-self: flex-end; }
+.lightbox-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+.lightbox-close { margin-left: 4px; }
+@media (max-width: 520px) { .thumbs li.wide { grid-column: auto; } }
 
 /* ---------- plan page polish (C3) ---------- */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

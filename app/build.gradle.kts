@@ -81,6 +81,8 @@ dependencies {
     // Map server style fetch + place search
     implementation(libs.okhttp)
     testImplementation(libs.junit)
+    // A fake server inside the unit tests, to check what the picture uploader really sends.
+    testImplementation(libs.okhttp.mockwebserver)
     testImplementation("org.json:json:20240303")
     // Virtual time for the search debounce, so the tests do not actually wait 250 ms.
     testImplementation(libs.kotlinx.coroutines.test)
