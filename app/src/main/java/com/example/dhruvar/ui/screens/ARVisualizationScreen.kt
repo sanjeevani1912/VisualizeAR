@@ -1064,7 +1064,7 @@ fun ARVisualizationScreen(
                                         onClick = {
                                             val heading = uiState.currentLayout.anchor.headingDegrees
                                                 ?: compassState.magneticHeadingDegrees
-                                            val ok = arRenderer.setOriginAtCenterHit(heading)
+                                            val ok = arRenderer.setOriginAtCenterHit(heading, compassState.magneticHeadingDegrees)
                                             if (ok) {
                                                 val n = uiState.currentLayout.objects.size
                                                 calibrationFeedback = if (arRenderer.originOnRaisedSurface) {

@@ -16,6 +16,7 @@ import com.example.dhruvar.domain.ar.GroundFloor
 import com.example.dhruvar.domain.model.AssetType
 import com.example.dhruvar.domain.model.Layout
 import com.example.dhruvar.domain.spatial.ARCoordinateTransformer
+import com.example.dhruvar.domain.spatial.ArHeadingFix
 import com.example.dhruvar.domain.spatial.SpatialDistanceCalculator
 import com.google.ar.core.Anchor
 import com.google.ar.core.HitResult
@@ -811,14 +812,14 @@ class ARRenderer(
      * matches [magneticHeadingDegrees] (prefer layout.anchor.headingDegrees at the call site;
      * fall back to live compass). The ARCore session anchor is ephemeral — never persisted to JSON.
      */
-    fun setOriginAtCenterHit(magneticHeadingDegrees: Float): Boolean {
+    fun setOriginAtCenterHit(magneticHeadingDegrees: Float, liveHeadingDegrees: Float = magneticHeadingDegrees): Boolean {
         val hit = currentCenterHit
         if (hit != null) {
             val plane = hit.trackable as? Plane
             if (plane != null) {
                 refreshOriginRaised(hit.hitPose.ty())
                 val newAnchor = plane.createAnchor(
-                    northAlignedPose(hit.hitPose, magneticHeadingDegrees)
+                    northAlignedPose(hit.hitPose, magneticHeadingDegrees, liveHeadingDegrees)
                 )
                 originAnchor?.detach()
                 originAnchor = newAnchor
@@ -832,7 +833,7 @@ class ARRenderer(
         if (fallbackPlane != null) {
             refreshOriginRaised(fallbackPlane.centerPose.ty())
             val newAnchor = fallbackPlane.createAnchor(
-                northAlignedPose(fallbackPlane.centerPose, magneticHeadingDegrees)
+                northAlignedPose(fallbackPlane.centerPose, magneticHeadingDegrees, liveHeadingDegrees)
             )
             originAnchor?.detach()
             originAnchor = newAnchor
@@ -843,12 +844,22 @@ class ARRenderer(
         return false
     }
 
-    private fun northAlignedPose(sourcePose: Pose, magneticHeadingDegrees: Float): Pose {
-        val yaw = ARCoordinateTransformer.originYawDegreesForMagneticNorth(
-            cameraForwardX = cameraForwardX,
-            cameraForwardZ = cameraForwardZ,
-            magneticHeadingDegrees = magneticHeadingDegrees
-        )
+    private fun northAlignedPose(sourcePose: Pose, magneticHeadingDegrees: Float, liveHeadingDegrees: Float): Pose {
+        // ArHeadingFix.ENABLED chooses between today's yaw and the candidate fix (saved heading minus live heading).
+        val yaw = if (ArHeadingFix.ENABLED) {
+            ARCoordinateTransformer.originYawDegreesForPlanHeading(
+                cameraForwardX = cameraForwardX,
+                cameraForwardZ = cameraForwardZ,
+                savedHeadingDegrees = magneticHeadingDegrees,
+                liveHeadingDegrees = liveHeadingDegrees
+            )
+        } else {
+            ARCoordinateTransformer.originYawDegreesForMagneticNorth(
+                cameraForwardX = cameraForwardX,
+                cameraForwardZ = cameraForwardZ,
+                magneticHeadingDegrees = magneticHeadingDegrees
+            )
+        }
         val alpha = Math.toRadians((-yaw).toDouble()).toFloat()
         val rotation = Pose.makeRotation(0f, sin(alpha / 2f), 0f, cos(alpha / 2f))
         val translation = Pose.makeTranslation(sourcePose.tx(), sourcePose.ty(), sourcePose.tz())

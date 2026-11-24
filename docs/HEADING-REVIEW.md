@@ -6,8 +6,8 @@ Status: **review only. No app code was changed.** The proof is `app/src/test/jav
 ## In plain words
 Every plan stores one "heading": the compass direction the plan's up-axis (+Z) points to, in degrees clockwise from north.
 The **map and dashboard** use it correctly. The **AR screen** appears to use it in the wrong way, so a plan can show up
-rotated in AR compared with the map. The error is exactly "live compass heading + saved heading" instead of "saved heading".
-It is zero only when the phone is facing north (live heading 0) at the moment you set the origin in AR.
+rotated in AR compared with the map. The rotation error is exactly "live compass heading + saved heading" instead of "saved heading" (zero only when the phone faces north
+as you set the AR origin). Separately, the plan also looks **mirrored left-to-right** in AR (see section 3).
 
 ## The model I used (an assumption to confirm on a phone)
 - ARCore world is right-handed, Y up. Seen from above: +X right, +Z toward the bottom of the page. A camera looking along -Z faces "up".
@@ -34,14 +34,41 @@ Working it through, plan +Z ends up at compass heading **live + heading** (not h
   "left of the camera". For a camera looking along +Z in a right-handed Y-up world, -X is the **right**. The test encodes the same
   sign assumption as the code, so it does not catch this.
 
-### 3. Candidate fix (shown in a test only, not applied)
-`yaw = savedHeading - liveHeading - forwardAngle` (i.e. use the saved heading as the target and subtract the live heading).
-`candidateFix_agreesWithMapForAllSamples` shows 0 degrees error against the map for every saved heading, live heading and camera yaw tested.
-It touches only `originYawDegreesForMagneticNorth` and its two callers; it does not touch the layout schema.
-**Per the brief I have not applied it. Needs your decision.** Because it hangs on the right-handed assumption above, it should be
-confirmed with the phone field test below before or right after applying.
+### 3. A second, bigger finding: the plan looks mirrored in AR (found while extending the test to points off the axis)
+Production places each object at `originPose * translate(x, 0, z)` (`ARCoordinateTransformer.transformPlanningToWorldPose`). In the
+map, +X is east and +Z is north, so +X is **clockwise** 90 degrees from +Z. In an ARCore world (right-handed, Y up, camera looks along -Z),
++X is **counter-clockwise** 90 degrees from +Z. Same numbers, opposite handedness: left and right are swapped, whatever the heading.
+The existing "facing east" test comment ("north to the left", expects -X) fits a left-handed world, which ARCore is not.
 
-### 4. Other items from the code review
+Table from `objectAtXZ_mapVersusAr_table` (object at x=3, z=4; live compass 60 degrees; camera yaws 0, 90, 200 give identical rows because the
+origin yaw cancels the camera direction). East/North metres from the origin:
+
+| Saved heading | Map E,N | AR today E,N |
+|---|---|---|
+| 0   | 3.0, 4.0   | 2.0, 4.6   |
+| 90  | 4.0, -3.0  | 4.6, -2.0  |
+| 180 | -3.0, -4.0 | -2.0, -4.6 |
+| 270 | -4.0, 3.0  | -4.6, 2.0  |
+| 45  | 4.9, 0.7   | 4.6, 1.9   |
+
+With the candidate fix (section 4) the AR column equals the Map column in all 15 rows (3 camera yaws per heading); the test asserts this.
+The test prints the full table when run.
+**AR today disagrees with the map in 15 of 15 rows.** This is what unit tests can show; it depends on ARCore being right-handed
+(documented by Google, but **not verified on a device**).
+
+### 4. Candidate fix (shown in tests only, NOT applied; needs your decision)
+Two parts, both in the AR placement maths only (layout schema and API unchanged):
+1. **Yaw:** `yaw = savedHeading - liveHeading - forwardAngle` (use the saved heading as the target, subtract the live heading).
+   `candidateFix_agreesWithMapForAllSamples`: plan +Z axis agrees with the map for every saved heading, live heading and camera yaw tried.
+2. **Mirror:** convert planning (x, z) to the AR local offset as (-x, z) (or equivalently (x, -z) with a matching yaw), and make the object
+   rotation sign consistent. With both, `objectAtXZ_mapVersusAr_table` shows 0 of 15 rows disagreeing.
+
+This is **not** "small": the same conversion is used in several places (`transformPlanningToWorldPose`, `transformPlanningToWorldPosition`,
+the ground probe and drag/hit-test code in `ARRenderer.kt` ~493 and ~511, and the origin yaw), and the mirror must be applied
+consistently or dragging in AR would move assets the wrong way. I recommend the field test below **before** changing anything, because part 2
+rests entirely on the right-handed assumption.
+
+### 5. Other items from the code review
 | Item | Finding |
 |---|---|
 | Magnetic, not true north | Confirmed: no `GeomagneticField` anywhere. Magnetic north differs from true north by the local declination (about a degree in Delhi; bigger elsewhere; I did not look up values). The map treats heading as true bearing, so every plan is rotated by the declination. Not fixed. |
@@ -57,7 +84,9 @@ confirmed with the phone field test below before or right after applying.
    not along where you are looking now.
 5. Repeat step 3 facing north and facing east. Today (if my analysis is right) the first asset is right when facing north and
    rotated when facing any other way. A compass app on the phone helps you check the bearing.
-6. Report: which direction each asset appeared in, and what your compass said. Photos help.
+6. **Mirror check:** the asset you placed 20 m to your **right** on the map should also appear to the right of the forward asset
+   when you look along the plan's direction. If it appears on the left, the plan is mirrored (section 3).
+7. Report: which direction each asset appeared in, and what your compass said. Photos help.
 
 ## Decision needed
-Apply the candidate fix? I recommend: do the field test first (it shows the problem exists on a real phone); then apply and re-test.
+Apply the candidate fix (yaw and mirror)? I recommend: field test first (it shows on a real phone whether the plan is mirrored and rotated); then apply and re-test.
