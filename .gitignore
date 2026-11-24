@@ -21,3 +21,4 @@ Thumbs.db
 deploy/.env
 web/dist/
 deploy/*credentials*.txt
+deploy/demo-passwords.txt
