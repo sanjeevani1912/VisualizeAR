@@ -1,6 +1,12 @@
 package com.example.dhruvar.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -28,6 +34,20 @@ fun AppNavigation(
     planningViewModel: PlanningViewModel = viewModel(),
     accountViewModel: AccountViewModel = viewModel()
 ) {
+    // Plans are per user: whenever the account changes, the plan list is cleared and reloaded.
+    // Signing out (or an expired session) also closes any open plan and returns to Home.
+    val account by accountViewModel.uiState.collectAsState()
+    val userId = account.user?.id
+    var lastUserId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(userId) {
+        val wasSignedIn = lastUserId != null
+        lastUserId = userId
+        planningViewModel.onAccountChanged(userId)
+        if (wasSignedIn && userId == null) {
+            navController.popBackStack(Screen.Home.route, inclusive = false)
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = Screen.Home.route,

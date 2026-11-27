@@ -1,6 +1,7 @@
 package com.example.dhruvar
 
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import com.example.dhruvar.data.location.DefaultDeviceLocationControllerProvider
 import com.example.dhruvar.data.repository.DefaultLayoutRepositoryProvider
@@ -18,6 +20,13 @@ import org.maplibre.android.MapLibre
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Launch splash (DhruvAR logo), held for about two seconds so it can be seen, then the
+        // normal Home screen. The app keeps loading behind it. Must run before super.onCreate.
+        val splash = installSplashScreen()
+        val splashStart = SystemClock.uptimeMillis()
+        splash.setKeepOnScreenCondition {
+            SystemClock.uptimeMillis() - splashStart < SPLASH_MILLIS
+        }
         super.onCreate(savedInstanceState)
         DefaultLayoutRepositoryProvider.init(filesDir.resolve("dhruvar_layouts"))
         // Map address saved at the last sign-in (<server>/map); blank keeps the build-time default.
@@ -49,5 +58,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private companion object {
+        /** How long the launch splash stays on screen. */
+        const val SPLASH_MILLIS = 2_000L
     }
 }

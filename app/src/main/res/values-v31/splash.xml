@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Android 12 and newer: same splash, plus the Indian Army logo small at the bottom
+        (the system's "branding image" slot, at most 200 x 80 dp). Older Android versions have
+        no such slot, so there the splash shows only the DhruvAR logo.
+    -->
+    <style name="Theme.DhruvAR.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="android:windowSplashScreenBrandingImage">@drawable/splash_branding</item>
+        <item name="postSplashScreenTheme">@style/Theme.DhruvAR</item>
+    </style>
+</resources>

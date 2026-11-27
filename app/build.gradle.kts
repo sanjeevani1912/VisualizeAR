@@ -65,6 +65,8 @@ android {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    // Launch splash (DhruvAR logo) on every Android version the app supports, pinned 1.0.1.
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))

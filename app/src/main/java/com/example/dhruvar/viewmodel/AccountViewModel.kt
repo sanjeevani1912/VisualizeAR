@@ -13,6 +13,8 @@ import com.example.dhruvar.data.remote.ServerUrl
 import com.example.dhruvar.data.remote.ServerUrlCheck
 import com.example.dhruvar.data.remote.SessionStore
 import com.example.dhruvar.data.remote.SignedInUser
+import com.example.dhruvar.data.repository.DefaultLayoutRepositoryProvider
+import com.example.dhruvar.data.repository.UserScopedLayoutRepository
 import com.example.dhruvar.domain.model.Layout
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,16 +46,33 @@ data class AccountUiState(
  */
 class AccountViewModel(application: Application) : AndroidViewModel(application) {
     private val session = SessionStore(application)
-    private val sentStore = SentPlanStore(application)
+    private val initialUser: SignedInUser? = if (session.token() != null) session.user() else null
+
+    /** Sent-plan records of the signed-in user only (one file per user id). */
+    private var sentStore = SentPlanStore(application, initialUser?.id)
+
+    /** Per-user plan folders; null only in tests that install a different repository. */
+    private val plans: UserScopedLayoutRepository? =
+        DefaultLayoutRepositoryProvider.getRepository() as? UserScopedLayoutRepository
 
     private val _uiState = MutableStateFlow(
         AccountUiState(
             serverUrl = session.serverUrl.ifBlank { BuildConfig.DEFAULT_SERVER_URL },
-            user = if (session.token() != null) session.user() else null,
+            user = initialUser,
             sent = sentStore.all()
         )
     )
     val uiState: StateFlow<AccountUiState> = _uiState.asStateFlow()
+
+    init {
+        plans?.setUser(initialUser?.id)
+    }
+
+    /** Points plan folders and sent records at [user] (null = nobody signed in). */
+    private fun switchUser(user: SignedInUser?) {
+        plans?.setUser(user?.id)
+        sentStore = SentPlanStore(getApplication(), user?.id)
+    }
 
     /** A plan the user tried to send while signed out; it goes out right after sign-in. */
     private var pendingSend: Pair<Layout, String>? = null
@@ -81,14 +100,29 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
                     com.example.dhruvar.data.map.MapBasemapConfig.runtimeMapBase = map
                 }
                 session.saveSession(result)
+                switchUser(result.user)
+                // A plan saved on this phone without an account is never sent as it is: it is
+                // first copied into the user's own plans, and the copy is sent.
+                val pending = pendingSend?.let { (layout, note) ->
+                    pendingSend = null
+                    val target = if (plans != null && plans.isViewOnly(layout.id)) {
+                        plans.copyToMine(layout.id)
+                    } else {
+                        layout
+                    }
+                    target?.let { it to note }
+                }
                 _uiState.update {
-                    it.copy(serverUrl = base, user = result.user, isSigningIn = false, signInError = null)
+                    it.copy(
+                        serverUrl = base,
+                        user = result.user,
+                        sent = sentStore.all(),
+                        isSigningIn = false,
+                        signInError = null
+                    )
                 }
                 refreshStatuses()
-                pendingSend?.let { (layout, note) ->
-                    pendingSend = null
-                    send(layout, note)
-                }
+                pending?.let { (layout, note) -> send(layout, note) }
             } catch (e: ServerException) {
                 _uiState.update { it.copy(isSigningIn = false, signInError = e.message) }
             }
@@ -100,7 +134,8 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
         val token = session.token()
         session.clearSession()
         pendingSend = null
-        _uiState.update { it.copy(user = null, message = "Signed out") }
+        switchUser(null)
+        _uiState.update { it.copy(user = null, sent = emptyMap(), sendingLayoutId = null, message = "Signed out") }
         if (token != null && base.isNotBlank()) {
             viewModelScope.launch { ServerClient.signOut(base, token) }
         }
@@ -126,12 +161,17 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
             _uiState.update { it.copy(user = null, message = "Sign in to send plans") }
             return
         }
+        if (plans != null && plans.isViewOnly(layout.id)) {
+            _uiState.update { it.copy(message = "Make a copy in your plans before sending") }
+            return
+        }
         if (layout.regionBounds == null || !layout.anchor.hasGeographicFix) {
             _uiState.update { it.copy(message = "Set a region and an origin before sending this plan") }
             return
         }
         if (_uiState.value.sendingLayoutId != null) return
         _uiState.update { it.copy(sendingLayoutId = layout.id) }
+        val store = sentStore
         viewModelScope.launch {
             try {
                 val json = LayoutJsonSerializer.serialize(layout)
@@ -151,7 +191,9 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
                     record = SentPlan(created.planId, created.code, 1, "SUBMITTED", now)
                     text = "Sent for approval as ${created.code}"
                 }
-                sentStore.put(layout.id, record)
+                store.put(layout.id, record)
+                // Signed out (or another user signed in) while sending: leave the new list alone.
+                if (store !== sentStore) return@launch
                 _uiState.update {
                     it.copy(sent = it.sent + (layout.id to record), sendingLayoutId = null, message = text)
                 }
@@ -167,6 +209,7 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
         val token = session.token() ?: return
         if (base.isBlank() || _uiState.value.isRefreshing) return
         _uiState.update { it.copy(isRefreshing = true) }
+        val store = sentStore
         viewModelScope.launch {
             try {
                 val remote = ServerClient.fetchPlanStatuses(base, token)
@@ -182,9 +225,13 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
                         sentAtEpochMs = before?.sentAtEpochMs ?: 0L
                     )
                     if (before != updated) {
-                        sentStore.put(layoutId, updated)
+                        store.put(layoutId, updated)
                         local[layoutId] = updated
                     }
+                }
+                if (store !== sentStore) {
+                    _uiState.update { it.copy(isRefreshing = false) }
+                    return@launch
                 }
                 _uiState.update { it.copy(sent = local, isRefreshing = false) }
             } catch (e: ServerException) {
@@ -198,8 +245,9 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
     private fun handleFailure(e: ServerException) {
         if (e.isSessionExpired) {
             session.clearSession()
+            switchUser(null)
             _uiState.update {
-                it.copy(user = null, sendingLayoutId = null, message = "Your session expired. Sign in again.")
+                it.copy(user = null, sent = emptyMap(), sendingLayoutId = null, message = "Your session expired. Sign in again.")
             }
         } else {
             _uiState.update { it.copy(sendingLayoutId = null, message = e.message) }

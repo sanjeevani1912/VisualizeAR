@@ -233,7 +233,8 @@ fun ARVisualizationScreen(
     var lastSavedImage by remember { mutableStateOf<SavedImage?>(null) }
     // Sending the picture to the plan on the dashboard server (optional; the gallery copy never depends on it).
     val sessionStore = remember { SessionStore(context) }
-    val sentPlanStore = remember { SentPlanStore(context) }
+    // Sent-plan records are kept per signed-in user (see SentPlanStore).
+    val sentPlanStore = remember { SentPlanStore(context, sessionStore.user()?.id) }
     var isSendingImage by remember { mutableStateOf(false) }
     var sendError by remember { mutableStateOf<String?>(null) }
     var savedForBitmap by remember { mutableStateOf<Pair<Bitmap, SavedImage>?>(null) }

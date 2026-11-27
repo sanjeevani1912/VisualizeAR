@@ -1,6 +1,8 @@
 package com.example.dhruvar.ui.screens
 
+import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,10 +21,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -48,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -86,6 +94,17 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) {
         viewModel.loadSavedLayouts()
+    }
+
+    // Collapsed state of the "This device" section, remembered per user on this phone.
+    val context = LocalContext.current
+    val collapseKey = "device_collapsed_" + (uiState.signedInUserId ?: "signed_out")
+    var deviceCollapsed by remember(collapseKey) {
+        mutableStateOf(homePrefs(context).getBoolean(collapseKey, false))
+    }
+    fun toggleDeviceCollapsed() {
+        deviceCollapsed = !deviceCollapsed
+        homePrefs(context).edit().putBoolean(collapseKey, deviceCollapsed).apply()
     }
 
     // Pick up the latest approval decisions whenever Home opens or the user signs in.
@@ -259,13 +278,19 @@ fun HomeScreen(
                 }
             }
 
-            uiState.savedLayouts.isEmpty() -> {
-                EmptyPlansState(modifier = Modifier.padding(innerPadding))
+            uiState.savedLayouts.isEmpty() && !account.isSignedIn -> {
+                Column(modifier = Modifier.padding(innerPadding)) {
+                    SignInHint(onOpenSignIn)
+                    EmptyPlansState()
+                }
             }
 
             else -> {
-                val latest = uiState.savedLayouts.first()
-                val older = uiState.savedLayouts.drop(1)
+                val signedIn = account.isSignedIn
+                val myPlans = uiState.myPlans
+                val devicePlans = uiState.devicePlans
+                // "Continue" highlights the newest plan the user can actually change.
+                val featuredId = if (signedIn) myPlans.firstOrNull()?.id else devicePlans.firstOrNull()?.id
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -278,41 +303,82 @@ fun HomeScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    item(key = "summary") {
-                        PlansSummary(layouts = uiState.savedLayouts)
+                    if (signedIn) {
+                        item(key = "my-header") {
+                            SectionHeader(title = "My plans", count = myPlans.size)
+                        }
+                        if (myPlans.isEmpty()) {
+                            item(key = "my-empty") {
+                                Text(
+                                    text = "No plans yet. Tap New plan to start one.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                        items(items = myPlans, key = { "my-" + it.id }) { layout ->
+                            PlanCard(
+                                layout = layout,
+                                featured = layout.id == featuredId,
+                                onOpen = { onOpenLayout(layout) },
+                                onRename = {
+                                    layoutToRename = layout
+                                    renameInput = layout.name
+                                },
+                                onDelete = { layoutToDelete = layout },
+                                sent = account.sent[layout.id],
+                                isSending = account.sendingLayoutId == layout.id,
+                                onSend = { layoutToSend = layout }
+                            )
+                        }
+                    } else {
+                        item(key = "sign-in-hint") {
+                            SignInHint(onOpenSignIn)
+                        }
                     }
-                    item(key = "continue-${latest.id}") {
-                        PlanCard(
-                            layout = latest,
-                            featured = true,
-                            onOpen = { onOpenLayout(latest) },
-                            onRename = {
-                                layoutToRename = latest
-                                renameInput = latest.name
-                            },
-                            onDelete = { layoutToDelete = latest },
-                            sent = account.sent[latest.id],
-                            isSending = account.sendingLayoutId == latest.id,
-                            onSend = { layoutToSend = latest }
-                        )
-                    }
-                    items(
-                        items = older,
-                        key = { it.id }
-                    ) { layout ->
-                        PlanCard(
-                            layout = layout,
-                            featured = false,
-                            onOpen = { onOpenLayout(layout) },
-                            onRename = {
-                                layoutToRename = layout
-                                renameInput = layout.name
-                            },
-                            onDelete = { layoutToDelete = layout },
-                            sent = account.sent[layout.id],
-                            isSending = account.sendingLayoutId == layout.id,
-                            onSend = { layoutToSend = layout }
-                        )
+
+                    if (devicePlans.isNotEmpty()) {
+                        item(key = "device-header") {
+                            DeviceSectionHeader(
+                                count = devicePlans.size,
+                                collapsed = deviceCollapsed,
+                                onToggle = { toggleDeviceCollapsed() }
+                            )
+                        }
+                        if (!deviceCollapsed) {
+                            items(items = devicePlans, key = { "device-" + it.id }) { layout ->
+                                if (signedIn) {
+                                    // View only: open on the map and in AR, or copy into my plans.
+                                    PlanCard(
+                                        layout = layout,
+                                        featured = false,
+                                        onOpen = { onOpenLayout(layout) },
+                                        onRename = {},
+                                        onDelete = {},
+                                        sent = null,
+                                        isSending = false,
+                                        onSend = {},
+                                        viewOnly = true,
+                                        onCopyToMine = { viewModel.copyToMyPlans(layout.id) }
+                                    )
+                                } else {
+                                    PlanCard(
+                                        layout = layout,
+                                        featured = layout.id == featuredId,
+                                        onOpen = { onOpenLayout(layout) },
+                                        onRename = {
+                                            layoutToRename = layout
+                                            renameInput = layout.name
+                                        },
+                                        onDelete = { layoutToDelete = layout },
+                                        sent = null,
+                                        isSending = false,
+                                        onSend = { layoutToSend = layout }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -320,16 +386,114 @@ fun HomeScreen(
     }
 }
 
+private fun homePrefs(context: Context) =
+    context.applicationContext.getSharedPreferences("dhruvar_home", Context.MODE_PRIVATE)
+
 @Composable
-private fun PlansSummary(layouts: List<Layout>) {
-    val ready = layouts.count { it.anchor.hasGeographicFix }
-    val planLabel = if (layouts.size == 1) "1 plan" else "${layouts.size} plans"
-    val readyLabel = if (ready == 1) "1 ready for AR" else "$ready ready for AR"
+private fun SectionHeader(title: String, count: Int) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp, bottom = 2.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        CountBubble(count)
+    }
+}
+
+/** Small rounded count next to a section title, e.g. "My plans (3)". */
+@Composable
+private fun CountBubble(count: Int) {
     Text(
-        text = "$planLabel · $readyLabel",
+        text = count.toString(),
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.primary,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+    )
+}
+
+@Composable
+private fun DeviceSectionHeader(count: Int, collapsed: Boolean, onToggle: () -> Unit) {
+    var showInfo by remember { mutableStateOf(false) }
+    if (showInfo) {
+        AlertDialog(
+            onDismissRequest = { showInfo = false },
+            title = { Text("Plans on this phone", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "These plans were saved on this phone without an account, so everyone who " +
+                        "uses this phone can see them. When you are signed in you can view them " +
+                        "on the map and in AR, or make a copy in your own plans to change or send it."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showInfo = false }) { Text("OK") }
+            }
+        )
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onToggle)
+            .padding(start = 4.dp, top = 12.dp, bottom = 2.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Smartphone,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = "On this phone",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        CountBubble(count)
+        Spacer(modifier = Modifier.weight(1f))
+        IconButton(onClick = { showInfo = true }, modifier = Modifier.size(36.dp)) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = "About plans on this phone",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Icon(
+            imageVector = if (collapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
+            contentDescription = if (collapsed) "Show plans on this phone" else "Hide plans on this phone",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(end = 8.dp)
+        )
+    }
+}
+
+@Composable
+private fun SignInHint(onOpenSignIn: () -> Unit) {
+    Text(
+        text = "Sign in to see your own plans",
         style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onOpenSignIn)
+            .padding(horizontal = 20.dp, vertical = 10.dp)
     )
 }
 
@@ -383,7 +547,9 @@ private fun PlanCard(
     onDelete: () -> Unit,
     sent: SentPlan?,
     isSending: Boolean,
-    onSend: () -> Unit
+    onSend: () -> Unit,
+    viewOnly: Boolean = false,
+    onCopyToMine: () -> Unit = {}
 ) {
     val shape = RoundedCornerShape(12.dp)
     val primary = MaterialTheme.colorScheme.primary
@@ -451,15 +617,24 @@ private fun PlanCard(
                     if (layout.regionBounds == null || !layout.anchor.hasGeographicFix) {
                         StatusChip(label = "Incomplete", done = false)
                     }
+                    if (viewOnly) {
+                        StatusChip(label = "View only", done = false)
+                    }
                 }
-                PlanSubmissionRow(
-                    layout = layout,
-                    sent = sent,
-                    isSending = isSending,
-                    onSend = onSend
-                )
+                if (!viewOnly) {
+                    PlanSubmissionRow(
+                        layout = layout,
+                        sent = sent,
+                        isSending = isSending,
+                        onSend = onSend
+                    )
+                }
             }
-            PlanActionsMenu(onRename = onRename, onDelete = onDelete)
+            if (viewOnly) {
+                CopyOnlyMenu(onCopyToMine = onCopyToMine)
+            } else {
+                PlanActionsMenu(onRename = onRename, onDelete = onDelete)
+            }
         }
     }
 }
@@ -531,6 +706,35 @@ private fun PlanActionsMenu(
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error
                     )
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CopyOnlyMenu(onCopyToMine: () -> Unit) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { menuExpanded = true }) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "Plan actions",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Make a copy in my plans") },
+                onClick = {
+                    menuExpanded = false
+                    onCopyToMine()
+                },
+                leadingIcon = {
+                    Icon(imageVector = Icons.Default.ContentCopy, contentDescription = null)
                 }
             )
         }

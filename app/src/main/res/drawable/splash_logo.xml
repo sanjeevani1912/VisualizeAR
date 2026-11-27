@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Launch splash icon: the DhruvAR logo shrunk to the middle half of the icon area.
+    The splash screen cuts its icon to a circle (2/3 of the icon area wide). The logo is a
+    rounded square whose corners reach about 62% of its width from the centre, so at 50% size
+    every corner stays inside that circle and nothing is cropped.
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/logo_dhruvar"
+    android:inset="25%" />

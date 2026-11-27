@@ -13,10 +13,11 @@ object DefaultLayoutRepositoryProvider {
     private var instance: LayoutRepository? = null
 
     /**
-     * Initializes the provider with a file-backed repository in [storageDir].
+     * Initializes the provider with the file-backed, per-user repository rooted at [storageDir]:
+     * device plans stay in [storageDir], each account's plans live in `users/<user id>/`.
      */
     fun init(storageDir: File) {
-        instance = FileLayoutRepository(storageDir)
+        instance = UserScopedLayoutRepository(storageDir)
     }
 
     /**

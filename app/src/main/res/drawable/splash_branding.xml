@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 12+ splash "branding image": the Indian Army logo, small, at the bottom of the splash.
+    Sized here (74 x 56 dp, same shape as army_logo.png) so it sits well inside the system's
+    200 x 80 dp slot on every screen density.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:width="74dp"
+        android:height="56dp"
+        android:gravity="center"
+        android:drawable="@drawable/army_logo" />
+</layer-list>

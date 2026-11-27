@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Splash background: the app's Mist (off-white) background, see ui/theme/Color.kt. -->
+    <color name="splash_background">#FFFCF9F2</color>
+
+    <!--
+        Shown while the app starts (AndroidX SplashScreen, works on Android 7 to 16).
+        MainActivity calls installSplashScreen(), which then switches to Theme.DhruvAR.
+    -->
+    <style name="Theme.DhruvAR.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.DhruvAR</item>
+    </style>
+</resources>

@@ -23,8 +23,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.MoreVert
@@ -114,6 +116,9 @@ fun PlanningScreen(
     viewModel: PlanningViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    // A signed-in user looking at a plan saved on this phone without an account: map and AR
+    // only. Every editing control is hidden here and refused again in the ViewModel.
+    val viewOnly = uiState.isViewOnly
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var showMenu by remember { mutableStateOf(false) }
@@ -207,7 +212,7 @@ fun PlanningScreen(
         viewModel.setGeoOriginPanelExpanded(false)
     }
 
-    BackHandler(enabled = uiState.setupStep.handlesSystemBackInternally()) {
+    BackHandler(enabled = !viewOnly && uiState.setupStep.handlesSystemBackInternally()) {
         viewModel.goToPreviousSetupStep()
     }
 
@@ -395,7 +400,9 @@ fun PlanningScreen(
         )
     }
 
-    val planSubtitle = uiState.setupStep.progressSubtitle() ?: buildString {
+    val planSubtitle = if (viewOnly) {
+        "${uiState.currentLayout.name} · View only"
+    } else uiState.setupStep.progressSubtitle() ?: buildString {
         append(uiState.currentLayout.name)
         append(" · ")
         append(
@@ -416,7 +423,9 @@ fun PlanningScreen(
                 title = uiState.setupStep.planningScreenTitle(),
                 subtitle = planSubtitle,
                 onNavigateBack = {
-                    if (uiState.setupStep == PlanningSetupStep.SET_ORIGIN &&
+                    if (viewOnly) {
+                        onNavigateBack()
+                    } else if (uiState.setupStep == PlanningSetupStep.SET_ORIGIN &&
                         uiState.mapInteractionMode == MapInteractionMode.SET_ANCHOR
                     ) {
                         viewModel.setMapInteractionMode(MapInteractionMode.NAVIGATE)
@@ -452,7 +461,14 @@ fun PlanningScreen(
                         }
                     }
 
-                    IconButton(onClick = {
+                    if (viewOnly) {
+                        IconButton(onClick = { viewModel.copyToMyPlans(uiState.currentLayout.id) }) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = "Make a copy in my plans"
+                            )
+                        }
+                    } else IconButton(onClick = {
                         if (!uiState.isPersisted) {
                             layoutNameInput = uiState.currentLayout.name
                             showSaveDialog = true
@@ -483,7 +499,19 @@ fun PlanningScreen(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false }
                         ) {
-                            DropdownMenuItem(
+                            if (viewOnly) {
+                                DropdownMenuItem(
+                                    text = { Text("Make a copy in my plans") },
+                                    onClick = {
+                                        viewModel.copyToMyPlans(uiState.currentLayout.id)
+                                        showMenu = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.ContentCopy, contentDescription = null)
+                                    }
+                                )
+                            }
+                            if (!viewOnly) DropdownMenuItem(
                                 text = { Text(if (uiState.isPersisted) "Save As / Rename..." else "Save Layout...") },
                                 onClick = {
                                     layoutNameInput = uiState.currentLayout.name
@@ -514,7 +542,7 @@ fun PlanningScreen(
                                     Icon(Icons.Default.Straighten, contentDescription = null)
                                 }
                             )
-                            DropdownMenuItem(
+                            if (!viewOnly) DropdownMenuItem(
                                 text = { Text("Clear Canvas") },
                                 onClick = {
                                     viewModel.clearLayout()
@@ -597,7 +625,7 @@ fun PlanningScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                if (!regionMoveMap && showsRegionDraftOverlay(
+                if (!viewOnly && !regionMoveMap && showsRegionDraftOverlay(
                         step = uiState.setupStep,
                         mode = uiState.mapInteractionMode,
                         surface = uiState.planningSurface
@@ -655,7 +683,7 @@ fun PlanningScreen(
 
             // Origin expands downward over the map. The scrim keeps it transient so it never
             // becomes a second permanent panel stacked against the mode rail.
-            if (uiState.isGeoOriginPanelExpanded) {
+            if (uiState.isGeoOriginPanelExpanded && !viewOnly) {
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -677,7 +705,18 @@ fun PlanningScreen(
             ) {
                 val isFindLocation = uiState.setupStep == PlanningSetupStep.FIND_LOCATION
                 val showExpandedSearch = isFindLocation && uiState.placeSearch.isExpanded
-                if (showExpandedSearch) {
+                if (viewOnly) {
+                    // Read-only: show the origin status chip only; no search, GNSS or region tools.
+                    if (hudTools.showOriginChip) {
+                        GeoOriginChip(
+                            expanded = false,
+                            onExpandedChange = {},
+                            anchor = uiState.currentLayout.anchor,
+                            locationState = uiState.locationState,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                } else if (showExpandedSearch) {
                     PlanningSearchField(
                         state = uiState.placeSearch,
                         onQueryChange = { viewModel.onSearchQueryChange(it) },
@@ -715,7 +754,7 @@ fun PlanningScreen(
                     }
                 }
 
-                if (isFindLocation) {
+                if (isFindLocation && !viewOnly) {
                     Spacer(modifier = Modifier.height(8.dp))
                     GnssDetectBar(
                         state = uiState.locationState,
@@ -736,7 +775,7 @@ fun PlanningScreen(
                     }
                 }
 
-                if (uiState.isGeoOriginPanelExpanded && hudTools.showOriginChip) {
+                if (!viewOnly && uiState.isGeoOriginPanelExpanded && hudTools.showOriginChip) {
                     Spacer(modifier = Modifier.height(8.dp))
                     GeoOriginSheet(
                         anchor = uiState.currentLayout.anchor,
@@ -796,7 +835,7 @@ fun PlanningScreen(
                     )
                 }
 
-                if (hudTools.showWorkspaceStatus) {
+                if (!viewOnly && hudTools.showWorkspaceStatus) {
                     val region = uiState.currentLayout.regionBounds
                     if (region != null) {
                         Spacer(modifier = Modifier.height(8.dp))
@@ -834,7 +873,14 @@ fun PlanningScreen(
                 }
             }
 
-            Column(
+            if (viewOnly) {
+                ViewOnlyBar(
+                    onCopy = { viewModel.copyToMyPlans(uiState.currentLayout.id) },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(start = 12.dp, end = 12.dp, bottom = bottomHudInset)
+                )
+            } else Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(start = 12.dp, bottom = bottomHudInset),
@@ -913,7 +959,7 @@ fun PlanningScreen(
                 }
             }
 
-            if (hudTools.showSetupContinue) {
+            if (!viewOnly && hudTools.showSetupContinue) {
                 val originContinue = uiState.setupStep == PlanningSetupStep.SET_ORIGIN
                 FindLocationContinueBar(
                     // Find location never blocks: a place is optional, the map is the fallback.
@@ -931,7 +977,7 @@ fun PlanningScreen(
                 )
             }
 
-            if (hudTools.showAssetPicker) {
+            if (!viewOnly && hudTools.showAssetPicker) {
                 FloatingAssetPickerOverlay(
                     isOpen = isAssetMenuOpen,
                     onToggle = { isAssetMenuOpen = !isAssetMenuOpen },
@@ -988,6 +1034,35 @@ fun PlanningScreen(
                     },
                     bottomInset = bottomHudInset
                 )
+            }
+        }
+    }
+}
+
+/** Bottom bar on a view-only plan: says why nothing can be changed and offers the copy. */
+@Composable
+private fun ViewOnlyBar(onCopy: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+        tonalElevation = 3.dp,
+        shadowElevation = 2.dp,
+        modifier = modifier.widthIn(max = 560.dp).fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "View only · saved on this phone",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onCopy) {
+                Icon(Icons.Default.ContentCopy, contentDescription = null)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Make a copy in my plans", fontWeight = FontWeight.Bold)
             }
         }
     }

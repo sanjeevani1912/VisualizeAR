@@ -9,6 +9,7 @@ import com.example.dhruvar.data.map.MapBasemapConfig
 import com.example.dhruvar.data.map.PlaceSearchGateway
 import com.example.dhruvar.data.repository.DefaultLayoutRepositoryProvider
 import com.example.dhruvar.data.repository.LayoutRepository
+import com.example.dhruvar.data.repository.UserScopedLayoutRepository
 import com.example.dhruvar.domain.location.DeviceLocationController
 import com.example.dhruvar.domain.location.DeviceLocationState
 import com.example.dhruvar.domain.model.AssetType
@@ -96,8 +97,24 @@ data class PlanningUiState(
     val setupSession: PlanningSetupSession = PlanningSetupSession(),
     val isBrandNewLayout: Boolean = true,
     /** Side of the square region built around the operator; picked in the area chips. */
-    val regionSideMeters: Double = AssetSizeConfig.DEFAULT_REGION_SIDE_METERS
+    val regionSideMeters: Double = AssetSizeConfig.DEFAULT_REGION_SIDE_METERS,
+    // Per-user plans on a shared phone
+    /** Server user id of whoever is signed in; null = nobody. */
+    val signedInUserId: String? = null,
+    /** Ids in [savedLayouts] that are "This device" plans (saved without an account). */
+    val devicePlanIds: Set<String> = emptySet(),
+    /** True while a signed-in user looks at a device plan: map and AR only, no changes. */
+    val isViewOnly: Boolean = false
 ) {
+    /** The signed-in user's own plans (empty when signed out). */
+    val myPlans: List<Layout>
+        get() = if (signedInUserId == null) emptyList() else savedLayouts.filter { it.id !in devicePlanIds }
+
+    /** Plans saved on this phone without an account; shown to everyone. */
+    val devicePlans: List<Layout>
+        get() = savedLayouts.filter { it.id in devicePlanIds }
+
+
     /**
      * Currently selected [LayoutObject], or null if no object is selected.
      */
@@ -199,6 +216,7 @@ class PlanningViewModel(
      * @return true if the anchor was updated.
      */
     fun setGeographicAnchorFromDeviceFix(headingDegrees: Float): Boolean {
+        if (viewOnlyBlocked()) return false
         syncLocationState()
         val locState = locationController.state.value
         val fix = locState.lastFix
@@ -250,6 +268,7 @@ class PlanningViewModel(
         longitude: Double,
         headingDegrees: Float
     ): Boolean {
+        if (viewOnlyBlocked()) return false
         if (!latitude.isFinite() || latitude !in -90.0..90.0) {
             _uiState.update { it.copy(userFeedbackMessage = "Latitude must be a finite value in [-90, 90]") }
             return false
@@ -281,6 +300,7 @@ class PlanningViewModel(
      * Writes compass heading onto the layout anchor (Capture heading).
      */
     fun updateGeographicHeading(headingDegrees: Float): Boolean {
+        if (viewOnlyBlocked()) return false
         if (!headingDegrees.isFinite()) {
             _uiState.update { it.copy(userFeedbackMessage = "Heading must be finite") }
             return false
@@ -302,6 +322,7 @@ class PlanningViewModel(
     }
 
     fun clearGeographicAnchor() {
+        if (viewOnlyBlocked()) return
         _uiState.update { state ->
             val cleared = state.currentLayout.anchor.copy(
                 latitude = null,
@@ -394,6 +415,7 @@ class PlanningViewModel(
      * by the Detect location button (which does replace it).
      */
     fun beginAutoLocate(replaceChosenLocation: Boolean = false) {
+        if (viewOnlyBlocked()) return
         if (_uiState.value.setupStep != PlanningSetupStep.FIND_LOCATION) return
         autoLocateReplacesChoice = replaceChosenLocation
         autoLocateShownAccuracy = null
@@ -650,6 +672,7 @@ class PlanningViewModel(
      * becomes the region center and assets stay on the same ground.
      */
     fun setRegionBounds(bounds: GeoBounds?): Boolean {
+        if (viewOnlyBlocked()) return false
         if (bounds == null) {
             clearRegionBounds()
             return true
@@ -690,6 +713,7 @@ class PlanningViewModel(
      * Rejected boxes stay on the current step.
      */
     fun confirmRegionAndAdvance(bounds: GeoBounds): Boolean {
+        if (viewOnlyBlocked()) return false
         val reason = RegionDraftGeometry.rejectionReason(bounds)
         if (reason != null) {
             _uiState.update { it.copy(userFeedbackMessage = reason) }
@@ -707,6 +731,7 @@ class PlanningViewModel(
      * Used when a saved plan has a region but no origin yet.
      */
     fun setOriginToRegionCenter(): Boolean {
+        if (viewOnlyBlocked()) return false
         val bounds = _uiState.value.currentLayout.regionBounds ?: run {
             _uiState.update { it.copy(userFeedbackMessage = "Select a region before setting the origin") }
             return false
@@ -732,6 +757,7 @@ class PlanningViewModel(
         eastLongitude: Double,
         westLongitude: Double
     ): Boolean {
+        if (viewOnlyBlocked()) return false
         val bounds = GeoBounds.createOrNull(
             northLatitude = northLatitude,
             southLatitude = southLatitude,
@@ -756,6 +782,7 @@ class PlanningViewModel(
      * until the new box is confirmed.
      */
     fun requestChangeRegion() {
+        if (viewOnlyBlocked()) return
         _uiState.update { state ->
             if (state.setupStep != PlanningSetupStep.PLACE_ASSETS) return@update state
             applySetupStep(state, PlanningSetupStep.SET_REGION)
@@ -766,6 +793,7 @@ class PlanningViewModel(
      * Returns to origin stamping inside the current region. Meter offsets on assets are not rewritten.
      */
     fun requestChangeOrigin() {
+        if (viewOnlyBlocked()) return
         _uiState.update { state ->
             if (state.setupStep != PlanningSetupStep.PLACE_ASSETS) return@update state
             if (state.currentLayout.regionBounds == null) return@update state
@@ -777,6 +805,7 @@ class PlanningViewModel(
     }
 
     fun clearRegionBounds() {
+        if (viewOnlyBlocked()) return
         _uiState.update { state ->
             val updated = state.copy(
                 hasUnsavedChanges = true,
@@ -864,6 +893,7 @@ class PlanningViewModel(
         longitude: Double,
         headingDegrees: Float?
     ): Boolean {
+        if (viewOnlyBlocked()) return false
         val existingHeading = _uiState.value.currentLayout.anchor.headingDegrees
         val heading = headingDegrees ?: existingHeading ?: 0f
         return setGeographicAnchorManual(latitude, longitude, heading)
@@ -876,6 +906,7 @@ class PlanningViewModel(
      * the region are **rejected** (not clamped).
      */
     fun placeAssetAtGeographic(latitude: Double, longitude: Double): Boolean {
+        if (viewOnlyBlocked()) return false
         val layout = _uiState.value.currentLayout
         val anchor = layout.anchor
         if (!anchor.hasGeographicFix) {
@@ -912,6 +943,7 @@ class PlanningViewModel(
         longitude: Double,
         announce: Boolean = true
     ): Boolean {
+        if (viewOnlyBlocked()) return false
         val layout = _uiState.value.currentLayout
         val anchor = layout.anchor
         if (!anchor.hasGeographicFix) {
@@ -939,6 +971,7 @@ class PlanningViewModel(
      * Handles an EDIT-mode map tap: select nearest asset, or move the current selection.
      */
     fun handleMapEditTap(latitude: Double, longitude: Double): Boolean {
+        if (viewOnlyBlocked()) return false
         val layout = _uiState.value.currentLayout
         val nearest = MapLayoutProjection.findNearestObjectId(
             layout.anchor,
@@ -968,9 +1001,101 @@ class PlanningViewModel(
      * Directly loads all saved layouts synchronously or from test coroutines.
      */
     suspend fun loadSavedLayoutsDirect(): List<Layout> {
-        val layouts = repository.getAllLayouts()
-        _uiState.update { it.copy(savedLayouts = layouts) }
+        val userAtStart = scoped?.currentUserId
+        val (layouts, deviceIds) = listSavedLayouts()
+        // Someone signed in or out while the files were read: that newer reload wins.
+        if (scoped != null && scoped?.currentUserId != userAtStart) return layouts
+        _uiState.update { it.copy(savedLayouts = layouts, devicePlanIds = deviceIds) }
         return layouts
+    }
+
+    private val scoped: UserScopedLayoutRepository?
+        get() = repository as? UserScopedLayoutRepository
+
+    /** "My plans" first, then "This device" plans, plus the ids of the device plans. */
+    private suspend fun listSavedLayouts(): Pair<List<Layout>, Set<String>> {
+        val repo = scoped
+        if (repo == null) {
+            // Plain repository (tests, headless): everything behaves like a device plan.
+            val all = repository.getAllLayouts()
+            return all to all.map { it.id }.toSet()
+        }
+        val mine = repo.myLayouts()
+        val device = repo.deviceLayouts()
+        return (mine + device) to device.map { it.id }.toSet()
+    }
+
+    private var accountKnown = false
+
+    /**
+     * Called whenever the signed-in account changes (sign-in, sign-out, session expiry).
+     * Clears the in-memory plan list and any open plan right away, then reloads the list for
+     * the new user: their own plans plus this phone's device plans.
+     */
+    fun onAccountChanged(userId: String?) {
+        val id = userId?.takeIf { it.isNotBlank() }
+        if (accountKnown && id == _uiState.value.signedInUserId) return
+        val firstCall = !accountKnown
+        accountKnown = true
+        scoped?.setUser(id)
+        _uiState.update { state ->
+            if (firstCall) {
+                state.copy(signedInUserId = id)
+            } else {
+                state.copy(
+                    signedInUserId = id,
+                    savedLayouts = emptyList(),
+                    devicePlanIds = emptySet(),
+                    currentLayout = Layout(),
+                    selectedObjectId = null,
+                    isPersisted = false,
+                    hasUnsavedChanges = false,
+                    isViewOnly = false,
+                    lastSavedTimestamp = null
+                )
+            }
+        }
+        loadSavedLayouts()
+    }
+
+    /** True when [layoutId] is a device plan that the signed-in user may only look at. */
+    fun isViewOnlyPlan(layoutId: String): Boolean = scoped?.isViewOnly(layoutId) == true
+
+    /**
+     * Copies a device plan into the signed-in user's own plans ("<name> (copy)", new id).
+     * The original is not changed. When that plan is open, the editable copy is opened instead.
+     */
+    suspend fun copyToMyPlansDirect(layoutId: String): Layout? {
+        val repo = scoped
+        if (repo == null || !repo.isSignedIn) {
+            _uiState.update { it.copy(userFeedbackMessage = "Sign in to keep your own copy") }
+            return null
+        }
+        val copy = repo.copyToMine(layoutId)
+        if (copy == null) {
+            _uiState.update { it.copy(userFeedbackMessage = "Could not copy this plan") }
+            return null
+        }
+        val (all, deviceIds) = listSavedLayouts()
+        val wasOpen = _uiState.value.currentLayout.id == layoutId
+        _uiState.update { it.copy(savedLayouts = all, devicePlanIds = deviceIds) }
+        if (wasOpen) loadLayout(copy)
+        _uiState.update { it.copy(userFeedbackMessage = "Copied into your plans as '${copy.name}'") }
+        return copy
+    }
+
+    fun copyToMyPlans(layoutId: String, onComplete: ((Layout?) -> Unit)? = null) {
+        viewModelScope.launch {
+            val copy = copyToMyPlansDirect(layoutId)
+            onComplete?.invoke(copy)
+        }
+    }
+
+    /** Refuses a change to a view-only plan and tells the user why. */
+    private fun viewOnlyBlocked(): Boolean {
+        if (!_uiState.value.isViewOnly) return false
+        _uiState.update { it.copy(userFeedbackMessage = VIEW_ONLY_MESSAGE) }
+        return true
     }
 
     /**
@@ -995,6 +1120,7 @@ class PlanningViewModel(
      * Loads a chosen [layout] into the workspace, resetting unsaved flags and viewport cursor.
      */
     fun loadLayout(layout: Layout) {
+        val viewOnly = isViewOnlyPlan(layout.id)
         _uiState.update { state ->
             val unselectedObjects = layout.objects.map { it.copy(isSelected = false) }
             val loaded = state.copy(
@@ -1009,7 +1135,12 @@ class PlanningViewModel(
                 mapStyleError = null,
                 isGeoOriginPanelExpanded = false,
                 geoAccuracyWarning = null,
-                userFeedbackMessage = "Loaded layout '${layout.name}'",
+                userFeedbackMessage = if (viewOnly) {
+                    "Viewing '${layout.name}' (view only)"
+                } else {
+                    "Loaded layout '${layout.name}'"
+                },
+                isViewOnly = viewOnly,
                 isBrandNewLayout = false,
                 setupSession = PlanningSetupSession(),
                 placeSearch = PlaceSearchUiState()
@@ -1051,6 +1182,7 @@ class PlanningViewModel(
                     mapStyleError = null,
                     isGeoOriginPanelExpanded = false,
                     geoAccuracyWarning = null,
+                    isViewOnly = false,
                     isBrandNewLayout = true,
                     setupSession = PlanningSetupSession(),
                     placeSearch = PlaceSearchUiState()
@@ -1139,6 +1271,7 @@ class PlanningViewModel(
      * Can be called directly within coroutines (e.g. unit tests).
      */
     suspend fun saveCurrentLayoutDirect(customName: String? = null): Boolean {
+        if (viewOnlyBlocked()) return false
         val targetName = customName?.trim()?.ifEmpty { null } ?: _uiState.value.currentLayout.name
         val updated = _uiState.value.currentLayout.copy(
             name = targetName,
@@ -1146,7 +1279,7 @@ class PlanningViewModel(
         )
         val success = repository.saveLayout(updated)
         if (success) {
-            val allLayouts = repository.getAllLayouts()
+            val (allLayouts, deviceIds) = listSavedLayouts()
             _uiState.update { state ->
                 state.copy(
                     currentLayout = updated,
@@ -1154,6 +1287,7 @@ class PlanningViewModel(
                     hasUnsavedChanges = false,
                     lastSavedTimestamp = updated.updatedAtEpochMs,
                     savedLayouts = allLayouts,
+                    devicePlanIds = deviceIds,
                     userFeedbackMessage = "Saved '${updated.name}'"
                 )
             }
@@ -1179,15 +1313,20 @@ class PlanningViewModel(
      * Directly renames a layout by ID.
      */
     suspend fun renameLayoutDirect(id: String, newName: String): Layout? {
+        if (isViewOnlyPlan(id)) {
+            _uiState.update { it.copy(userFeedbackMessage = VIEW_ONLY_MESSAGE) }
+            return null
+        }
         val updated = repository.renameLayout(id, newName)
         if (updated != null) {
-            val all = repository.getAllLayouts()
+            val (all, deviceIds) = listSavedLayouts()
             _uiState.update { state ->
                 val isCurrent = state.currentLayout.id == id
                 val newCurrent = if (isCurrent) state.currentLayout.copy(name = updated.name) else state.currentLayout
                 state.copy(
                     currentLayout = newCurrent,
                     savedLayouts = all,
+                    devicePlanIds = deviceIds,
                     userFeedbackMessage = "Renamed to '${updated.name}'"
                 )
             }
@@ -1209,15 +1348,20 @@ class PlanningViewModel(
      * Directly deletes a layout by ID.
      */
     suspend fun deleteLayoutDirect(id: String): Boolean {
+        if (isViewOnlyPlan(id)) {
+            _uiState.update { it.copy(userFeedbackMessage = VIEW_ONLY_MESSAGE) }
+            return false
+        }
         val success = repository.deleteLayout(id)
         if (success) {
-            val all = repository.getAllLayouts()
+            val (all, deviceIds) = listSavedLayouts()
             _uiState.update { state ->
                 val isCurrent = state.currentLayout.id == id
                 state.copy(
                     isPersisted = if (isCurrent) false else state.isPersisted,
                     hasUnsavedChanges = if (isCurrent) true else state.hasUnsavedChanges,
                     savedLayouts = all,
+                    devicePlanIds = deviceIds,
                     userFeedbackMessage = "Layout deleted"
                 )
             }
@@ -1331,6 +1475,7 @@ class PlanningViewModel(
     }
 
     fun moveObject(objectId: String, newX: Float, newZ: Float) {
+        if (viewOnlyBlocked()) return
         _uiState.update { state ->
             val updatedList = state.currentLayout.objects.map { obj ->
                 if (obj.id == objectId) {
@@ -1350,10 +1495,12 @@ class PlanningViewModel(
     }
 
     fun updateObjectCoordinates(objectId: String, newX: Float, newZ: Float) {
+        if (viewOnlyBlocked()) return
         moveObject(objectId, newX, newZ)
     }
 
     fun updateSelectedObjectPosition(newX: Float, newZ: Float) {
+        if (viewOnlyBlocked()) return
         val selectedId = _uiState.value.selectedObjectId ?: return
         moveObject(selectedId, newX, newZ)
     }
@@ -1364,6 +1511,7 @@ class PlanningViewModel(
         newLength: Float,
         newHeight: Float? = null
     ) {
+        if (viewOnlyBlocked()) return
         if (newWidth <= 0f || newLength <= 0f) return
         if (newHeight != null && newHeight <= 0f) return
         _uiState.update { state ->
@@ -1389,11 +1537,13 @@ class PlanningViewModel(
     }
 
     fun updateSelectedObjectDimensions(newWidth: Float, newLength: Float, newHeight: Float? = null) {
+        if (viewOnlyBlocked()) return
         val selectedId = _uiState.value.selectedObjectId ?: return
         updateObjectDimensions(selectedId, newWidth, newLength, newHeight)
     }
 
     fun rotateObject(objectId: String, degreesDelta: Float) {
+        if (viewOnlyBlocked()) return
         _uiState.update { state ->
             val updatedList = state.currentLayout.objects.map { obj ->
                 if (obj.id == objectId) {
@@ -1413,6 +1563,7 @@ class PlanningViewModel(
     }
 
     fun setObjectRotation(objectId: String, absoluteDegrees: Float) {
+        if (viewOnlyBlocked()) return
         _uiState.update { state ->
             val updatedList = state.currentLayout.objects.map { obj ->
                 if (obj.id == objectId) {
@@ -1432,16 +1583,19 @@ class PlanningViewModel(
     }
 
     fun rotateSelectedObject(degreesDelta: Float) {
+        if (viewOnlyBlocked()) return
         val selectedId = _uiState.value.selectedObjectId ?: return
         rotateObject(selectedId, degreesDelta)
     }
 
     fun setSelectedObjectRotation(absoluteDegrees: Float) {
+        if (viewOnlyBlocked()) return
         val selectedId = _uiState.value.selectedObjectId ?: return
         setObjectRotation(selectedId, absoluteDegrees)
     }
 
     fun duplicateSelectedObject(offsetXMeters: Float = 1.5f, offsetZMeters: Float = 1.5f) {
+        if (viewOnlyBlocked()) return
         _uiState.update { state ->
             val original = state.selectedObject ?: return@update state
             val count = state.currentLayout.objects.count { it.assetType == original.assetType } + 1
@@ -1475,6 +1629,7 @@ class PlanningViewModel(
      * The new object becomes selected; existing objects are left in place.
      */
     fun addAssetOfType(assetType: AssetType, xMeters: Float, zMeters: Float) {
+        if (viewOnlyBlocked()) return
         _uiState.update { state ->
             val count = state.currentLayout.objects.count { it.assetType == assetType } + 1
             val newObj = newSizedObject(
@@ -1533,6 +1688,7 @@ class PlanningViewModel(
      * a placed asset outside.
      */
     fun setRegionSideMeters(sideMeters: Double) {
+        if (viewOnlyBlocked()) return
         val side = sideMeters.coerceIn(RegionDraftGeometry.MIN_SIDE_METERS, 300.0)
         val state = _uiState.value
         val current = state.currentLayout.regionBounds
@@ -1581,6 +1737,7 @@ class PlanningViewModel(
     }
 
     fun addAssetAt(xMeters: Float, zMeters: Float) {
+        if (viewOnlyBlocked()) return
         val assetType = _uiState.value.selectedAssetType
         val count = _uiState.value.currentLayout.objects.count { it.assetType == assetType } + 1
         _uiState.update { state ->
@@ -1605,6 +1762,7 @@ class PlanningViewModel(
     }
 
     fun deleteSelectedObject() {
+        if (viewOnlyBlocked()) return
         _uiState.update { state ->
             val targetId = state.selectedObjectId ?: return@update state
             val updatedList = state.currentLayout.objects.filterNot { it.id == targetId }
@@ -1620,6 +1778,7 @@ class PlanningViewModel(
     }
 
     fun deleteObject(objectId: String) {
+        if (viewOnlyBlocked()) return
         _uiState.update { state ->
             val updatedList = state.currentLayout.objects.filterNot { it.id == objectId }
             val newSelectedId = if (state.selectedObjectId == objectId) null else state.selectedObjectId
@@ -1635,6 +1794,7 @@ class PlanningViewModel(
     }
 
     fun updateLayoutName(newName: String) {
+        if (viewOnlyBlocked()) return
         _uiState.update { state ->
             state.copy(
                 hasUnsavedChanges = true,
@@ -1647,6 +1807,7 @@ class PlanningViewModel(
     }
 
     fun clearLayout() {
+        if (viewOnlyBlocked()) return
         _uiState.update { state ->
             state.copy(
                 hasUnsavedChanges = true,
@@ -1660,6 +1821,9 @@ class PlanningViewModel(
     }
 
     companion object {
+        const val VIEW_ONLY_MESSAGE =
+            "View only: this plan is saved on this phone. Make a copy in your plans to change it."
+
         const val SITE_LEVEL_ACCURACY_WARNING =
             "Site-level only; relative meter placement remains precise"
 
