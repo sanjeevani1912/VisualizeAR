@@ -30,6 +30,7 @@ Status: **Phone-tested** = the owner tested it on a phone and the dashboard on 2
 | Users and roles | [USERS-HOWTO.md](USERS-HOWTO.md), [USERS-AND-ROLES-PLAN.md](USERS-AND-ROLES-PLAN.md) | Phone-tested; phone change-password screen open |
 | Demo accounts and data (no passwords) | [DEMO-ACCOUNTS.md](DEMO-ACCOUNTS.md) | Done |
 | Panorama (capture, send to plan, wide viewer) | [PANORAMA-FEATURE.md](PANORAMA-FEATURE.md) | Phone-tested |
+| Per-user plans on a shared phone; launch splash | [USER-PLANS-AND-SPLASH.md](USER-PLANS-AND-SPLASH.md) | Built and unit-tested; not yet phone-tested |
 | AR ground fix (steady floor height, shadows) | [GROUND-FIX.md](GROUND-FIX.md) | Phone-tested; switched on |
 | AR heading review and fix | [HEADING-REVIEW.md](HEADING-REVIEW.md), [HEADING-FIX-HOWTO.md](HEADING-FIX-HOWTO.md) | Fix is **off** (`ArHeadingFix.ENABLED = false`) until a field test |
 | Branding (icon, army logo, avatar) | [BRANDING.md](BRANDING.md), [FieldGuide.md](FieldGuide.md) | Done |
