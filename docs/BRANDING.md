@@ -44,3 +44,9 @@ To swap it later: replace `docs/branding/army-logo.png` and run `python docs/bra
 
 ## See the dashboard in the running stack
 After you approve, from the repo that serves the stack run `deploy\build-dashboard.ps1` (rebuilds `web/dist`). Run it in the folder that has this branch's code (merge `brand/logos` or run it from `DhruvAR-brand`).
+
+## Dashboard sign-in page (version B, added 27 Nov 2026)
+- Left: field photo (`web/public/login-field.jpg`, cropped from `docs/branding/login-photo-source.webp`), headline and three feature badges.
+- Right: army logo top left and DhruvAR logo top right above the sign-in card; icons in the inputs; show/hide password button.
+- Code: `web/src/pages/Login.tsx` and `web/src/pages/Login.css` (own `lp-` classes, so the Account and loading screens are unchanged). Sign-in, demo sign-in and error messages work as before.
+- The running Docker stack serves `DhruvAR-integration\web\dist` (see `docker inspect dhruvar-nginx-1`). Rebuild into that folder, or restart the stack from this repo, to publish dashboard changes.
