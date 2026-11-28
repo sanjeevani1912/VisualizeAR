@@ -49,6 +49,14 @@ export function PlanDetail() {
   const [commentError, setCommentError] = useState<string | null>(null)
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'order', dir: 1 })
   const mapRef = useRef<MapHandle>(null)
+  // Get the map's print picture ready (and loaded) first, so the printed map is never an empty box.
+  const printPlan = async () => {
+    try {
+      await mapRef.current?.preparePrint()
+    } finally {
+      window.print()
+    }
+  }
 
   // Opening a submitted plan as a reviewer moves it to "under review".
   useEffect(() => {
@@ -143,7 +151,7 @@ export function PlanDetail() {
         </div>
         <div className="head-side">
           <StatusBadge status={plan.status} />
-          <button type="button" className="btn btn-ghost btn-sm no-print" onClick={() => window.print()}>Print plan</button>
+          <button type="button" className="btn btn-ghost btn-sm no-print" onClick={printPlan}>Print plan</button>
         </div>
       </header>
 
