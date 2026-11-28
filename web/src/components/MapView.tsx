@@ -158,11 +158,14 @@ function buildData(layout: LayoutData) {
 export interface MapHandle {
   fitAssets: () => void
   fitRegion: () => void
+  /** Puts a fully loaded picture of the map in place for printing; resolves when it is ready (or could not be made). */
+  preparePrint: () => Promise<void>
 }
 
 export const MapView = forwardRef<MapHandle, Props>(function MapView({ layout, highlightId, onSelect }, ref) {
   const el = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
+  const preparePrintRef = useRef<() => Promise<void>>(async () => {})
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
   // The live store re-fetches plans every few seconds and hands over a new (but identical) layout object.
@@ -210,6 +213,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView({ layout, h
     return {
       fitRegion: () => fit(regionBox()),
       fitAssets: () => fit(layoutRef.current.objects.length > 0 ? assetBounds(layoutRef.current) : regionBox()),
+      preparePrint: () => preparePrintRef.current(),
     }
   }, [])
 
@@ -256,14 +260,14 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView({ layout, h
     // Instead, just before printing, swap in a picture of exactly what is on screen (plus the map credit as text);
     // the print stylesheet hides the live map and shows the picture. Removed again afterwards.
     let printEls: HTMLElement[] = []
+    let preparedAt = 0
     const clearPrint = () => {
       printEls.forEach((n) => n.remove())
       printEls = []
     }
-    const beforePrint = () => {
-      clearPrint()
+    // Builds the picture and credit line. Returns null if the map cannot give a picture (the live map then prints instead).
+    const makePrintEls = (): [HTMLImageElement, HTMLParagraphElement] | null => {
       try {
-        map.triggerRepaint()
         const img = document.createElement('img')
         img.className = 'map-print-img'
         img.alt = ''
@@ -271,12 +275,44 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView({ layout, h
         const credit = document.createElement('p')
         credit.className = 'map-print-credit'
         credit.textContent = map.getContainer().querySelector('.maplibregl-ctrl-attrib-inner')?.textContent ?? ''
-        const host = map.getContainer()
-        host.after(img, credit)
-        printEls = [img, credit]
+        return [img, credit]
       } catch {
-        clearPrint() // keep the live map visible in print if a picture cannot be taken
+        return null
       }
+    }
+    const place = (els: [HTMLImageElement, HTMLParagraphElement]) => {
+      clearPrint()
+      map.getContainer().after(...els)
+      printEls = els
+    }
+    // The "Print plan" button: draw a fresh frame, take the picture, wait until the picture is fully decoded, and only
+    // then let the page print. (Taking it inside 'beforeprint' was too late: Chrome laid out the printed page before
+    // the picture had loaded, so the map box printed empty.)
+    preparePrintRef.current = async () => {
+      if (removed) return
+      await new Promise<void>((resolve) => {
+        const done = window.setTimeout(resolve, 1500) // never hold up printing, e.g. if the tab is not drawing
+        map.once('render', () => {
+          window.clearTimeout(done)
+          resolve()
+        })
+        map.triggerRepaint()
+      })
+      const els = makePrintEls()
+      if (!els || removed) return
+      try {
+        await els[0].decode()
+      } catch {
+        return // a picture that will not load would print as an empty box; leave the live map to print instead
+      }
+      place(els)
+      preparedAt = Date.now()
+    }
+    // Ctrl+P (or the browser menu): no time to wait, so take the picture straight away, unless the button already did.
+    const beforePrint = () => {
+      if (printEls.length > 0 && Date.now() - preparedAt < 5000) return // the button's picture, just made
+      const els = makePrintEls()
+      if (els) place(els)
     }
     window.addEventListener('beforeprint', beforePrint)
     window.addEventListener('afterprint', clearPrint)
