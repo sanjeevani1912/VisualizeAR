@@ -181,7 +181,7 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
                 val text: String
                 if (existing != null && existing.canResubmit) {
                     ServerClient.submitVersion(base, token, existing.planId, json, note)
-                    record = existing.copy(version = existing.version + 1, status = "SUBMITTED", sentAtEpochMs = now)
+                    record = existing.copy(version = existing.version + 1, status = "SUBMITTED", sentAtEpochMs = now, feedback = emptyList())
                     text = "Resubmitted ${existing.code} as version ${record.version}"
                 } else if (existing != null) {
                     _uiState.update { it.copy(sendingLayoutId = null, message = "${existing.code} was already sent") }
@@ -222,7 +222,8 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
                         code = plan.code,
                         version = plan.latestVersion,
                         status = plan.status,
-                        sentAtEpochMs = before?.sentAtEpochMs ?: 0L
+                        sentAtEpochMs = before?.sentAtEpochMs ?: 0L,
+                        feedback = plan.feedback
                     )
                     if (before != updated) {
                         store.put(layoutId, updated)
