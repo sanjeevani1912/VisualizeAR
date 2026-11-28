@@ -60,8 +60,9 @@ fun PlanSubmissionRow(
     modifier: Modifier = Modifier
 ) {
     val ready = layout.isReadyToSend()
+    Column(modifier = modifier.fillMaxWidth()) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -100,6 +101,40 @@ fun PlanSubmissionRow(
                 text = "Set a region and an origin to send",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+    // What the reviewer wrote (for example the reason for "Changes requested"), under the status.
+    if (!isSending && sent != null && sent.feedback.isNotEmpty()) {
+        ReviewerFeedback(lines = sent.feedback, isProblem = sent.canResubmit)
+    }
+    }
+}
+
+@Composable
+private fun ReviewerFeedback(lines: List<String>, isProblem: Boolean) {
+    val scheme = MaterialTheme.colorScheme
+    val accent = if (isProblem) scheme.error else scheme.primary
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 6.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(accent.copy(alpha = 0.07f))
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            text = "Reviewer",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = accent
+        )
+        lines.forEach { line ->
+            Text(
+                text = "“$line”",
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.onSurface
             )
         }
     }

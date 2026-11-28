@@ -1,6 +1,7 @@
 package com.example.dhruvar.data.remote
 
 import android.content.Context
+import org.json.JSONArray
 import org.json.JSONObject
 
 /** The dashboard's record of one plan that was sent from this phone. */
@@ -10,7 +11,9 @@ data class SentPlan(
     val version: Int,
     /** Server status: SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED, CHANGES_REQUESTED or WITHDRAWN. */
     val status: String,
-    val sentAtEpochMs: Long
+    val sentAtEpochMs: Long,
+    /** The reviewers' reason and comments on the latest version (shown under the status). */
+    val feedback: List<String> = emptyList()
 ) {
     /** True when the reviewer is waiting for the planner to change and resend the plan. */
     val canResubmit: Boolean get() = status == STATUS_CHANGES_REQUESTED || status == STATUS_REJECTED
@@ -63,7 +66,10 @@ class SentPlanStore(private val prefs: StringPrefs?) {
                     code = j.getString("code"),
                     version = j.optInt("version", 1),
                     status = j.optString("status", "SUBMITTED"),
-                    sentAtEpochMs = j.optLong("sentAt", 0L)
+                    sentAtEpochMs = j.optLong("sentAt", 0L),
+                    feedback = j.optJSONArray("feedback")?.let { a ->
+                        (0 until a.length()).mapNotNull { a.optString(it).takeIf { s -> s.isNotBlank() } }
+                    } ?: emptyList()
                 )
             } catch (_: Exception) {
                 // A damaged entry is skipped, never allowed to break the Home screen.
@@ -80,6 +86,7 @@ class SentPlanStore(private val prefs: StringPrefs?) {
             .put("version", sent.version)
             .put("status", sent.status)
             .put("sentAt", sent.sentAtEpochMs)
+            .put("feedback", JSONArray(sent.feedback))
         target.put(layoutId, j.toString())
     }
 

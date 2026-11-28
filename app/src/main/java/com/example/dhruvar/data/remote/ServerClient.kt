@@ -38,8 +38,45 @@ data class RemotePlanStatus(
     val code: String,
     val status: String,
     val latestVersion: Int,
-    val layoutId: String?
+    val layoutId: String?,
+    /** What the reviewers wrote about the latest version: the decision's reason, then their comments. */
+    val feedback: List<String> = emptyList()
 )
+
+/**
+ * The reviewers' words on a plan's latest version, oldest first: the reason given with the latest
+ * decision (a reason is required to reject or request changes) and comments by anyone other than the
+ * plan's owner. At most [MAX_FEEDBACK] lines, keeping the newest; blank text is skipped.
+ */
+fun reviewerFeedback(plan: JSONObject, latestVersion: Int): List<String> {
+    val ownerId = plan.optString("ownerId")
+    val entries = ArrayList<Pair<Long, String>>()
+    val decisions = plan.optJSONArray("decisions")
+    var lastDecision: JSONObject? = null
+    if (decisions != null) {
+        for (i in 0 until decisions.length()) {
+            val d = decisions.optJSONObject(i) ?: continue
+            if (d.optInt("version", -1) != latestVersion) continue
+            if (lastDecision == null || d.optLong("decidedAt") >= lastDecision.optLong("decidedAt")) lastDecision = d
+        }
+    }
+    lastDecision?.optString("reason")?.trim()?.takeIf { it.isNotEmpty() }?.let {
+        entries.add(lastDecision.optLong("decidedAt") to it)
+    }
+    val comments = plan.optJSONArray("comments")
+    if (comments != null) {
+        for (i in 0 until comments.length()) {
+            val c = comments.optJSONObject(i) ?: continue
+            if (c.optInt("version", -1) != latestVersion) continue
+            if (ownerId.isNotEmpty() && c.optString("authorId") == ownerId) continue
+            val text = c.optString("text").trim()
+            if (text.isNotEmpty()) entries.add(c.optLong("createdAt") to text)
+        }
+    }
+    return entries.sortedBy { it.first }.map { it.second }.distinct().takeLast(MAX_FEEDBACK)
+}
+
+const val MAX_FEEDBACK = 3
 
 /**
  * Talks to the DhruvAR dashboard server (docs/Web-Dashboard-Plan.md, server/README.md).
@@ -104,13 +141,15 @@ object ServerClient {
             val p = array.optJSONObject(i) ?: continue
             val versions = p.optJSONArray("versions")
             val last = versions?.optJSONObject((versions.length() - 1).coerceAtLeast(0))
+            val latestVersion = last?.optInt("version", 1) ?: 1
             out.add(
                 RemotePlanStatus(
                     planId = p.optString("id"),
                     code = p.optString("code"),
                     status = p.optString("status"),
-                    latestVersion = last?.optInt("version", 1) ?: 1,
-                    layoutId = last?.optJSONObject("layout")?.optString("id")?.takeIf { it.isNotBlank() }
+                    latestVersion = latestVersion,
+                    layoutId = last?.optJSONObject("layout")?.optString("id")?.takeIf { it.isNotBlank() },
+                    feedback = reviewerFeedback(p, latestVersion)
                 )
             )
         }
